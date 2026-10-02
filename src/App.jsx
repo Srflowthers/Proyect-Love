@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import CanvasGallery from '@/components/ui/canvas-gallery';
 import InfiniteGallery from '@/components/ui/infinite-gallery-tw';
+import Counter from '@/components/ui/counter';
 
 const images = [
   { src: '/fotos/Imagenes-amor/1000043105.jpg', title: 'Amor 1' },
@@ -73,18 +74,163 @@ const images = [
 ];
 
 function App() {
-  const [viewMode, setViewMode] = useState('3d'); // '3d' o 'rows'
+  const [viewMode, setViewMode] = React.useState('home');
+  const [isWarping, setIsWarping] = React.useState(false);
+
+  React.useEffect(() => {
+    // Escuchar los botones de "Atrás" o "Adelante" del navegador
+    const handlePopState = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash === '3d' || hash === 'rows') {
+        setViewMode(hash);
+      } else {
+        setViewMode('home');
+      }
+    };
+
+    // Revisar el hash actual cuando carga la página
+    handlePopState();
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const changeView = (mode) => {
+    if (mode === 'home') {
+      window.history.pushState(null, '', window.location.pathname);
+      setViewMode('home');
+    } else {
+      window.location.hash = mode;
+      setViewMode(mode);
+    }
+  };
+
+  const triggerEpicTransition = () => {
+    // Activa el efecto de deformación a velocidad de la luz
+    setIsWarping(true);
+    
+    // Cambia la vista cuando la pantalla esté blanca (a la mitad del efecto)
+    setTimeout(() => {
+      changeView('3d');
+    }, 1000);
+
+    // Apaga el efecto después de 1.5s
+    setTimeout(() => {
+      setIsWarping(false);
+    }, 1500);
+  };
 
   const toggleView = () => {
-    setViewMode(prev => prev === '3d' ? 'rows' : '3d');
+    const nextMode = viewMode === '3d' ? 'rows' : '3d';
+    changeView(nextMode);
   };
 
   return (
-    <div className="w-screen h-screen overflow-hidden bg-gradient-to-br from-purple-900 via-pink-900 to-black text-white">
-      {viewMode === '3d' ? (
-        <CanvasGallery items={images} toggleView={toggleView} />
-      ) : (
-        <InfiniteGallery items={images} toggleView={toggleView} />
+    <div className={`w-screen relative text-white ${viewMode === 'home' ? 'min-h-screen overflow-y-auto overflow-x-hidden bg-black' : 'h-screen overflow-hidden bg-gradient-to-br from-purple-950 via-pink-900 to-black'}`}>
+      
+      {/* Fondo Premium Minimalista para el Inicio */}
+      {viewMode === 'home' && (
+        <div className="fixed inset-0 z-0 pointer-events-none">
+          <div className="absolute inset-0 bg-[url('/fotos/Imagenes-amor/IMG_20221008_115919.jpg')] bg-cover bg-center opacity-30 blur-2xl scale-110" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black via-[#1c0f16]/90 to-black" />
+          {/* Brillo central */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-pink-900/20 rounded-full blur-[120px]" />
+        </div>
+      )}
+
+      {/* --- EFECTO ÉPICO DE WARP (VIAJE A LA LUZ) --- */}
+      {isWarping && (
+        <div className="fixed inset-0 z-[9999] pointer-events-none flex items-center justify-center overflow-hidden bg-black">
+          {/* Luces de "Híper-velocidad" (Puro CSS, sin lag) */}
+          <div className="absolute w-64 h-64 bg-pink-500/30 rounded-full animate-warp blur-lg" />
+          <div className="absolute w-96 h-96 bg-purple-600/30 rounded-full animate-warp blur-xl" style={{ animationDelay: '0.1s' }} />
+          <div className="absolute w-[150vw] h-[150vh] bg-[radial-gradient(circle,transparent_20%,rgba(255,255,255,0.8)_80%)] animate-warp" />
+          
+          {/* El flash de luz cegadora */}
+          <div className="absolute inset-0 bg-white animate-flash" />
+        </div>
+      )}
+      
+      {/* Botón Global para Volver al Inicio (Solo visible en las galerías) */}
+      {viewMode !== 'home' && (
+        <button 
+          onClick={() => changeView('home')}
+          className="absolute top-8 left-8 z-[100] px-4 py-2 bg-pink-500/20 hover:bg-pink-500/50 border border-pink-400/50 rounded-full font-bold transition-all hover:scale-105 backdrop-blur-md cursor-pointer"
+        >
+          ← Volver
+        </button>
+      )}
+
+      {viewMode === 'home' && (
+        <div className="flex flex-col min-h-screen w-full relative z-10">
+          {/* Banner Expandible de Galería (Ultra Premium) */}
+          <div 
+            onClick={triggerEpicTransition}
+            className="w-full h-32 md:h-40 bg-black/90 border-b border-pink-500/20 shadow-[0_20px_50px_rgba(0,0,0,0.5)] cursor-pointer overflow-hidden relative group shrink-0 flex items-center justify-center"
+          >
+            {/* Fila de imágenes moviéndose en el fondo (3 filas apiladas) */}
+            <div className="absolute inset-0 flex flex-col gap-2 overflow-hidden opacity-30 group-hover:opacity-70 transition-opacity duration-1000 blur-[2px] group-hover:blur-[1px] pointer-events-none py-2 px-1">
+              {/* Fila 1 */}
+              <div className="flex shrink-0 gap-2 h-1/3 animate-scroll-left">
+                {images.slice(0, 22).map((img, i) => (
+                   <img key={`r1a-${i}`} src={img.src} className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />
+                ))}
+                {images.slice(0, 22).map((img, i) => (
+                   <img key={`r1b-${i}`} src={img.src} className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />
+                ))}
+              </div>
+              {/* Fila 2 */}
+              <div className="flex shrink-0 gap-2 h-1/3 animate-scroll-left" style={{ animationDuration: '50s', animationDirection: 'reverse' }}>
+                {images.slice(22, 44).map((img, i) => (
+                   <img key={`r2a-${i}`} src={img.src} className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />
+                ))}
+                {images.slice(22, 44).map((img, i) => (
+                   <img key={`r2b-${i}`} src={img.src} className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />
+                ))}
+              </div>
+              {/* Fila 3 */}
+              <div className="flex shrink-0 gap-2 h-1/3 animate-scroll-left" style={{ animationDuration: '70s' }}>
+                {images.slice(44, 66).map((img, i) => (
+                   <img key={`r3a-${i}`} src={img.src} className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />
+                ))}
+                {images.slice(44, 66).map((img, i) => (
+                   <img key={`r3b-${i}`} src={img.src} className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />
+                ))}
+              </div>
+            </div>
+
+            <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/20 to-black/90 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-purple-900/40 to-transparent pointer-events-none" />
+            
+            <div className="relative z-10 flex flex-col items-center pointer-events-none px-4 text-center">
+              <span className="text-xs md:text-sm uppercase tracking-[0.5em] text-pink-300/70 font-sans mb-2 font-semibold">
+                Toca para Desbloquear
+              </span>
+              <h1 className="text-3xl md:text-5xl font-serif italic text-transparent bg-clip-text bg-gradient-to-b from-white to-pink-200 drop-shadow-[0_2px_10px_rgba(255,255,255,0.2)] group-hover:scale-[1.02] transition-transform duration-700">
+                Nuestro Universo de Recuerdos
+              </h1>
+              {/* Línea decorativa */}
+              <div className="w-0 group-hover:w-48 h-[1px] bg-gradient-to-r from-transparent via-pink-400 to-transparent transition-all duration-700 mt-4 opacity-50"></div>
+            </div>
+          </div>
+
+          {/* Contador de Tiempo */}
+          <div className="flex-1 bg-gradient-to-b from-transparent to-black/80 relative">
+            <Counter />
+          </div>
+        </div>
+      )}
+
+      {viewMode === '3d' && (
+        <div className="w-full h-full animate-focus-in">
+          <CanvasGallery items={images} toggleView={toggleView} />
+        </div>
+      )}
+
+      {viewMode === 'rows' && (
+        <div className="w-full h-full animate-focus-in">
+          <InfiniteGallery items={images} toggleView={toggleView} />
+        </div>
       )}
     </div>
   );

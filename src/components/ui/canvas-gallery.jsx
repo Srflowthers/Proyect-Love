@@ -72,38 +72,59 @@ export default function CanvasGallery({ items, toggleView }) {
 
   const scatteredItems = useMemo(() => {
     const random = mulberry32(9999); 
-
-    // Multiplicamos las fotos (x4) para que el universo se vea repleto de recuerdos
-    const massiveItems = [...items, ...items, ...items, ...items];
     
-    return massiveItems.map((item) => {
-      // Universo el doble de ancho y alto
+    // 1. Generamos un "Bloque Maestro" de fotos con un tamaño exacto
+    const BLOCK_SIZE = 15000;
+    const baseItems = [];
+    
+    // Usamos las fotos, multiplicadas un poco para llenar el bloque
+    const massiveItems = [...items, ...items, ...items];
+    
+    massiveItems.forEach((item) => {
       const x = (random() * 16000) - 8000; 
       const y = (random() * 12000) - 6000;
-      // Z con muchísima más profundidad para ver el "túnel" de fotos
-      const z = (random() * 20000) - 18000; 
-      
+      // Z va de 0 hasta -15000
+      const z = (random() * BLOCK_SIZE) - BLOCK_SIZE; 
       const rotation = (random() * 30) - 15;
       const width = 250 + (random() * 250);
-
-      return {
-        ...item,
-        x,
-        y,
-        z,
-        rotation,
-        width
-      };
+      
+      baseItems.push({ ...item, x, y, z, rotation, width });
     });
+
+    // 2. Duplicamos este bloque perfectamente hacia adelante y hacia atrás
+    // para que la transición sea 100% invisible
+    const finalItems = [];
+    baseItems.forEach(item => {
+      finalItems.push({ ...item, z: item.z + BLOCK_SIZE });     // Bloque Frontal
+      finalItems.push({ ...item, z: item.z });                  // Bloque Central
+      finalItems.push({ ...item, z: item.z - BLOCK_SIZE });     // Bloque Trasero 1
+      finalItems.push({ ...item, z: item.z - BLOCK_SIZE * 2 }); // Bloque Trasero 2
+    });
+
+    return finalItems;
   }, [items]);
 
   const handleWheel = (e) => {
     e.preventDefault();
-    const zoomSpeed = 3; // Un poco más rápido
-    setCamera(prev => ({
-      ...prev,
-      z: prev.z + (e.deltaY * zoomSpeed)
-    }));
+    const zoomSpeed = 3; 
+    setCamera(prev => {
+      let newZ = prev.z + (e.deltaY * zoomSpeed);
+      
+      // BUCLE INFINITO INVISIBLE
+      const BLOCK_SIZE = 15000;
+      
+      // Si avanzamos exactamente el tamaño de un bloque, restamos un bloque
+      // Como el diseño es idéntico, el salto de 15000px es visualmente indetectable
+      if (newZ > BLOCK_SIZE) {
+        newZ -= BLOCK_SIZE;
+      } 
+      // Si retrocedemos exactamente el tamaño de un bloque, sumamos un bloque
+      else if (newZ < 0) {
+        newZ += BLOCK_SIZE;
+      }
+      
+      return { ...prev, z: newZ };
+    });
   };
 
   const handlePointerDown = (e) => {
@@ -130,6 +151,13 @@ export default function CanvasGallery({ items, toggleView }) {
     isDragging.current = false;
   };
 
+  const [showTitle, setShowTitle] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowTitle(false), 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -150,14 +178,13 @@ export default function CanvasGallery({ items, toggleView }) {
     >
       <InteractiveFlower onClick={toggleView} />
 
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none text-center">
-        <h1 className="text-2xl font-bold tracking-widest text-white/90 drop-shadow-md">
-          UNIVERSO DE RECUERDOS
-        </h1>
-        <p className="text-sm text-white/70 bg-purple-900/60 px-3 py-1 rounded-full mt-2 inline-block backdrop-blur-md border border-purple-500/30">
-          Usa la rueda del ratón para acercarte/alejarte • Arrastra para explorar
-        </p>
-      </div>
+      {showTitle && (
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none text-center animate-[fadeOut_1s_ease-in_2s_forwards]">
+          <h1 className="text-2xl font-bold tracking-widest text-white/90 drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]">
+            UNIVERSO DE RECUERDOS
+          </h1>
+        </div>
+      )}
 
       <div 
         className="absolute top-1/2 left-1/2 w-0 h-0"
@@ -167,16 +194,15 @@ export default function CanvasGallery({ items, toggleView }) {
         }}
       >
         {scatteredItems.map((item, i) => {
-          // Calculamos la profundidad real del elemento respecto a la pantalla
+          // Profundidad real respecto a la cámara
           const absoluteZ = item.z + camera.z;
           
-          // Lógica de "Niebla" extendida para no cortar tan rápido
+          // Lógica de "Niebla"
           let opacity = 1;
           
           if (absoluteZ < -15000) {
             opacity = 0; // Extremadamente lejos
           } else if (absoluteZ < -6000) {
-            // Desvanecimiento muy suave desde muy lejos
             opacity = 1 - ((-6000 - absoluteZ) / 9000);
           } else if (absoluteZ > 1200) {
             opacity = 0; 

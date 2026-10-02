@@ -168,6 +168,90 @@ button {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
   }
+}
+
+/* ---- Romantic Animations ---- */
+@keyframes float-up {
+  0% {
+    transform: translateY(110vh) scale(0.5) rotate(0deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  80% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-20vh) scale(1.5) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.animate-float-up {
+  position: absolute;
+  animation: float-up var(--duration, 15s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+  left: var(--left, 50%);
+}
+
+@keyframes slow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(236,72,153,0.2), inset 0 0 10px rgba(236,72,153,0.1);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(236,72,153,0.5), inset 0 0 20px rgba(236,72,153,0.2);
+  }
+}
+
+.premium-glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+@keyframes warpSpeed {
+  0% { transform: scale(0.5); opacity: 0; }
+  20% { opacity: 0.8; }
+  100% { transform: scale(5); opacity: 0; }
+}
+
+@keyframes flashWhite {
+  0% { opacity: 0; background: transparent; }
+  70% { opacity: 1; background: white; }
+  100% { opacity: 0; background: transparent; }
+}
+
+.animate-warp {
+  animation: warpSpeed 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-flash {
+  animation: flashWhite 1.5s ease-in-out forwards;
+}
+
+@keyframes focusIn {
+  0% { filter: blur(20px); opacity: 0; transform: scale(1.1); }
+  100% { filter: blur(0px); opacity: 1; transform: scale(1); }
+}
+
+.animate-focus-in {
+  animation: focusIn 2s ease-out forwards;
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes scrollLeft {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
+.animate-scroll-left {
+  animation: scrollLeft 60s linear infinite;
 }

@@ -1,0 +1,21 @@
+# Dependencias
+node_modules
+
+# Archivos del sistema
+.DS_Store
+*.log
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+
+# Nota: la carpeta docs/ SÍ se versiona a propósito,
+# porque GitHub Pages la sirve directamente desde main.
+
+# Ignorar fotos y videos personales
+public/fotos/Imagenes-amor/
+public/fotos/*.jpg
+public/fotos/*.jpeg
+public/fotos/*.png
+public/fotos/*.webp
+public/fotos/*.mp4

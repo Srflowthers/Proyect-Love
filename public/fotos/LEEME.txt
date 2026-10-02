@@ -1,0 +1,34 @@
+CÓMO AGREGAR FOTOS
+===================
+
+1. Copia tus fotos dentro de esta misma carpeta (public/fotos/).
+
+2. Nómbralas EXACTAMENTE así (minúsculas, sin espacios, sin tildes):
+
+   foto-01.jpg
+   foto-02.jpg
+   foto-03.jpg
+   foto-04.jpg
+   foto-05.jpg
+   foto-06.jpg
+
+   - Puedes usar .jpg, .jpeg, .png o .webp, pero el nombre en
+     src/config/configuracion.js debe coincidir EXACTO
+     (incluida la extensión).
+   - Puedes agregar más o menos fotos: solo agrega/quita líneas
+     en el arreglo "fotos" dentro de configuracion.js.
+
+3. Por cada foto, edita en src/config/configuracion.js:
+
+   { archivo: "foto-01.jpg", alt: "Nuestro primer recuerdo juntos" }
+
+   - "archivo": el nombre exacto del archivo que pusiste aquí.
+   - "alt": una frase corta que describe la foto (aparece si la
+     imagen no carga y ayuda a la accesibilidad).
+
+4. Recomendación de peso: si las fotos pesan mucho (varios MB),
+   compárimelas antes (por ejemplo con squoosh.app) para que la
+   página cargue rápido en el celular.
+
+Este archivo (LEEME.txt) es solo informativo, no afecta el
+funcionamiento de la web. Puedes borrarlo si quieres.

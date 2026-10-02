@@ -1,0 +1,25 @@
+CÓMO AGREGAR LA MÚSICA
+=======================
+
+1. Copia tu canción dentro de esta misma carpeta (public/musica/).
+
+2. Nómbrala EXACTAMENTE así (minúsculas, sin espacios, sin tildes):
+
+   nuestra-cancion.mp3
+
+   - Usa formato .mp3: es el más compatible con todos los
+     navegadores y celulares.
+   - Si le pones otro nombre o formato, actualiza el valor
+     "cancion" en src/config/configuracion.js para que coincida
+     EXACTO (incluida la extensión).
+
+3. Opcional: cambia el texto que se muestra debajo del botón
+   editando "nombreCancion" en configuracion.js.
+
+4. El navegador bloquea la reproducción automática, así que la
+   canción solo empieza cuando la persona toca el botón
+   "🎵 Reproducir nuestra canción". Esto ya está resuelto en el
+   componente Musica.jsx, no necesitas hacer nada más.
+
+Este archivo (LEEME.txt) es solo informativo, no afecta el
+funcionamiento de la web. Puedes borrarlo si quieres.

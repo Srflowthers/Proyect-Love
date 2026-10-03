@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/config/firebase';
+
 import { DEMO_IMAGES } from '@/data/demoImages';
 import CanvasGallery from '@/components/ui/canvas-gallery';
 import InfiniteGallery from '@/components/ui/infinite-gallery-tw';
@@ -26,11 +25,14 @@ const GalleryView = ({ user, onOpenSettings }) => {
 
     const fetchUserData = async () => {
       try {
-        const userRef = doc(db, 'users', user.uid);
-        const snap = await getDoc(userRef);
+        const token = await user.getIdToken();
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8787'}/api/users/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const snap = await res.json();
         
-        if (snap.exists()) {
-          const data = snap.data();
+        if (snap.exists) {
+          const data = snap.data;
           setUserData(data);
           
           if (data.galleryImages && data.galleryImages.length > 0) {

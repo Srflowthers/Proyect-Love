@@ -1,29 +1,35 @@
-import { doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
-import { db } from '@/config/firebase';
+import { auth } from '@/config/firebase';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
+
+const getAuthHeaders = async () => {
+  const token = await auth.currentUser?.getIdToken();
+  return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+};
 
 export const saveUserToDatabase = async (user) => {
   try {
-    const userRef = doc(db, 'users', user.uid);
-    const userSnap = await getDoc(userRef);
-    
-    if (!userSnap.exists()) {
-      await setDoc(userRef, {
-        email: user.email,
-        name: user.displayName || 'Sin nombre',
-        role: 'client',
-        createdAt: new Date()
-      });
+    const token = await user.getIdToken();
+    const res = await fetch(`${API_URL}/api/users/me`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: user.displayName || 'Sin nombre', email: user.email })
+    });
+    // Si retorna 409, significa que ya existía. Lo ignoramos.
+    if (!res.ok && res.status !== 409) {
+      console.error("Error al crear usuario", await res.text());
     }
   } catch (error) {
-    console.error("Error guardando usuario en Firestore:", error);
+    console.error("Error guardando usuario:", error);
   }
 };
 
 export const fetchAllClients = async () => {
   try {
-    const querySnapshot = await getDocs(collection(db, 'users'));
-    const usersList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    return usersList.filter(u => u.role === 'client');
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_URL}/api/users`, { headers });
+    if (!res.ok) throw new Error("Error obteniendo clientes");
+    return await res.json(); // Backend ya filtra role === 'client'
   } catch (error) {
     console.error("Error obteniendo clientes:", error);
     return [];
@@ -39,9 +45,13 @@ export const PLANS = {
 
 export const updateClientPlan = async (userId, planId) => {
   try {
-    const userRef = doc(db, 'users', userId);
-    await setDoc(userRef, { plan: planId }, { merge: true });
-    return true;
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_URL}/api/users/${userId}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ plan: planId })
+    });
+    return res.ok;
   } catch (error) {
     console.error("Error actualizando plan:", error);
     return false;
@@ -50,9 +60,13 @@ export const updateClientPlan = async (userId, planId) => {
 
 export const toggleClientFlightMode = async (userId, enable) => {
   try {
-    const userRef = doc(db, 'users', userId);
-    await setDoc(userRef, { hasFlightMode: enable }, { merge: true });
-    return true;
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_URL}/api/users/${userId}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ hasFlightMode: enable })
+    });
+    return res.ok;
   } catch (error) {
     console.error("Error toggling flight mode:", error);
     return false;

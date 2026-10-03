@@ -50,9 +50,9 @@ function App() {
         {showPricing && (
           <PricingModal 
             onClose={() => setShowPricing(false)} 
-            onLogin={() => {
+            onLogin={(turnstileToken) => {
               setShowPricing(false);
-              loginWithGoogle();
+              loginWithGoogle(turnstileToken);
             }} 
           />
         )}

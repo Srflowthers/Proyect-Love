@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { loginWithGoogle } from '@/services/authService';
-import AdminView from '@/views/AdminView';
+const AdminView = lazy(() => import('@/views/AdminView'));
 import GalleryView from '@/views/GalleryView';
 import SettingsView from '@/views/SettingsView';
 import Dock from '@/components/ui/Dock';
@@ -76,7 +76,9 @@ function App() {
   if (userRole === 'admin' && view === 'admin') {
     return (
       <div className="relative">
-        <AdminView user={user} />
+        <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center text-pink-400 font-serif italic text-2xl">Cargando Panel...</div>}>
+          <AdminView user={user} />
+        </Suspense>
         <button 
           onClick={() => setView('settings')}
           className="fixed bottom-8 left-8 z-50 px-6 py-3 bg-pink-600 hover:bg-pink-500 text-white rounded-full font-bold shadow-[0_0_20px_rgba(236,72,153,0.5)] transition-all"

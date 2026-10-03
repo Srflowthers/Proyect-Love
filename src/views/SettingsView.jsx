@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '@/config/firebase';
+
 import imageCompression from 'browser-image-compression';
 import { PLANS } from '@/services/userService';
 
@@ -31,10 +30,13 @@ const SettingsView = ({ user, onSaveComplete }) => {
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const data = userSnap.data();
+        const token = await user.getIdToken();
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8787'}/api/users/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const snap = await res.json();
+        if (snap.exists) {
+          const data = snap.data;
           setFormData({
             user1Name: data.user1Name || '',
             user2Name: data.user2Name || '',
@@ -67,18 +69,23 @@ const SettingsView = ({ user, onSaveComplete }) => {
     setLoading(true);
     setMessage('');
     try {
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
-        user1Name: formData.user1Name,
-        user2Name: formData.user2Name,
-        anniversaryDate: formData.anniversaryDate,
-        pets: formData.pets,
-        kids: formData.kids,
-        spotifyUrl: formData.spotifyUrl,
-        customMessage: formData.customMessage,
-        letterPages: formData.letterPages,
-        letterStyle: formData.letterStyle
+      const token = await user.getIdToken();
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8787'}/api/users/me`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user1Name: formData.user1Name,
+          user2Name: formData.user2Name,
+          anniversaryDate: formData.anniversaryDate,
+          pets: formData.pets,
+          kids: formData.kids,
+          spotifyUrl: formData.spotifyUrl,
+          customMessage: formData.customMessage,
+          letterPages: formData.letterPages,
+          letterStyle: formData.letterStyle
+        })
       });
+      if (!res.ok) throw new Error("Fallo al actualizar");
       setMessage('¡Datos guardados con éxito! 💖');
       setTimeout(() => onSaveComplete(), 1500); // Volver a la galería después de guardar
     } catch (error) {
@@ -205,11 +212,14 @@ const SettingsView = ({ user, onSaveComplete }) => {
             public_id: cloudData.public_id,
             bytes: cloudData.bytes || 0
           };
-          const userRef = doc(db, 'users', user.uid);
-          const currentImagesSnap = await getDoc(userRef);
+          
+          const getRes = await fetch(`${apiUrl}/api/users/me`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const snap = await getRes.json();
           let currentImages = [];
-          if (currentImagesSnap.exists() && currentImagesSnap.data().galleryImages) {
-            currentImages = currentImagesSnap.data().galleryImages;
+          if (snap.exists && snap.data.galleryImages) {
+            currentImages = snap.data.galleryImages;
           }
           const updatedImages = [...currentImages, newImg];
           await updateDoc(userRef, { galleryImages: updatedImages });
@@ -263,10 +273,15 @@ const SettingsView = ({ user, onSaveComplete }) => {
 
       if (!delRes.ok) throw new Error('No se pudo borrar la imagen en el servidor seguro.');
 
-      // 2. Borrar de Firestore
+      // 2. Borrar de Firestore (ahora usando el API)
       const updatedImages = images.filter(img => img.public_id !== imageToDelete.public_id);
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, { galleryImages: updatedImages });
+      
+      const patchRes = await fetch(`${apiUrl}/api/users/me`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ galleryImages: updatedImages })
+      });
+      if (!patchRes.ok) throw new Error("Error al eliminar imagen en DB");
       
       setImages(updatedImages);
       setMessage('Imagen eliminada.');

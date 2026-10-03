@@ -7,13 +7,13 @@ const getAuthHeaders = async () => {
   return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
 };
 
-export const saveUserToDatabase = async (user) => {
+export const saveUserToDatabase = async (user, turnstileToken) => {
   try {
     const token = await user.getIdToken();
     const res = await fetch(`${API_URL}/api/users/me`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: user.displayName || 'Sin nombre', email: user.email })
+      body: JSON.stringify({ name: user.displayName || 'Sin nombre', email: user.email, turnstileToken })
     });
     // Si retorna 409, significa que ya existía. Lo ignoramos.
     if (!res.ok && res.status !== 409) {

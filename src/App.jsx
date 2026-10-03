@@ -1,236 +1,147 @@
-import React, { useState } from 'react';
-import CanvasGallery from '@/components/ui/canvas-gallery';
-import InfiniteGallery from '@/components/ui/infinite-gallery-tw';
-import Counter from '@/components/ui/counter';
-
-const images = [
-  { src: '/fotos/Imagenes-amor/1000043105.jpg', title: 'Amor 1' },
-  { src: '/fotos/Imagenes-amor/1000046753.jpg', title: 'Amor 2' },
-  { src: '/fotos/Imagenes-amor/1000046754.jpg', title: 'Amor 3' },
-  { src: '/fotos/Imagenes-amor/1000046762.jpg', title: 'Amor 4' },
-  { src: '/fotos/Imagenes-amor/1759337817954.jpg', title: 'Amor 5' },
-  { src: '/fotos/Imagenes-amor/7297f1c0d24917110d23963adf0da967.jpg', title: 'Amor 6' },
-  { src: '/fotos/Imagenes-amor/Foto0144.jpg', title: 'Amor 7' },
-  { src: '/fotos/Imagenes-amor/IMG-20211014-WA0001.jpg', title: 'Amor 8' },
-  { src: '/fotos/Imagenes-amor/IMG-20221028-WA0035.jpg', title: 'Amor 9' },
-  { src: '/fotos/Imagenes-amor/IMG-20230628-WA0064.jpg', title: 'Amor 10' },
-  { src: '/fotos/Imagenes-amor/IMG-20240126-WA0002~3.jpg', title: 'Amor 11' },
-  { src: '/fotos/Imagenes-amor/IMG-20240521-WA0018.jpg', title: 'Amor 12' },
-  { src: '/fotos/Imagenes-amor/IMG-20240521-WA0028.jpg', title: 'Amor 13' },
-  { src: '/fotos/Imagenes-amor/IMG-20240521-WA0050.jpg', title: 'Amor 14' },
-  { src: '/fotos/Imagenes-amor/IMG-20240521-WA0065.jpg', title: 'Amor 15' },
-  { src: '/fotos/Imagenes-amor/IMG-20240521-WA0094.jpg', title: 'Amor 16' },
-  { src: '/fotos/Imagenes-amor/IMG-20240521-WA0100.jpg', title: 'Amor 17' },
-  { src: '/fotos/Imagenes-amor/IMG-20240521-WA0103.jpg', title: 'Amor 18' },
-  { src: '/fotos/Imagenes-amor/IMG-20240705-WA0067.jpg', title: 'Amor 19' },
-  { src: '/fotos/Imagenes-amor/IMG-20240731-WA0007.jpg', title: 'Amor 20' },
-  { src: '/fotos/Imagenes-amor/IMG-20240906-WA0001.jpg', title: 'Amor 21' },
-  { src: '/fotos/Imagenes-amor/IMG-20250306-WA0050.jpg', title: 'Amor 22' },
-  { src: '/fotos/Imagenes-amor/IMG-20250306-WA0067.jpg', title: 'Amor 23' },
-  { src: '/fotos/Imagenes-amor/IMG-20250312-WA0015.jpg', title: 'Amor 24' },
-  { src: '/fotos/Imagenes-amor/IMG_20220525_112804_946.jpg', title: 'Amor 25' },
-  { src: '/fotos/Imagenes-amor/IMG_20220810_173718.jpg', title: 'Amor 26' },
-  { src: '/fotos/Imagenes-amor/IMG_20220810_173741.jpg', title: 'Amor 27' },
-  { src: '/fotos/Imagenes-amor/IMG_20220831_081917_104.jpg', title: 'Amor 28' },
-  { src: '/fotos/Imagenes-amor/IMG_20220913_140824.jpg', title: 'Amor 29' },
-  { src: '/fotos/Imagenes-amor/IMG_20221008_093043.jpg', title: 'Amor 30' },
-  { src: '/fotos/Imagenes-amor/IMG_20221008_115919.jpg', title: 'Amor 31' },
-  { src: '/fotos/Imagenes-amor/IMG_20221109_222313_405.jpg', title: 'Amor 32' },
-  { src: '/fotos/Imagenes-amor/IMG_20221203_143747_971.jpg', title: 'Amor 33' },
-  { src: '/fotos/Imagenes-amor/IMG_20230104_205354_801.jpg', title: 'Amor 34' },
-  { src: '/fotos/Imagenes-amor/IMG_20230121_184407_392.jpg', title: 'Amor 35' },
-  { src: '/fotos/Imagenes-amor/IMG_20230131_220451_862.jpg', title: 'Amor 36' },
-  { src: '/fotos/Imagenes-amor/IMG_20230329_182657_681.jpg', title: 'Amor 37' },
-  { src: '/fotos/Imagenes-amor/IMG_20230329_184446.jpg', title: 'Amor 38' },
-  { src: '/fotos/Imagenes-amor/IMG_20231202_201745.jpg', title: 'Amor 39' },
-  { src: '/fotos/Imagenes-amor/IMG_20231202_201844.jpg', title: 'Amor 40' },
-  { src: '/fotos/Imagenes-amor/IMG_20231202_201856.jpg', title: 'Amor 41' },
-  { src: '/fotos/Imagenes-amor/IMG_20231203_162826.jpg', title: 'Amor 42' },
-  { src: '/fotos/Imagenes-amor/IMG_20240304_184938~2.jpg', title: 'Amor 43' },
-  { src: '/fotos/Imagenes-amor/IMG_20240827_172950.jpg', title: 'Amor 44' },
-  { src: '/fotos/Imagenes-amor/IMG_20241001_191820.jpg', title: 'Amor 45' },
-  { src: '/fotos/Imagenes-amor/IMG_20241007_214508.jpg', title: 'Amor 46' },
-  { src: '/fotos/Imagenes-amor/IMG_20241125_213128.jpg', title: 'Amor 47' },
-  { src: '/fotos/Imagenes-amor/IMG_20241203_230756.jpg', title: 'Amor 48' },
-  { src: '/fotos/Imagenes-amor/IMG_20241203_230802.jpg', title: 'Amor 49' },
-  { src: '/fotos/Imagenes-amor/IMG_20250117_211901.jpg', title: 'Amor 50' },
-  { src: '/fotos/Imagenes-amor/IMG_20250327112511468.jpg', title: 'Amor 51' },
-  { src: '/fotos/Imagenes-amor/IMG_20250421_182432.jpg', title: 'Amor 52' },
-  { src: '/fotos/Imagenes-amor/IMG_20250428_130924.jpg', title: 'Amor 53' },
-  { src: '/fotos/Imagenes-amor/IMG_20250428_131034.jpg', title: 'Amor 54' },
-  { src: '/fotos/Imagenes-amor/IMG_20251002_132911.jpg', title: 'Amor 55' },
-  { src: '/fotos/Imagenes-amor/IMG_20260518_002038.jpg', title: 'Amor 56' },
-  { src: '/fotos/Imagenes-amor/IMG_20260819_204656.jpg', title: 'Amor 57' },
-  { src: '/fotos/Imagenes-amor/NESECITO BSUCAR DE ESAS.jpg', title: 'Amor 58' },
-  { src: '/fotos/Imagenes-amor/Screenshot_20220711-234736.png', title: 'Amor 59' },
-  { src: '/fotos/Imagenes-amor/Screenshot_2023-08-17-19-09-10-468_com.discord.jpg', title: 'Amor 60' },
-  { src: '/fotos/Imagenes-amor/Screenshot_2023-08-17-19-12-13-574_com.discord.jpg', title: 'Amor 61' },
-  { src: '/fotos/Imagenes-amor/Snapchat-1385529188.jpg', title: 'Amor 62' },
-  { src: '/fotos/Imagenes-amor/Snapchat-1521522494.jpg', title: 'Amor 63' },
-  { src: '/fotos/Imagenes-amor/VID_20240906_202630.mp4', title: 'Amor 64', isVideo: true },
-  { src: '/fotos/Imagenes-amor/WIN_20250817_21_06_20_Pro.jpg', title: 'Amor 65' },
-  { src: '/fotos/Imagenes-amor/aura.jpg', title: 'Amor 66' },
-  { src: '/fotos/Imagenes-amor/b9bc2a4257e373cf1d8822c7a033b453.jpg', title: 'Amor 67' }
-];
+import React from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { loginWithGoogle } from '@/services/authService';
+import AdminView from '@/views/AdminView';
+import GalleryView from '@/views/GalleryView';
+import SettingsView from '@/views/SettingsView';
+import Dock from '@/components/ui/Dock';
+import PricingModal from '@/components/ui/PricingModal';
+import { logout } from '@/services/authService'; 
 
 function App() {
-  const [viewMode, setViewMode] = React.useState('home');
-  const [isWarping, setIsWarping] = React.useState(false);
+  const { user, userRole, loading } = useAuth();
+  // Los clientes ven la galería por defecto. El admin ve el panel.
+  const [view, setView] = React.useState(null); 
+  const [showPricing, setShowPricing] = React.useState(false);
 
   React.useEffect(() => {
-    // Escuchar los botones de "Atrás" o "Adelante" del navegador
-    const handlePopState = () => {
-      const hash = window.location.hash.replace('#', '');
-      if (hash === '3d' || hash === 'rows') {
-        setViewMode(hash);
-      } else {
-        setViewMode('home');
-      }
-    };
+    if (userRole === 'admin' && !view) setView('admin');
+    if (userRole === 'client' && !view) setView('gallery');
+  }, [userRole, view]);
 
-    // Revisar el hash actual cuando carga la página
-    handlePopState();
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center text-white font-serif italic text-2xl">
+        Cargando Universo...
+      </div>
+    );
+  }
 
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  const changeView = (mode) => {
-    if (mode === 'home') {
-      window.history.pushState(null, '', window.location.pathname);
-      setViewMode('home');
-    } else {
-      window.location.hash = mode;
-      setViewMode(mode);
-    }
-  };
-
-  const triggerEpicTransition = () => {
-    // Activa el efecto de deformación a velocidad de la luz
-    setIsWarping(true);
-    
-    // Cambia la vista cuando la pantalla esté blanca (a la mitad del efecto)
-    setTimeout(() => {
-      changeView('3d');
-    }, 1000);
-
-    // Apaga el efecto después de 1.5s
-    setTimeout(() => {
-      setIsWarping(false);
-    }, 1500);
-  };
-
-  const toggleView = () => {
-    const nextMode = viewMode === '3d' ? 'rows' : '3d';
-    changeView(nextMode);
-  };
-
-  return (
-    <div className={`w-screen relative text-white ${viewMode === 'home' ? 'min-h-screen overflow-y-auto overflow-x-hidden bg-black' : 'h-screen overflow-hidden bg-gradient-to-br from-purple-950 via-pink-900 to-black'}`}>
-      
-      {/* Fondo Premium Minimalista para el Inicio */}
-      {viewMode === 'home' && (
-        <div className="fixed inset-0 z-0 pointer-events-none">
-          <div className="absolute inset-0 bg-[url('/fotos/Imagenes-amor/IMG_20221008_115919.jpg')] bg-cover bg-center opacity-30 blur-2xl scale-110" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black via-[#1c0f16]/90 to-black" />
-          {/* Brillo central */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-pink-900/20 rounded-full blur-[120px]" />
-        </div>
-      )}
-
-      {/* --- EFECTO ÉPICO DE WARP (VIAJE A LA LUZ) --- */}
-      {isWarping && (
-        <div className="fixed inset-0 z-[9999] pointer-events-none flex items-center justify-center overflow-hidden bg-black">
-          {/* Luces de "Híper-velocidad" (Puro CSS, sin lag) */}
-          <div className="absolute w-64 h-64 bg-pink-500/30 rounded-full animate-warp blur-lg" />
-          <div className="absolute w-96 h-96 bg-purple-600/30 rounded-full animate-warp blur-xl" style={{ animationDelay: '0.1s' }} />
-          <div className="absolute w-[150vw] h-[150vh] bg-[radial-gradient(circle,transparent_20%,rgba(255,255,255,0.8)_80%)] animate-warp" />
-          
-          {/* El flash de luz cegadora */}
-          <div className="absolute inset-0 bg-white animate-flash" />
-        </div>
-      )}
-      
-      {/* Botón Global para Volver al Inicio (Solo visible en las galerías) */}
-      {viewMode !== 'home' && (
+  // 1. Si no hay usuario logueado -> Mostrar Galería Mágica de "Landing Page"
+  if (!user) {
+    return (
+      <div className="relative">
+        <GalleryView user={null} />
+        
+        {/* Botón flotante para Iniciar Sesión / Crear Universo */}
         <button 
-          onClick={() => changeView('home')}
-          className="absolute top-8 left-8 z-[100] px-4 py-2 bg-pink-500/20 hover:bg-pink-500/50 border border-pink-400/50 rounded-full font-bold transition-all hover:scale-105 backdrop-blur-md cursor-pointer"
+          onClick={() => setShowPricing(true)}
+          className="fixed top-8 right-8 z-[9999] px-6 py-3 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white rounded-full font-bold shadow-xl transition-all border border-pink-400 flex items-center gap-2"
         >
-          ← Volver
+          <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#fff"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#fff"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#fff"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#fff"/>
+          </svg>
+          Crea tu Collage
+        </button>
+
+        {showPricing && (
+          <PricingModal 
+            onClose={() => setShowPricing(false)} 
+            onLogin={() => {
+              setShowPricing(false);
+              loginWithGoogle();
+            }} 
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Si ya cargó el usuario pero aún no se define la vista por el rol
+  if (!view) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center text-white font-serif italic text-2xl">
+        Preparando tu espacio...
+      </div>
+    );
+  }
+
+  if (view === 'settings') {
+    return <SettingsView user={user} onSaveComplete={() => setView('gallery')} />;
+  }
+
+  if (userRole === 'admin' && view === 'admin') {
+    return (
+      <div className="relative">
+        <AdminView user={user} />
+        <button 
+          onClick={() => setView('settings')}
+          className="fixed bottom-8 left-8 z-50 px-6 py-3 bg-pink-600 hover:bg-pink-500 text-white rounded-full font-bold shadow-[0_0_20px_rgba(236,72,153,0.5)] transition-all"
+        >
+          Configurar y Ver Galería ✨
+        </button>
+      </div>
+    );
+  }
+
+  // Si están viendo la galería (ya sean admins o clientes)
+  return (
+    <div className="relative">
+      <GalleryView user={user} onOpenSettings={() => setView('settings')} />
+      
+      {/* Botón extra para el admin para volver a su panel */}
+      {userRole === 'admin' && (
+        <button 
+          onClick={() => setView('admin')}
+          className="fixed top-24 right-8 z-[9999] px-6 py-3 bg-gray-900 border border-gray-700 hover:bg-gray-800 text-white rounded-full font-bold shadow-xl transition-all"
+        >
+          ← Volver al Panel Admin
         </button>
       )}
 
-      {viewMode === 'home' && (
-        <div className="flex flex-col min-h-screen w-full relative z-10">
-          {/* Banner Expandible de Galería (Ultra Premium) */}
-          <div 
-            onClick={triggerEpicTransition}
-            className="w-full h-32 md:h-40 bg-black/90 border-b border-pink-500/20 shadow-[0_20px_50px_rgba(0,0,0,0.5)] cursor-pointer overflow-hidden relative group shrink-0 flex items-center justify-center"
-          >
-            {/* Fila de imágenes moviéndose en el fondo (3 filas apiladas) */}
-            <div className="absolute inset-0 flex flex-col gap-2 overflow-hidden opacity-30 group-hover:opacity-70 transition-opacity duration-1000 blur-[2px] group-hover:blur-[1px] pointer-events-none py-2 px-1">
-              {/* Fila 1 */}
-              <div className="flex shrink-0 gap-2 h-1/3 animate-scroll-left">
-                {images.slice(0, 22).map((img, i) => (
-                   <img key={`r1a-${i}`} src={img.src} className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />
-                ))}
-                {images.slice(0, 22).map((img, i) => (
-                   <img key={`r1b-${i}`} src={img.src} className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />
-                ))}
-              </div>
-              {/* Fila 2 */}
-              <div className="flex shrink-0 gap-2 h-1/3 animate-scroll-left" style={{ animationDuration: '50s', animationDirection: 'reverse' }}>
-                {images.slice(22, 44).map((img, i) => (
-                   <img key={`r2a-${i}`} src={img.src} className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />
-                ))}
-                {images.slice(22, 44).map((img, i) => (
-                   <img key={`r2b-${i}`} src={img.src} className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />
-                ))}
-              </div>
-              {/* Fila 3 */}
-              <div className="flex shrink-0 gap-2 h-1/3 animate-scroll-left" style={{ animationDuration: '70s' }}>
-                {images.slice(44, 66).map((img, i) => (
-                   <img key={`r3a-${i}`} src={img.src} className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />
-                ))}
-                {images.slice(44, 66).map((img, i) => (
-                   <img key={`r3b-${i}`} src={img.src} className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />
-                ))}
-              </div>
-            </div>
-
-            <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/20 to-black/90 pointer-events-none" />
-            <div className="absolute inset-0 bg-gradient-to-t from-purple-900/40 to-transparent pointer-events-none" />
-            
-            <div className="relative z-10 flex flex-col items-center pointer-events-none px-4 text-center">
-              <span className="text-xs md:text-sm uppercase tracking-[0.5em] text-pink-300/70 font-sans mb-2 font-semibold">
-                Toca para Desbloquear
-              </span>
-              <h1 className="text-3xl md:text-5xl font-serif italic text-transparent bg-clip-text bg-gradient-to-b from-white to-pink-200 drop-shadow-[0_2px_10px_rgba(255,255,255,0.2)] group-hover:scale-[1.02] transition-transform duration-700">
-                Nuestro Universo de Recuerdos
-              </h1>
-              {/* Línea decorativa */}
-              <div className="w-0 group-hover:w-48 h-[1px] bg-gradient-to-r from-transparent via-pink-400 to-transparent transition-all duration-700 mt-4 opacity-50"></div>
-            </div>
-          </div>
-
-          {/* Contador de Tiempo */}
-          <div className="flex-1 bg-gradient-to-b from-transparent to-black/80 relative">
-            <Counter />
-          </div>
-        </div>
-      )}
-
-      {viewMode === '3d' && (
-        <div className="w-full h-full animate-focus-in">
-          <CanvasGallery items={images} toggleView={toggleView} />
-        </div>
-      )}
-
-      {viewMode === 'rows' && (
-        <div className="w-full h-full animate-focus-in">
-          <InfiniteGallery items={images} toggleView={toggleView} />
-        </div>
+      {/* Dock Navigation - Oculto en la Galería para no molestar */}
+      {view !== 'gallery' && (
+        <Dock 
+          items={[
+            {
+              icon: (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              ),
+              label: 'Galería',
+              onClick: () => setView('gallery')
+            },
+            ...(userRole === 'admin' ? [{
+              icon: (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+              ),
+              label: 'Panel Admin',
+              onClick: () => setView('admin')
+            }] : []),
+            {
+              icon: (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              ),
+              label: 'Configuración',
+              onClick: () => setView('settings')
+            },
+            {
+              icon: (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+              ),
+              label: 'Cerrar Sesión',
+              onClick: async () => {
+                await logout();
+                window.location.reload();
+              }
+            }
+          ]}
+          panelHeight={68}
+          baseItemSize={50}
+          magnification={70}
+        />
       )}
     </div>
   );

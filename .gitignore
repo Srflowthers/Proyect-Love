@@ -19,3 +19,10 @@ public/fotos/*.jpeg
 public/fotos/*.png
 public/fotos/*.webp
 public/fotos/*.mp4
+
+# Excepción: SÍ queremos subir la luna porque es parte de la interfaz (UI)
+!public/fotos/moon.jpg
+
+# Variables de entorno
+.env
+.env.*

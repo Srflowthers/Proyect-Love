@@ -1,4 +1,4 @@
-const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
+const BACKEND_URL = '';
 export const DEMO_IMAGES = [
   `${BACKEND_URL}/fotos/Imagenes-amor/1000043105.jpg`,
   `${BACKEND_URL}/fotos/Imagenes-amor/1000046753.jpg`,

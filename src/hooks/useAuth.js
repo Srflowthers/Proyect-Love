@@ -12,9 +12,6 @@ export const useAuth = () => {
       setUser(currentUser);
       
       if (currentUser) {
-        // Guardamos o actualizamos en Firestore
-        await saveUserToDatabase(currentUser);
-
         // Obtenemos el rol seguro del Backend (Custom Claims)
         const tokenResult = await currentUser.getIdTokenResult(true);
         setUserRole(tokenResult.claims.role || 'client');

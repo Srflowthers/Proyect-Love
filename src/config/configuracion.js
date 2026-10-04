@@ -97,6 +97,6 @@ export const CONFIG = {
   // Usa "\n\n" para separar párrafos.
   // --------------------------------------------------------
   mensajeFinal:
-    "Gracias por cada momento, cada sonrisa, cada abrazo y cada recuerdo que hemos creado juntos.\n\nEspero que podamos seguir sumando días, meses y años a esta historia.",
+    "PARA Mosholate\n\nElla decidió darle una oportunidad porque lo amaba, y él decidió cambiar porque no quería perderla. Los dos eligieron luchar por su amor.",
   firmaFinal: "Te amo ❤️",
 };

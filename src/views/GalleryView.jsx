@@ -6,6 +6,7 @@ import InfiniteGallery from '@/components/ui/infinite-gallery-tw';
 import Counter from '@/components/ui/counter';
 import LuxurySections from '@/components/ui/luxury-sections';
 import TreeGallery from '@/components/ui/tree-gallery';
+import { logout } from '@/services/authService';
 
 const GalleryView = ({ user, onOpenSettings }) => {
   const [images, setImages] = useState([]);
@@ -168,14 +169,25 @@ const GalleryView = ({ user, onOpenSettings }) => {
         </div>
       )}
 
-      {/* Botón de Configuración SOLO visible en Home (Y si está logueado) */}
+      {/* Botones SOLO visibles en Home (Y si está logueado) */}
       {viewMode === 'home' && user && onOpenSettings && (
-        <button 
-          onClick={onOpenSettings}
-          className="fixed top-8 right-8 z-[9999] px-6 py-3 bg-black/50 hover:bg-black/80 border border-pink-500/50 backdrop-blur-md text-white rounded-full font-bold shadow-xl transition-all"
-        >
-          ⚙️ Configurar Mi Universo
-        </button>
+        <div className="fixed top-8 right-8 z-[9999] flex gap-3">
+          <button 
+            onClick={async () => {
+              await logout();
+              window.location.reload();
+            }}
+            className="px-6 py-3 bg-red-900/50 hover:bg-red-900/80 border border-red-500/50 backdrop-blur-md text-white rounded-full font-bold shadow-xl transition-all"
+          >
+            Cerrar Sesión
+          </button>
+          <button 
+            onClick={onOpenSettings}
+            className="px-6 py-3 bg-black/50 hover:bg-black/80 border border-pink-500/50 backdrop-blur-md text-white rounded-full font-bold shadow-xl transition-all"
+          >
+            ⚙️ Configurar Mi Universo
+          </button>
+        </div>
       )}
 
       {isWarping && (

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 
 import imageCompression from 'browser-image-compression';
 import { PLANS } from '@/services/userService';
+import { logout } from '@/services/authService';
 
 const SettingsView = ({ user, onSaveComplete }) => {
   const [formData, setFormData] = useState({
@@ -299,12 +300,23 @@ const SettingsView = ({ user, onSaveComplete }) => {
         
         <div className="flex justify-between items-center mb-8 border-b border-gray-800 pb-4">
           <h1 className="text-3xl font-serif italic text-pink-400">Configura tu Universo</h1>
-          <button 
-            onClick={onSaveComplete}
-            className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors"
-          >
-            Ir a la Galería ➔
-          </button>
+          <div className="flex gap-4">
+            <button 
+              onClick={async () => {
+                await logout();
+                window.location.reload();
+              }}
+              className="px-4 py-2 bg-red-900/50 hover:bg-red-900/80 border border-red-500/50 rounded-lg text-sm text-white transition-colors"
+            >
+              Cerrar Sesión
+            </button>
+            <button 
+              onClick={onSaveComplete}
+              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors"
+            >
+              Ir a la Galería ➔
+            </button>
+          </div>
         </div>
 
         {message && (

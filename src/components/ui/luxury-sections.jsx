@@ -57,6 +57,7 @@ export default function LuxurySections({ userData }) {
       )}
 
       {/* SECCIÓN: LÍNEA DE TIEMPO (HISTORIA) */}
+      {/* 
       {CONFIG.historia && CONFIG.historia.length > 0 && (
         <section className="w-full max-w-4xl px-4 flex flex-col items-center relative">
           <h3 className="text-3xl md:text-5xl font-serif italic text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-pink-200 drop-shadow-md mb-4 text-center">
@@ -79,8 +80,10 @@ export default function LuxurySections({ userData }) {
           </div>
         </section>
       )}
+      */}
 
       {/* SECCIÓN: CUENTITOS */}
+      {/* 
       {CONFIG.cuentos && CONFIG.cuentos.length > 0 && (
         <section className="w-full max-w-6xl px-4 flex flex-col items-center">
           <h3 className="text-3xl md:text-5xl font-serif italic text-white drop-shadow-md mb-4 text-center">
@@ -100,13 +103,14 @@ export default function LuxurySections({ userData }) {
           </div>
         </section>
       )}
+      */}
 
       {/* SECCIÓN: CARTA FINAL */}
       {pages.length > 0 && (
         <section className="w-full max-w-3xl px-4 flex flex-col items-center mt-16 pb-16">
+          {/*
           <div className="flex flex-col items-center w-full max-w-md mb-8 space-y-4">
             
-            {/* Controles de Paginación */}
             <div className="flex justify-between items-center w-full">
               <button 
                 onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
@@ -127,7 +131,6 @@ export default function LuxurySections({ userData }) {
               </button>
             </div>
 
-            {/* Selector Rápido de Estilo */}
             <button
               onClick={() => {
                 setLocalTheme(prev => {
@@ -141,6 +144,7 @@ export default function LuxurySections({ userData }) {
               Estilo actual: {localTheme === 'modern' ? 'Moderno (Crema)' : localTheme === 'parchment' ? 'Antiguo (Pergamino)' : 'Antiguo Quemado'} 🔄
             </button>
           </div>
+          */}
 
           <LetterPage 
             key={`${currentPage}-${localTheme}`} 

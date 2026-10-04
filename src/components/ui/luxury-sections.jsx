@@ -22,18 +22,18 @@ export default function LuxurySections({ userData }) {
   };
 
   const embedUrl = getEmbedUrl(userData?.spotifyUrl || CONFIG.spotifyUrl);
-  
-  const pages = userData?.letterPages && userData.letterPages.length > 0 && userData.letterPages[0] !== "" 
-    ? userData.letterPages 
+
+  const pages = userData?.letterPages && userData.letterPages.length > 0 && userData.letterPages[0] !== ""
+    ? userData.letterPages
     : [
-        CONFIG.mensajeFinal || "Página 1", 
-        "Esta es una segunda página de prueba para que puedas ver cómo funciona la paginación. Puedes editar todas tus páginas o borrarlas desde la sección de Configuración."
-      ];
+      CONFIG.mensajeFinal || "Página 1",
+      "Esta es una segunda página de prueba para que puedas ver cómo funciona la paginación. Puedes editar todas tus páginas o borrarlas desde la sección de Configuración."
+    ];
   const userName = userData?.user1Name || CONFIG.nombrePareja;
 
   return (
     <div className="w-full flex flex-col items-center justify-center space-y-32 pb-32">
-      
+
       {/* SECCIÓN: MÚSICA */}
       {embedUrl && (
         <section className="w-full max-w-4xl px-4 flex flex-col items-center">
@@ -146,12 +146,12 @@ export default function LuxurySections({ userData }) {
           </div>
           */}
 
-          <LetterPage 
-            key={`${currentPage}-${localTheme}`} 
-            index={currentPage} 
-            text={pages[currentPage]} 
-            userName={userName} 
-            signature={CONFIG.firmaFinal} 
+          <LetterPage
+            key={`${currentPage}-${localTheme}`}
+            index={currentPage}
+            text={pages[currentPage]}
+            userName={userName}
+            signature={CONFIG.firmaFinal}
             isLastPage={currentPage === pages.length - 1}
             theme={localTheme}
           />

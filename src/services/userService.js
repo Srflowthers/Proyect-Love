@@ -28,7 +28,11 @@ export const fetchAllClients = async () => {
   try {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_URL}/api/users`, { headers });
-    if (!res.ok) throw new Error("Error obteniendo clientes");
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("Backend error:", res.status, errText);
+      throw new Error("Error obteniendo clientes");
+    }
     return await res.json(); // Backend ya filtra role === 'client'
   } catch (error) {
     console.error("Error obteniendo clientes:", error);

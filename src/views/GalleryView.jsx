@@ -19,8 +19,41 @@ const GalleryView = ({ user, onOpenSettings }) => {
   // Fetch real user data and images from Firestore
   useEffect(() => {
     if (!user) {
-      // Si es un visitante sin loguear, le mostramos todas las fotos de demostración locales
-      setImages(DEMO_IMAGES);
+      // Si es un visitante sin loguear, intentamos obtener las fotos de demostración del backend
+      const fetchDemoImages = async () => {
+        try {
+          const cached = localStorage.getItem('demo-images-v1');
+          if (cached) {
+            const { t, images } = JSON.parse(cached);
+            if (Date.now() - t < 3600000 && images && images.length > 0) {
+              setImages(images.map(img => typeof img === 'string' ? { src: img, public_id: img } : img));
+              return;
+            }
+          }
+        } catch(e) {}
+
+        try {
+          const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8787'}/api/demo-images`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.images && data.images.length > 0) {
+              try {
+                localStorage.setItem('demo-images-v1', JSON.stringify({ t: Date.now(), images: data.images }));
+              } catch(e) {}
+              const mappedImages = data.images.map(img => 
+                typeof img === 'string' ? { src: img, public_id: img } : img
+              );
+              setImages(mappedImages);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching demo images del backend:", err);
+        }
+        // Fallback local
+        setImages(DEMO_IMAGES);
+      };
+      fetchDemoImages();
       return;
     }
 

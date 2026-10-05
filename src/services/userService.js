@@ -1,6 +1,6 @@
 import { auth } from '@/config/firebase';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '');
 
 const getAuthHeaders = async () => {
   const token = await auth.currentUser?.getIdToken();

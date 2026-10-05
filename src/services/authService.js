@@ -27,7 +27,7 @@ export const logout = async () => {
 export const makeUserAdminDevMode = async (user) => {
   try {
     const token = await user.getIdToken();
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8787';
+    const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '');
     await fetch(`${apiUrl}/api/make-me-admin`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` }

@@ -37,7 +37,10 @@ const GalleryView = ({ user, onOpenSettings }) => {
           setUserData(data);
           
           if (data.galleryImages && data.galleryImages.length > 0) {
-            setImages(data.galleryImages);
+            const mappedImages = data.galleryImages.map(img => 
+              typeof img === 'string' ? { src: img, public_id: img } : img
+            );
+            setImages(mappedImages);
           } else {
             // El usuario está logueado pero no tiene imágenes.
             // NO le mostramos la demo, le mostramos SU universo (que actualmente está vacío).

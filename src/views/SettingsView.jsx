@@ -223,8 +223,12 @@ const SettingsView = ({ user, onSaveComplete }) => {
             currentImages = snap.data.galleryImages;
           }
           const updatedImages = [...currentImages, newImg];
-          await updateDoc(userRef, { galleryImages: updatedImages });
-          
+          const patchRes = await fetch(`${apiUrl}/api/users/me`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ galleryImages: updatedImages })
+          });
+          if (!patchRes.ok) throw new Error("Error guardando foto en backend");
           setImages(updatedImages);
           
         } catch (error) {

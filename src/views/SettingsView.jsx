@@ -32,7 +32,7 @@ const SettingsView = ({ user, onSaveComplete }) => {
     const loadUserData = async () => {
       try {
         const token = await user.getIdToken();
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8787'}/api/users/me`, {
+        const res = await fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '')}/api/users/me`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const snap = await res.json();
@@ -71,7 +71,7 @@ const SettingsView = ({ user, onSaveComplete }) => {
     setMessage('');
     try {
       const token = await user.getIdToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8787'}/api/users/me`, {
+      const res = await fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '')}/api/users/me`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -157,7 +157,7 @@ const SettingsView = ({ user, onSaveComplete }) => {
 
     try {
       const token = await user.getIdToken();
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8787';
+      const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '');
 
       while (uploadQueueRef.current.length > 0) {
         const fileToUpload = uploadQueueRef.current[0];
@@ -264,7 +264,7 @@ const SettingsView = ({ user, onSaveComplete }) => {
     setMessage('Eliminando imagen...');
     try {
       const token = await user.getIdToken();
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8787';
+      const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '');
 
       // 1. Borrar de Cloudinary usando el backend
       const delRes = await fetch(`${apiUrl}/api/images/delete`, {

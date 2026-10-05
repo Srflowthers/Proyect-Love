@@ -33,7 +33,7 @@ const GalleryView = ({ user, onOpenSettings }) => {
         } catch(e) {}
 
         try {
-          const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8787'}/api/demo-images`);
+          const res = await fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '')}/api/demo-images`);
           if (res.ok) {
             const data = await res.json();
             if (data.images && data.images.length > 0) {
@@ -60,7 +60,7 @@ const GalleryView = ({ user, onOpenSettings }) => {
     const fetchUserData = async () => {
       try {
         const token = await user.getIdToken();
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8787'}/api/users/me`, {
+        const res = await fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '')}/api/users/me`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const snap = await res.json();

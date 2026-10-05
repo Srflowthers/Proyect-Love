@@ -62,6 +62,62 @@ export const updateClientPlan = async (userId, planId) => {
   }
 };
 
+export const fetchPlans = async () => {
+  try {
+    const res = await fetch(`${API_URL}/api/plans`);
+    if (!res.ok) return [];
+    return await res.json();
+  } catch (error) {
+    console.error("Error fetching plans:", error);
+    return [];
+  }
+};
+
+export const createPlan = async (planData) => {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_URL}/api/plans`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(planData)
+    });
+    return res.ok;
+  } catch (error) {
+    return false;
+  }
+};
+
+export const updatePlanConfig = async (planId, planData) => {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_URL}/api/plans/${planId}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(planData)
+    });
+    return res.ok;
+  } catch (error) {
+    return false;
+  }
+};
+
+export const renewClientPlan = async (userId) => {
+  try {
+    const headers = await getAuthHeaders();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+    const res = await fetch(`${API_URL}/api/users/${userId}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ planExpiresAt: expiresAt.toISOString() })
+    });
+    return res.ok;
+  } catch (error) {
+    console.error("Error renewing plan:", error);
+    return false;
+  }
+};
+
 export const toggleClientFlightMode = async (userId, enable) => {
   try {
     const headers = await getAuthHeaders();

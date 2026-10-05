@@ -6,9 +6,7 @@ import { saveUserToDatabase } from './userService';
 export const loginWithGoogle = async (turnstileToken) => {
   try {
     const result = await signInWithPopup(auth, googleProvider);
-    if (turnstileToken) {
-      await saveUserToDatabase(result.user, turnstileToken);
-    }
+    await saveUserToDatabase(result.user, turnstileToken);
     return { user: result.user, error: null };
   } catch (error) {
     console.error("Error en login:", error);

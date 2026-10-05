@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
+import { Turnstile } from '@marsidev/react-turnstile';
 import { loginWithGoogle } from '@/services/authService';
 
 const LoginView = () => {
   const [authError, setAuthError] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState(null);
 
   const handleLogin = async () => {
     setAuthError('');
-    const { error } = await loginWithGoogle();
+    if (!turnstileToken) {
+      setAuthError('Por favor, completa la verificación de seguridad (Turnstile).');
+      return;
+    }
+    const { error } = await loginWithGoogle(turnstileToken);
     if (error) setAuthError(error);
   };
 
@@ -19,9 +25,18 @@ const LoginView = () => {
         <h1 className="text-4xl md:text-5xl font-serif italic mb-2 text-transparent bg-clip-text bg-gradient-to-r from-pink-300 to-purple-300">Acceso Privado</h1>
         <p className="text-gray-400 mb-8 font-sans tracking-widest text-sm uppercase">Solo personas autorizadas</p>
         
+        <div className="mb-6">
+          <Turnstile 
+            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY} 
+            onSuccess={(token) => setTurnstileToken(token)}
+            options={{ theme: 'dark' }}
+          />
+        </div>
+
         <button 
           onClick={handleLogin}
-          className="group relative px-8 py-4 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full transition-all duration-300 overflow-hidden flex items-center gap-3"
+          disabled={!turnstileToken}
+          className={`group relative px-8 py-4 ${!turnstileToken ? 'bg-gray-600/50 cursor-not-allowed' : 'bg-white/10 hover:bg-white/20'} border border-white/20 rounded-full transition-all duration-300 overflow-hidden flex items-center gap-3`}
         >
           <div className="absolute inset-0 bg-gradient-to-r from-pink-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <svg className="w-5 h-5 text-white z-10" viewBox="0 0 24 24" fill="currentColor">

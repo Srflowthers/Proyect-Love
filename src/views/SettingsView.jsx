@@ -16,12 +16,12 @@ const SettingsView = ({ user, onSaveComplete }) => {
     letterPages: [''],
     letterStyle: 'modern'
   });
-  
+
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false); // is queue processing?
   const [message, setMessage] = useState('');
-  
+
   // Nuevo sistema de cola en segundo plano
   const [uploadQueue, setUploadQueue] = useState([]);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
@@ -113,7 +113,7 @@ const SettingsView = ({ user, onSaveComplete }) => {
     const currentBytes = images.reduce((sum, img) => sum + (img.bytes || 0), 0);
     const newFilesBytes = files.reduce((sum, file) => sum + file.size, 0); // Estimación basada en archivo original
     if (currentBytes + newFilesBytes > planData.maxBytes) {
-      const maxMB = (planData.maxBytes / (1024*1024)).toFixed(0);
+      const maxMB = (planData.maxBytes / (1024 * 1024)).toFixed(0);
       alert(`¡Límite de almacenamiento excedido! Tu plan actual (${planData.name}) permite un máximo de ${maxMB} MB.`);
       return;
     }
@@ -140,7 +140,7 @@ const SettingsView = ({ user, onSaveComplete }) => {
 
     uploadQueueRef.current = [...uploadQueueRef.current, ...compressedFiles];
     setUploadQueue([...uploadQueueRef.current]); // Para UI
-    
+
     if (!uploadingRef.current) {
       setUploadProgress({ current: 1, total: compressedFiles.length });
       processQueue();
@@ -151,7 +151,7 @@ const SettingsView = ({ user, onSaveComplete }) => {
 
   const processQueue = async () => {
     if (uploadingRef.current || uploadQueueRef.current.length === 0) return;
-    
+
     uploadingRef.current = true;
     setUploading(true);
 
@@ -161,14 +161,14 @@ const SettingsView = ({ user, onSaveComplete }) => {
 
       while (uploadQueueRef.current.length > 0) {
         const fileToUpload = uploadQueueRef.current[0];
-        
+
         try {
           // 1. Pedir firma
           const sigRes = await fetch(`${apiUrl}/api/upload-signature`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
           });
-          
+
           if (!sigRes.ok) {
             const err = await sigRes.json();
             throw new Error(err.message || 'Error en firma');
@@ -208,12 +208,12 @@ const SettingsView = ({ user, onSaveComplete }) => {
           const urlParts = cloudData.secure_url.split('/upload/');
           const optimizedUrl = `${urlParts[0]}/upload/f_auto,q_auto,w_800/${urlParts[1]}`;
 
-          const newImg = { 
-            src: optimizedUrl, 
+          const newImg = {
+            src: optimizedUrl,
             public_id: cloudData.public_id,
             bytes: cloudData.bytes || 0
           };
-          
+
           const getRes = await fetch(`${apiUrl}/api/users/me`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
@@ -230,7 +230,7 @@ const SettingsView = ({ user, onSaveComplete }) => {
           });
           if (!patchRes.ok) throw new Error("Error guardando foto en backend");
           setImages(updatedImages);
-          
+
         } catch (error) {
           console.error("Error en archivo:", fileToUpload.name, error);
           // Opcional: mostrar un toast de error, pero continuamos con la cola
@@ -239,15 +239,15 @@ const SettingsView = ({ user, onSaveComplete }) => {
         // Avanzar cola
         uploadQueueRef.current.shift();
         setUploadQueue([...uploadQueueRef.current]); // Actualizar UI
-        
+
         if (uploadQueueRef.current.length > 0) {
           setUploadProgress(prev => ({ ...prev, current: prev.current + 1 }));
         }
       }
 
-      setMessage('¡Todas las imágenes subidas con éxito! 📸');
+      if (uploadProgress.current > 1) { setMessage('¡Imágenes procesadas!'); }
       setTimeout(() => { setMessage(''); }, 3000);
-      
+
     } catch (globalError) {
       console.error("Error global de subida:", globalError);
     } finally {
@@ -259,7 +259,7 @@ const SettingsView = ({ user, onSaveComplete }) => {
 
   const handleDeleteImage = async (imageToDelete) => {
     if (!confirm('¿Estás seguro de que deseas eliminar esta imagen de tu universo?')) return;
-    
+
     setLoading(true);
     setMessage('Eliminando imagen...');
     try {
@@ -269,7 +269,7 @@ const SettingsView = ({ user, onSaveComplete }) => {
       // 1. Borrar de Cloudinary usando el backend
       const delRes = await fetch(`${apiUrl}/api/images/delete`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
@@ -280,14 +280,14 @@ const SettingsView = ({ user, onSaveComplete }) => {
 
       // 2. Borrar de Firestore (ahora usando el API)
       const updatedImages = images.filter(img => img.public_id !== imageToDelete.public_id);
-      
+
       const patchRes = await fetch(`${apiUrl}/api/users/me`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ galleryImages: updatedImages })
       });
       if (!patchRes.ok) throw new Error("Error al eliminar imagen en DB");
-      
+
       setImages(updatedImages);
       setMessage('Imagen eliminada.');
     } catch (error) {
@@ -301,11 +301,11 @@ const SettingsView = ({ user, onSaveComplete }) => {
   return (
     <div className="min-h-screen bg-black text-white p-8 flex flex-col items-center">
       <div className="w-full max-w-3xl bg-[#111] border border-pink-500/30 rounded-2xl p-8 shadow-[0_0_50px_rgba(236,72,153,0.1)]">
-        
+
         <div className="flex justify-between items-center mb-8 border-b border-gray-800 pb-4">
           <h1 className="text-3xl font-serif italic text-pink-400">Configura tu Universo</h1>
           <div className="flex gap-4">
-            <button 
+            <button
               onClick={async () => {
                 await logout();
                 window.location.reload();
@@ -314,7 +314,7 @@ const SettingsView = ({ user, onSaveComplete }) => {
             >
               Cerrar Sesión
             </button>
-            <button 
+            <button
               onClick={onSaveComplete}
               className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors"
             >
@@ -333,8 +333,8 @@ const SettingsView = ({ user, onSaveComplete }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm text-gray-400 mb-2 uppercase tracking-wider">Tu Nombre o Apodo</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 name="user1Name"
                 value={formData.user1Name}
                 onChange={handleChange}
@@ -344,8 +344,8 @@ const SettingsView = ({ user, onSaveComplete }) => {
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-2 uppercase tracking-wider">Nombre o Apodo de tu Pareja</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 name="user2Name"
                 value={formData.user2Name}
                 onChange={handleChange}
@@ -357,8 +357,8 @@ const SettingsView = ({ user, onSaveComplete }) => {
 
           <div>
             <label className="block text-sm text-gray-400 mb-2 uppercase tracking-wider">Fecha de Aniversario</label>
-            <input 
-              type="date" 
+            <input
+              type="date"
               name="anniversaryDate"
               value={formData.anniversaryDate}
               onChange={handleChange}
@@ -368,8 +368,8 @@ const SettingsView = ({ user, onSaveComplete }) => {
 
           <div>
             <label className="block text-sm text-gray-400 mb-2 uppercase tracking-wider">Mensaje de Amor (Opcional)</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               name="customMessage"
               value={formData.customMessage}
               onChange={handleChange}
@@ -380,10 +380,10 @@ const SettingsView = ({ user, onSaveComplete }) => {
 
           <div className="border-t border-gray-800 pt-6 mt-6">
             <h3 className="text-xl font-serif text-pink-300 mb-4">Carta Final en 3D</h3>
-            
+
             <div className="mb-6">
               <label className="block text-sm text-gray-400 mb-2 uppercase tracking-wider">Estilo del Papel</label>
-              <select 
+              <select
                 name="letterStyle"
                 value={formData.letterStyle}
                 onChange={handleChange}
@@ -399,23 +399,23 @@ const SettingsView = ({ user, onSaveComplete }) => {
             {formData.letterPages.map((pageText, index) => (
               <div key={index} className="mb-6 bg-[#1a1a1a] p-4 rounded-xl border border-gray-800">
                 <label className="block text-sm text-pink-400/80 mb-2 uppercase tracking-wider font-semibold">Página {index + 1}</label>
-                <textarea 
+                <textarea
                   value={pageText}
                   onChange={(e) => {
                     const newPages = [...formData.letterPages];
                     newPages[index] = e.target.value;
-                    setFormData({...formData, letterPages: newPages});
+                    setFormData({ ...formData, letterPages: newPages });
                   }}
                   rows={5}
                   placeholder="Escribe aquí los párrafos de esta página..."
                   className="w-full bg-black border border-gray-700 rounded-lg p-3 text-white focus:border-pink-500 outline-none transition-colors mb-2"
                 />
                 {formData.letterPages.length > 1 && (
-                  <button 
+                  <button
                     type="button"
                     onClick={() => {
                       const newPages = formData.letterPages.filter((_, i) => i !== index);
-                      setFormData({...formData, letterPages: newPages});
+                      setFormData({ ...formData, letterPages: newPages });
                     }}
                     className="text-red-400 text-sm hover:text-red-300 font-semibold"
                   >
@@ -424,9 +424,9 @@ const SettingsView = ({ user, onSaveComplete }) => {
                 )}
               </div>
             ))}
-            <button 
+            <button
               type="button"
-              onClick={() => setFormData({...formData, letterPages: [...formData.letterPages, '']})}
+              onClick={() => setFormData({ ...formData, letterPages: [...formData.letterPages, ''] })}
               className="px-4 py-2 border border-pink-500/50 text-pink-300 rounded-lg hover:bg-pink-500/10 transition-colors w-full"
             >
               + Agregar Nueva Página
@@ -436,8 +436,8 @@ const SettingsView = ({ user, onSaveComplete }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
             <div>
               <label className="block text-sm text-gray-400 mb-2 uppercase tracking-wider">Mascotas (Opcional)</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 name="pets"
                 value={formData.pets}
                 onChange={handleChange}
@@ -447,8 +447,8 @@ const SettingsView = ({ user, onSaveComplete }) => {
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-2 uppercase tracking-wider">Hijos (Opcional)</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 name="kids"
                 value={formData.kids}
                 onChange={handleChange}
@@ -460,8 +460,8 @@ const SettingsView = ({ user, onSaveComplete }) => {
 
           <div>
             <label className="block text-sm text-gray-400 mb-2 uppercase tracking-wider">Link de Spotify (Tu Canción Especial)</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               name="spotifyUrl"
               value={formData.spotifyUrl}
               onChange={handleChange}
@@ -471,8 +471,8 @@ const SettingsView = ({ user, onSaveComplete }) => {
             <p className="text-xs text-gray-500 mt-2">Copia y pega el enlace de tu canción favorita desde Spotify.</p>
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={loading}
             className="w-full py-4 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 rounded-lg font-bold shadow-lg transition-all disabled:opacity-50"
           >
@@ -482,11 +482,11 @@ const SettingsView = ({ user, onSaveComplete }) => {
 
         <div className="border-t border-gray-800 pt-8">
           <h2 className="text-2xl font-serif italic text-purple-400 mb-6">Tus Recuerdos (Fotos)</h2>
-          
+
           <div className="mb-6 relative">
-            <input 
-              type="file" 
-              multiple 
+            <input
+              type="file"
+              multiple
               accept="image/*"
               onChange={handleImageUpload}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
@@ -500,7 +500,7 @@ const SettingsView = ({ user, onSaveComplete }) => {
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                   <span className="text-pink-200 font-medium text-center">
-                    Subiendo ({uploadProgress.current - 1} de {uploadProgress.total})<br/>
+                    Subiendo ({uploadProgress.current - 1} de {uploadProgress.total})<br />
                     <span className="text-sm opacity-70">¡Puedes seguir seleccionando más fotos!</span>
                   </span>
                 </>
@@ -520,7 +520,7 @@ const SettingsView = ({ user, onSaveComplete }) => {
                   <img src={img.src} alt="Recuerdo" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity gap-2">
                     <span className="text-xs text-white uppercase tracking-wider">Subida</span>
-                    <button 
+                    <button
                       type="button"
                       onClick={() => handleDeleteImage(img)}
                       className="px-3 py-1 bg-red-500/80 hover:bg-red-500 text-white text-xs rounded-full shadow-lg transition-colors"

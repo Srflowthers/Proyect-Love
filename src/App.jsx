@@ -1,10 +1,11 @@
 import React, { Suspense, lazy } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { loginWithGoogle } from '@/services/authService';
 const AdminView = lazy(() => import('@/views/AdminView'));
 import GalleryView from '@/views/GalleryView';
 import SettingsView from '@/views/SettingsView';
-import Dock from '@/components/ui/Dock';
+import Dock from '@/components/Dock';
 import PricingModal from '@/components/ui/PricingModal';
 import { logout } from '@/services/authService'; 
 
@@ -13,11 +14,52 @@ function App() {
   // Los clientes ven la galería por defecto. El admin ve el panel.
   const [view, setView] = React.useState(null); 
   const [showPricing, setShowPricing] = React.useState(false);
+  const [settingsTab, setSettingsTab] = React.useState('profile');
+  const [adminTab, setAdminTab] = React.useState('clients');
+  const [isMobile, setIsMobile] = React.useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  const [hideDock, setHideDock] = React.useState(false);
 
   React.useEffect(() => {
-    if (userRole === 'admin' && !view) setView('admin');
-    if (userRole === 'client' && !view) setView('gallery');
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      console.log('Current window.innerWidth:', window.innerWidth, 'isMobile:', window.innerWidth < 768);
+    };
+    handleResize(); // Evalúa inmediatamente al montar por si el valor inicial difiere
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  React.useEffect(() => {
+    if (userRole === 'admin' && !view) {
+      setView('admin');
+      window.history.replaceState({ view: 'admin' }, '');
+    }
+    if (userRole === 'client' && !view) {
+      handleSetView('gallery');
+      window.history.replaceState({ view: 'gallery' }, '');
+    }
   }, [userRole, view]);
+
+  // Manejar el botón de "Atrás" del navegador
+  React.useEffect(() => {
+    const handlePopState = (event) => {
+      if (event.state && event.state.view) {
+        setView(event.state.view);
+      } else {
+        // Fallback si no hay estado: volver a la galería o panel principal
+        setView(userRole === 'admin' ? 'admin' : 'gallery');
+      }
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [userRole]);
+
+  // Wrapper para cambiar la vista y añadir historial
+  const handleSetView = (newView) => {
+    setView(newView);
+    window.history.pushState({ view: newView }, '');
+  };
 
   if (loading) {
     return (
@@ -69,83 +111,120 @@ function App() {
     );
   }
 
-  if (view === 'settings') {
-    return <SettingsView user={user} onSaveComplete={() => setView('gallery')} />;
-  }
+  // Items del Dock profesionales por rol
+  const dockItems = userRole === 'admin' ? [
+    {
+      icon: <svg className="w-6 h-6 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>,
+      label: 'Panel Principal',
+      onClick: () => { setAdminTab('clients'); handleSetView('admin'); }
+    },
+    {
+      icon: <svg className="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>,
+      label: 'Usuarios',
+      onClick: () => { setAdminTab('clients'); handleSetView('admin'); }
+    },
+    {
+      icon: <svg className="w-6 h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+      label: 'Planes',
+      onClick: () => { setAdminTab('plans'); handleSetView('admin'); }
+    },
+    {
+      icon: <svg className="w-6 h-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
+      label: 'Configuración de Sistema',
+      onClick: () => { setSettingsTab('profile'); handleSetView('settings'); }
+    },
+    {
+      icon: <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>,
+      label: 'Cerrar Sesión',
+      onClick: async () => { if (window.confirm("¿Estás seguro de que deseas cerrar sesión?")) { await logout(); window.location.reload(); } }
+    }
+  ] : [
+    {
+      icon: <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>,
+      label: 'Galería',
+      onClick: () => { handleSetView('gallery'); }
+    },
+    {
+      icon: <svg className="w-6 h-6 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76" /></svg>,
+      label: 'Cartas',
+      onClick: () => { setSettingsTab('pages'); handleSetView('settings'); }
+    },
+    {
+      icon: <svg className="w-6 h-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
+      label: 'Mis Fotos',
+      onClick: () => { setSettingsTab('images'); handleSetView('settings'); }
+    },
+    {
+      icon: <svg className="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
+      label: 'Mi Perfil',
+      onClick: () => { setSettingsTab('profile'); handleSetView('settings'); }
+    },
+    {
+      icon: <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>,
+      label: 'Salir',
+      onClick: async () => { if (window.confirm("¿Estás seguro de que deseas salir de tu Universo?")) { await logout(); window.location.reload(); } }
+    }
+  ];
 
-  if (userRole === 'admin' && view === 'admin') {
-    return (
+  let activeView = null;
+  if (view === 'settings') {
+    activeView = <SettingsView user={user} onSaveComplete={() => handleSetView('gallery')} initialTab={settingsTab} />;
+  } else if (userRole === 'admin' && view === 'admin') {
+    activeView = (
       <div className="relative">
         <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center text-pink-400 font-serif italic text-2xl">Cargando Panel...</div>}>
-          <AdminView user={user} />
+          <AdminView user={user} initialTab={adminTab} />
         </Suspense>
         <button 
-          onClick={() => setView('settings')}
+          onClick={() => handleSetView('settings')}
           className="fixed bottom-8 left-8 z-50 px-6 py-3 bg-pink-600 hover:bg-pink-500 text-white rounded-full font-bold shadow-[0_0_20px_rgba(236,72,153,0.5)] transition-all"
         >
           Configurar y Ver Galería ✨
         </button>
       </div>
     );
+  } else {
+    activeView = (
+      <div className="relative">
+        <GalleryView 
+          user={user} 
+          onOpenSettings={(tab = 'profile') => {
+            setSettingsTab(tab);
+            handleSetView('settings');
+          }} 
+          onOpenAdmin={userRole === 'admin' ? () => handleSetView('admin') : undefined}
+          onDockVisibilityChange={setHideDock}
+        />
+        
+        {userRole === 'admin' && (
+          <button 
+            onClick={() => handleSetView('admin')}
+            className="fixed top-24 right-8 z-[9999] px-6 py-3 bg-gray-900 border border-gray-700 hover:bg-gray-800 text-white rounded-full font-bold shadow-xl transition-all"
+          >
+            ← Volver al Panel Admin
+          </button>
+        )}
+      </div>
+    );
   }
 
-  // Si están viendo la galería (ya sean admins o clientes)
   return (
-    <div className="relative">
-      <GalleryView user={user} onOpenSettings={() => setView('settings')} />
-      
-      {/* Botón extra para el admin para volver a su panel */}
-      {userRole === 'admin' && (
-        <button 
-          onClick={() => setView('admin')}
-          className="fixed top-24 right-8 z-[9999] px-6 py-3 bg-gray-900 border border-gray-700 hover:bg-gray-800 text-white rounded-full font-bold shadow-xl transition-all"
-        >
-          ← Volver al Panel Admin
-        </button>
-      )}
+    <>
+      {activeView}
 
-      {/* Dock Navigation - Oculto en la Galería para no molestar */}
-      {view !== 'gallery' && (
+      {/* GLOBAL DOCK - Oculto solo en inmersión */}
+      {user && !hideDock && createPortal(
         <Dock 
-          items={[
-            {
-              icon: (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-              ),
-              label: 'Galería',
-              onClick: () => setView('gallery')
-            },
-            ...(userRole === 'admin' ? [{
-              icon: (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-              ),
-              label: 'Panel Admin',
-              onClick: () => setView('admin')
-            }] : []),
-            {
-              icon: (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-              ),
-              label: 'Configuración',
-              onClick: () => setView('settings')
-            },
-            {
-              icon: (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
-              ),
-              label: 'Cerrar Sesión',
-              onClick: async () => {
-                await logout();
-                window.location.reload();
-              }
-            }
-          ]}
-          panelHeight={68}
-          baseItemSize={50}
-          magnification={70}
-        />
+          direction={isMobile ? "horizontal" : "vertical"}
+          items={dockItems}
+          panelHeight={60}
+          baseItemSize={45}
+          magnification={65}
+          distance={150}
+        />,
+        document.body
       )}
-    </div>
+    </>
   );
 }
 

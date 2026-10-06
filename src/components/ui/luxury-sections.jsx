@@ -150,6 +150,7 @@ export default function LuxurySections({ userData }) {
             key={`${currentPage}-${localTheme}`}
             index={currentPage}
             text={pages[currentPage]}
+            title={userData?.letterTitle}
             userName={userName}
             signature={CONFIG.firmaFinal}
             isLastPage={currentPage === pages.length - 1}

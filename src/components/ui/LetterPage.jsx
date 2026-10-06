@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PaperCrumple from './PaperCrumple';
 
-const LetterPage = ({ text, userName, signature, index, isLastPage, theme }) => {
+const LetterPage = ({ text, title, userName, signature, index, isLastPage, theme }) => {
   const [letterSrc, setLetterSrc] = useState(null);
 
   useEffect(() => {
@@ -24,7 +24,7 @@ const LetterPage = ({ text, userName, signature, index, isLastPage, theme }) => 
       
       if (index === 0) {
         ctx.font = 'bold 24px "Georgia", serif';
-        ctx.fillText(`Para ${userName || 'Ti'},`, 40, y);
+        ctx.fillText(title || `Para ${userName || 'Ti'},`, 40, y);
         y += 50;
       }
       

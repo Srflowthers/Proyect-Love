@@ -132,3 +132,17 @@ export const toggleClientFlightMode = async (userId, enable) => {
     return false;
   }
 };
+
+export const deleteClient = async (userId) => {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_URL}/api/users/${userId}`, {
+      method: 'DELETE',
+      headers
+    });
+    return res.ok;
+  } catch (error) {
+    console.error("Error deleting client:", error);
+    return false;
+  }
+};

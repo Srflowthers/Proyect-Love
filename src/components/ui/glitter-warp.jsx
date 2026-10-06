@@ -114,10 +114,18 @@ export function GlitterWarp({
     };
 
     const onMove = (e) => {
+      // Ignorar si es mouse y no hay clic presionado (solo hover)
+      if (e.pointerType === "mouse" && e.buttons === 0) return;
+
       const r = canvas.getBoundingClientRect();
       const m = (live.current.mouseInfluence ?? preset.mouse ?? 0.15) * 2;
       tgt.x = w / 2 + ((e.clientX - r.left) / r.width - 0.5) * w * m;
       tgt.y = h / 2 + ((e.clientY - r.top) / r.height - 0.5) * h * m;
+    };
+
+    const resetCenter = () => {
+      tgt.x = w / 2;
+      tgt.y = h / 2;
     };
 
     const frame = (now) => {

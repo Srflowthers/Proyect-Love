@@ -1,0 +1,62 @@
+[
+  {
+    "archivo": "components.json",
+    "mensaje": "chore: configuración de registry privado para React Bits Pro"
+  },
+  {
+    "archivo": "package.json",
+    "mensaje": "chore: actualización de dependencias y registro de shadcn UI"
+  },
+  {
+    "archivo": "package-lock.json",
+    "mensaje": "chore: actualización de lockfile"
+  },
+  {
+    "archivo": "src/App.jsx",
+    "mensaje": "feat: implementación de Dock global usando React Portals"
+  },
+  {
+    "archivo": "src/components/ui/LetterPage.jsx",
+    "mensaje": "fix: ajustes de renderización en LetterPage"
+  },
+  {
+    "archivo": "src/components/ui/luxury-sections.jsx",
+    "mensaje": "feat: actualización visual de luxury sections"
+  },
+  {
+    "archivo": "src/services/userService.js",
+    "mensaje": "feat: ajustes en lógica del servicio de usuarios"
+  },
+  {
+    "archivo": "src/views/AdminView.jsx",
+    "mensaje": "feat: mejoras en el panel de administración"
+  },
+  {
+    "archivo": "src/views/GalleryView.jsx",
+    "mensaje": "feat: GlitterWarp integrado como fondo animado y control de Dock"
+  },
+  {
+    "archivo": "src/views/SettingsView.jsx",
+    "mensaje": "feat: rediseño del catálogo de Efectos Especiales y Fondos Clásicos"
+  },
+  {
+    "archivo": "src/components/Dock.jsx",
+    "mensaje": "feat: nuevo componente Dock interactivo y global"
+  },
+  {
+    "archivo": "src/components/Dock.css",
+    "mensaje": "style: estilos para el Dock en múltiples orientaciones"
+  },
+  {
+    "archivo": "src/components/ui/button.tsx",
+    "mensaje": "feat: componente Button de shadcn UI"
+  },
+  {
+    "archivo": "src/components/ui/glitter-warp.jsx",
+    "mensaje": "feat: nuevo componente premium GlitterWarp (Partículas 3D)"
+  },
+  {
+    "archivo": "docs/",
+    "mensaje": "build: actualización de archivos compilados de producción"
+  }
+]

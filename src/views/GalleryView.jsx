@@ -7,8 +7,10 @@ import Counter from '@/components/ui/counter';
 import LuxurySections from '@/components/ui/luxury-sections';
 import TreeGallery from '@/components/ui/tree-gallery';
 import { logout } from '@/services/authService';
+import Dock from '@/components/Dock';
+import { GlitterWarp, PALETTES } from '@/components/ui/glitter-warp';
 
-const GalleryView = ({ user, onOpenSettings }) => {
+const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange }) => {
   const [images, setImages] = useState([]);
   const [userData, setUserData] = useState(null);
   const [viewMode, setViewMode] = useState('home');
@@ -16,6 +18,13 @@ const GalleryView = ({ user, onOpenSettings }) => {
   const [musicActive, setMusicActive] = useState(false);
   const [clickCount, setClickCount] = useState(0);
   const [isExpired, setIsExpired] = useState(false);
+
+  useEffect(() => {
+    if (onDockVisibilityChange) {
+      onDockVisibilityChange(viewMode !== 'home');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode]);
 
   // Fetch real user data and images from Firestore
   useEffect(() => {
@@ -31,7 +40,7 @@ const GalleryView = ({ user, onOpenSettings }) => {
               return;
             }
           }
-        } catch(e) {}
+        } catch (e) { }
 
         try {
           const res = await fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '')}/api/demo-images`);
@@ -40,8 +49,8 @@ const GalleryView = ({ user, onOpenSettings }) => {
             if (data.images && data.images.length > 0) {
               try {
                 localStorage.setItem('demo-images-v1', JSON.stringify({ t: Date.now(), images: data.images }));
-              } catch(e) {}
-              const mappedImages = data.images.map(img => 
+              } catch (e) { }
+              const mappedImages = data.images.map(img =>
                 typeof img === 'string' ? { src: img, public_id: img } : img
               );
               setImages(mappedImages);
@@ -65,18 +74,18 @@ const GalleryView = ({ user, onOpenSettings }) => {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const snap = await res.json();
-        
+
         if (snap.exists) {
           const data = snap.data;
           setUserData(data);
-          
+
           if (data.planExpiresAt) {
             const expDate = new Date(data.planExpiresAt);
             setIsExpired(expDate.getTime() < Date.now());
           }
-          
+
           if (data.galleryImages && data.galleryImages.length > 0) {
-            const mappedImages = data.galleryImages.map(img => 
+            const mappedImages = data.galleryImages.map(img =>
               typeof img === 'string' ? { src: img, public_id: img } : img
             );
             setImages(mappedImages);
@@ -104,7 +113,7 @@ const GalleryView = ({ user, onOpenSettings }) => {
         const id = parts[1].split('?')[0].split('&')[0];
         return `spotify:track:${id}`;
       }
-    } catch(e) {}
+    } catch (e) { }
     return defaultUri;
   };
 
@@ -199,7 +208,7 @@ const GalleryView = ({ user, onOpenSettings }) => {
     return (
       <div className="min-h-screen bg-black text-white p-8 flex flex-col items-center justify-center relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-pink-600/20 rounded-full blur-[100px]"></div>
-        
+
         <div className="w-full max-w-md bg-[#111] border border-pink-500/30 rounded-2xl p-8 shadow-[0_0_50px_rgba(236,72,153,0.1)] text-center relative z-10">
           <div className="w-20 h-20 mx-auto bg-pink-900/30 rounded-full flex items-center justify-center mb-6 border border-pink-500/50">
             <svg className="w-10 h-10 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -210,7 +219,7 @@ const GalleryView = ({ user, onOpenSettings }) => {
           <p className="text-gray-400 mb-8 leading-relaxed">
             Tu plan ha expirado. Renueva tu membresía para seguir disfrutando de tus recuerdos invaluables y mantener viva tu galería.
           </p>
-          <a 
+          <a
             href="https://wa.me/56956710377?text=Hola,%20mi%20plan%20ha%20expirado%20y%20deseo%20renovarlo."
             target="_blank"
             rel="noopener noreferrer"
@@ -220,8 +229,10 @@ const GalleryView = ({ user, onOpenSettings }) => {
           </a>
           <button
             onClick={async () => {
-              await logout();
-              window.location.reload();
+              if (window.confirm("¿Estás seguro de que deseas cerrar sesión?")) {
+                await logout();
+                window.location.reload();
+              }
             }}
             className="w-full py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors text-sm font-semibold"
           >
@@ -232,8 +243,26 @@ const GalleryView = ({ user, onOpenSettings }) => {
     );
   }
 
+  const getUniverseBgClass = () => {
+    const color = userData?.universeColor || 'purple';
+    if (color === 'blue') return 'bg-gradient-to-br from-blue-950 via-cyan-900 to-black';
+    if (color === 'red') return 'bg-gradient-to-br from-red-950 via-rose-900 to-black';
+    if (color === 'gold') return 'bg-gradient-to-br from-yellow-950 via-amber-900 to-black';
+    if (color === 'black') return 'bg-gradient-to-br from-gray-900 via-[#111] to-black';
+    return 'bg-gradient-to-br from-purple-950 via-pink-900 to-black';
+  };
+
+  const getAuraColor = () => {
+    const color = userData?.universeColor || 'purple';
+    if (color === 'blue') return 'rgba(6,182,212,0.15)'; // Cyan
+    if (color === 'red') return 'rgba(239,68,68,0.12)';  // Red
+    if (color === 'gold') return 'rgba(245,158,11,0.12)'; // Gold
+    if (color === 'black') return 'rgba(156,163,175,0.1)'; // Gray/White
+    return 'rgba(131,24,67,0.15)'; // Pink/Purple (Default)
+  };
+
   return (
-    <div className={`w-screen relative text-white ${viewMode === 'home' ? 'min-h-screen overflow-y-auto overflow-x-hidden bg-black' : 'h-screen overflow-hidden bg-gradient-to-br from-purple-950 via-pink-900 to-black'}`}>
+    <div className={`w-screen relative text-white ${viewMode === 'home' ? 'min-h-screen overflow-y-auto overflow-x-hidden bg-black' : `h-screen overflow-hidden ${getUniverseBgClass()}`}`}>
 
       {/* Contenedor Global del Iframe de Spotify API */}
       <div className="fixed opacity-0 pointer-events-none -z-50">
@@ -242,30 +271,9 @@ const GalleryView = ({ user, onOpenSettings }) => {
 
       {viewMode === 'home' && (
         <div className="fixed inset-0 z-0 pointer-events-none">
-          <div className="absolute inset-0 bg-[url('/fotos/Imagenes-amor/IMG_20221008_115919.jpg')] bg-cover bg-center opacity-30 blur-2xl scale-110" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black via-[#1c0f16]/90 to-black" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-pink-900/20 rounded-full blur-[120px]" />
-        </div>
-      )}
-
-      {/* Botones SOLO visibles en Home (Y si está logueado) */}
-      {viewMode === 'home' && user && onOpenSettings && (
-        <div className="fixed top-8 right-8 z-[9999] flex gap-3">
-          <button 
-            onClick={async () => {
-              await logout();
-              window.location.reload();
-            }}
-            className="px-6 py-3 bg-red-900/50 hover:bg-red-900/80 border border-red-500/50 backdrop-blur-md text-white rounded-full font-bold shadow-xl transition-all"
-          >
-            Cerrar Sesión
-          </button>
-          <button 
-            onClick={onOpenSettings}
-            className="px-6 py-3 bg-black/50 hover:bg-black/80 border border-pink-500/50 backdrop-blur-md text-white rounded-full font-bold shadow-xl transition-all"
-          >
-            ⚙️ Configurar Mi Universo
-          </button>
+          <div className="absolute inset-0 bg-[url('/fotos/Imagenes-amor/IMG_20221008_115919.jpg')] bg-cover bg-center opacity-10 scale-110" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black via-[#1c0f16]/95 to-black" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] pointer-events-none" style={{ background: `radial-gradient(circle, ${getAuraColor()} 0%, transparent 70%)` }} />
         </div>
       )}
 
@@ -277,9 +285,19 @@ const GalleryView = ({ user, onOpenSettings }) => {
           <div className="absolute inset-0 bg-white animate-flash" />
         </div>
       )}
-      
+
       {viewMode !== 'home' && (
-        <button 
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <GlitterWarp
+            variant={userData?.universeVariant || 'tunnel'}
+            colors={PALETTES[userData?.universePalette || 'Cósmico']}
+            background="transparent"
+          />
+        </div>
+      )}
+
+      {viewMode !== 'home' && (
+        <button
           onClick={() => changeView('home')}
           className="absolute top-8 left-8 z-[100] px-4 py-2 bg-pink-500/20 hover:bg-pink-500/50 border border-pink-400/50 rounded-full font-bold transition-all hover:scale-105 backdrop-blur-md cursor-pointer"
         >
@@ -290,7 +308,7 @@ const GalleryView = ({ user, onOpenSettings }) => {
       {viewMode === 'home' && (
         <div className="flex flex-col min-h-screen w-full relative z-10">
           <div className="w-full h-32 md:h-40 bg-black/90 border-b border-pink-500/20 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden relative shrink-0 flex items-center justify-center cursor-pointer">
-            <div 
+            <div
               className={`w-full h-full relative group transition-transform duration-100 ${clickCount > 0 ? 'scale-[0.98]' : 'scale-100'} active:scale-[0.95]`}
               onClick={() => {
                 if (clickCount === 0) {
@@ -305,24 +323,24 @@ const GalleryView = ({ user, onOpenSettings }) => {
                 }
               }}
             >
-              <div className="absolute inset-0 flex flex-col gap-2 overflow-hidden opacity-30 group-hover:opacity-70 transition-opacity duration-1000 blur-[2px] group-hover:blur-[1px] pointer-events-none py-2 px-1">
+              <div className="absolute inset-0 flex flex-col gap-2 overflow-hidden opacity-30 group-hover:opacity-70 transition-opacity duration-1000 pointer-events-none py-2 px-1">
                 <div className="flex shrink-0 gap-2 h-1/3 animate-scroll-left">
-                  {images.slice(0, 22).map((img, i) => <img key={`r1a-${i}`} src={img.src} className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
-                  {images.slice(0, 22).map((img, i) => <img key={`r1b-${i}`} src={img.src} className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
+                  {images.slice(0, 8).map((img, i) => <img key={`r1a-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
+                  {images.slice(0, 8).map((img, i) => <img key={`r1b-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
                 </div>
                 <div className="flex shrink-0 gap-2 h-1/3 animate-scroll-left" style={{ animationDuration: '50s', animationDirection: 'reverse' }}>
-                  {images.slice(22, 44).map((img, i) => <img key={`r2a-${i}`} src={img.src} className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
-                  {images.slice(22, 44).map((img, i) => <img key={`r2b-${i}`} src={img.src} className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
+                  {images.slice(8, 16).map((img, i) => <img key={`r2a-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
+                  {images.slice(8, 16).map((img, i) => <img key={`r2b-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
                 </div>
                 <div className="flex shrink-0 gap-2 h-1/3 animate-scroll-left" style={{ animationDuration: '70s' }}>
-                  {images.slice(44, 66).map((img, i) => <img key={`r3a-${i}`} src={img.src} className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
-                  {images.slice(44, 66).map((img, i) => <img key={`r3b-${i}`} src={img.src} className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
+                  {images.slice(16, 24).map((img, i) => <img key={`r3a-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
+                  {images.slice(16, 24).map((img, i) => <img key={`r3b-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
                 </div>
               </div>
 
               <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/20 to-black/90 pointer-events-none" />
               <div className="absolute inset-0 bg-gradient-to-t from-purple-900/40 to-transparent pointer-events-none" />
-              
+
               <div className="relative z-10 flex flex-col items-center justify-center h-full pointer-events-none px-4 text-center">
                 <span className={`text-xs md:text-sm uppercase tracking-[0.5em] font-sans mb-2 font-semibold transition-colors duration-300 ${clickCount > 0 ? 'text-white' : 'text-pink-300/70'}`}>
                   {getBannerText()}
@@ -345,10 +363,10 @@ const GalleryView = ({ user, onOpenSettings }) => {
           </div>
 
           <div className="bg-gradient-to-b from-transparent to-black relative">
-            <Counter 
-              anniversaryDate={userData?.anniversaryDate} 
-              isGuest={!user} 
-              customMessage={userData?.customMessage} 
+            <Counter
+              anniversaryDate={userData?.anniversaryDate}
+              isGuest={!user}
+              customMessage={userData?.customMessage}
             />
           </div>
 
@@ -359,19 +377,37 @@ const GalleryView = ({ user, onOpenSettings }) => {
       )}
 
       {viewMode === '3d' && (
-        <div className="w-full h-full animate-focus-in">
+        <div className="w-full h-full animate-focus-in relative">
+          {images.length === 0 && (
+            <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm pointer-events-none p-4 text-center">
+              <h2 className="text-3xl font-serif text-pink-300 italic mb-4">Tu universo está naciendo</h2>
+              <p className="text-gray-300 max-w-md">No tienes fotos guardadas aún. Ve a "Configurar" y luego a "Fotos" para empezar a poblar tu universo con recuerdos invaluables.</p>
+            </div>
+          )}
           <CanvasGallery items={images} toggleView={toggleView} hasFlightMode={userData?.hasFlightMode} />
         </div>
       )}
 
       {viewMode === 'rows' && (
-        <div className="w-full h-full animate-focus-in">
+        <div className="w-full h-full animate-focus-in relative">
+          {images.length === 0 && (
+            <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm pointer-events-none p-4 text-center">
+              <h2 className="text-3xl font-serif text-pink-300 italic mb-4">Tu universo está naciendo</h2>
+              <p className="text-gray-300 max-w-md">No tienes fotos guardadas aún. Ve a "Configurar" y luego a "Fotos" para empezar a poblar tu universo con recuerdos invaluables.</p>
+            </div>
+          )}
           <InfiniteGallery items={images} toggleView={toggleView} />
         </div>
       )}
 
       {viewMode === '3dtest' && (
-        <div className="w-full h-full animate-focus-in">
+        <div className="w-full h-full animate-focus-in relative">
+          {images.length === 0 && (
+            <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm pointer-events-none p-4 text-center">
+              <h2 className="text-3xl font-serif text-pink-300 italic mb-4">Tu universo está naciendo</h2>
+              <p className="text-gray-300 max-w-md">No tienes fotos guardadas aún. Ve a "Configurar" y luego a "Fotos" para empezar a poblar tu universo con recuerdos invaluables.</p>
+            </div>
+          )}
           <TreeGallery items={images} toggleView={toggleView} />
         </div>
       )}

@@ -55,13 +55,27 @@ const InfiniteRow = ({ items, reverse = false, speed = 40 }) => {
 
 export default function InfiniteGallery({ items, toggleView }) {
   const [selectedItem, setSelectedItem] = useState(null);
+  const [shuffled, setShuffled] = useState([]);
 
-  const shuffled = [...items].sort(() => 0.5 - Math.random());
+  // Solo barajamos las fotos NUEVAS y las añadimos al final.
+  // Esto evita re-renderizar y romper la animación de las fotos que ya están en pantalla.
+  React.useEffect(() => {
+    setShuffled(prev => {
+      const existingIds = new Set(prev.map(item => item.public_id || item.src));
+      const newItems = items.filter(item => !existingIds.has(item.public_id || item.src));
+      if (newItems.length === 0) return prev;
+      
+      const newShuffled = [...newItems].sort(() => 0.5 - Math.random());
+      return [...prev, ...newShuffled];
+    });
+  }, [items]);
   
-  const itemsWithClick = shuffled.map(item => ({
-    ...item,
-    onClick: (img) => setSelectedItem(img)
-  }));
+  const itemsWithClick = React.useMemo(() => {
+    return shuffled.map(item => ({
+      ...item,
+      onClick: (img) => setSelectedItem(img)
+    }));
+  }, [shuffled]);
 
   const third = Math.ceil(itemsWithClick.length / 3);
   const row1 = itemsWithClick.slice(0, third);

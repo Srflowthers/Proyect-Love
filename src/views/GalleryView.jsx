@@ -12,6 +12,8 @@ import { GlitterWarp, PALETTES } from '@/components/ui/glitter-warp';
 
 const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange }) => {
   const [images, setImages] = useState([]);
+  const [nextCursor, setNextCursor] = useState(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [userData, setUserData] = useState(null);
   const [viewMode, setViewMode] = useState('home');
   const [isWarping, setIsWarping] = useState(false);
@@ -28,6 +30,22 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
 
   // Fetch real user data and images from Firestore
   useEffect(() => {
+    // QA/desarrollo: ?stress=10000 genera N fotos sintéticas para validar la escala
+    // (solo existe en dev; el build de producción lo elimina por completo)
+    if (import.meta.env.DEV) {
+      const stress = parseInt(new URLSearchParams(window.location.search).get('stress') || '', 10);
+      if (stress > 0) {
+        const base = DEMO_IMAGES;
+        setImages(Array.from({ length: stress }, (_, i) => ({
+          // DEMO_IMAGES es un array de objetos {src}: hay que extraer el string
+          // (si no, <img src=[object Object]> pide /%5Bobject%20Object%5D)
+          src: (base.length && base[i % base.length]?.src) || '/fotos/Imagenes-amor/Foto0144.jpg',
+          public_id: `stress-${i}`,
+          id: `stress-${i}`,
+        })));
+        return;
+      }
+    }
     if (!user) {
       // Si es un visitante sin loguear, intentamos obtener las fotos de demostración del backend
       const fetchDemoImages = async () => {
@@ -84,14 +102,20 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
             setIsExpired(expDate.getTime() < Date.now());
           }
 
-          if (data.galleryImages && data.galleryImages.length > 0) {
-            const mappedImages = data.galleryImages.map(img =>
-              typeof img === 'string' ? { src: img, public_id: img } : img
-            );
-            setImages(mappedImages);
-          } else {
-            // El usuario está logueado pero no tiene imágenes.
-            // NO le mostramos la demo, le mostramos SU universo (que actualmente está vacío).
+          // Petición optimizada a la ruta paginada (evita traer 3000 imágenes de golpe)
+          try {
+            const imgRes = await fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '')}/api/images?limit=70`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (imgRes.ok) {
+              const imgData = await imgRes.json();
+              setImages(imgData.items || []);
+              setNextCursor(imgData.nextCursor || null);
+            } else {
+              setImages([]);
+            }
+          } catch (e) {
+            console.error("Error fetching paginated images:", e);
             setImages([]);
           }
         }
@@ -101,6 +125,38 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
     };
     fetchUserData();
   }, [user]);
+
+  const loadMoreImages = async () => {
+    if (!nextCursor || isLoadingMore || !user) return;
+    setIsLoadingMore(true);
+    try {
+      const token = await user.getIdToken();
+      // Traemos lotes de 50 para que el universo se expanda más rápido pero sin asfixiar la red
+      const imgRes = await fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '')}/api/images?limit=50&cursor=${nextCursor}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (imgRes.ok) {
+        const imgData = await imgRes.json();
+        if (imgData.items && imgData.items.length > 0) {
+          setImages(prev => [...prev, ...imgData.items]);
+        }
+        setNextCursor(imgData.nextCursor || null);
+      }
+    } catch (e) {
+      console.error("Error loading more images:", e);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  // Carga progresiva en segundo plano ("lazy loading" automático)
+  useEffect(() => {
+    if (!nextCursor || isLoadingMore || !user) return;
+    const timer = setTimeout(() => {
+      loadMoreImages();
+    }, 2500); // Cada 2.5 segundos intentará traer el siguiente lote silenciosamente
+    return () => clearTimeout(timer);
+  }, [nextCursor, isLoadingMore, user]);
 
   // Helper para extraer la URI de Spotify desde una URL (ej: https://open.spotify.com/track/...)
   const getSpotifyUri = (url) => {
@@ -262,7 +318,10 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
   };
 
   return (
-    <div className={`w-screen relative text-white ${viewMode === 'home' ? 'min-h-screen overflow-y-auto overflow-x-hidden bg-black' : `h-screen overflow-hidden ${getUniverseBgClass()}`}`}>
+    <div
+      className={`w-screen relative text-white ${viewMode === 'home' ? 'min-h-screen overflow-y-auto overflow-x-hidden bg-black' : `h-screen overflow-hidden overscroll-none ${getUniverseBgClass()}`}`}
+      style={viewMode !== 'home' ? { height: '100svh' } : undefined}
+    >
 
       {/* Contenedor Global del Iframe de Spotify API */}
       <div className="fixed opacity-0 pointer-events-none -z-50">
@@ -409,6 +468,16 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
             </div>
           )}
           <TreeGallery items={images} toggleView={toggleView} />
+        </div>
+      )}
+
+      {/* Indicador sutil de que el universo sigue expandiéndose (reemplaza al botón manual) */}
+      {(viewMode === '3d' || viewMode === 'rows' || viewMode === '3dtest') && nextCursor && (
+        <div className="fixed bottom-4 left-4 z-[100] pointer-events-none opacity-50">
+          <div className="flex items-center gap-2 bg-black/30 px-3 py-1.5 rounded-full backdrop-blur-sm text-pink-200/80 text-xs font-mono">
+            <svg className="animate-spin h-3 w-3 text-pink-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            Expandiendo universo...
+          </div>
         </div>
       )}
     </div>

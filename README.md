@@ -54,3 +54,10 @@ regenera cada vez que corres `npm run build`.
 
 Cada vez que cambies algo, corre `npm run build` de nuevo y sube
 los cambios (incluida la carpeta `docs/` actualizada).
+
+## 6. Funciones Avanzadas Implementadas (Oct 2026)
+
+- **Carga Progresiva Infinita**: Las imágenes se cargan en lotes desde el backend respetando el Anti-Bot/Rate Limit (50 imágenes cada 2.5s) sin recargas manuales.
+- **Universo 3D Dinámico**: Generación aleatoria de la semilla del universo 3D en cada sesión para garantizar un clúster de entrada siempre único.
+- **Drift Diagonal (Zoom Infinito)**: Algoritmo matemático para que el avance en Z mueva de forma imperceptible los ejes X/Y, creando constelaciones siempre nuevas al dar la vuelta al universo.
+- **Controles Táctiles (Móvil)**: Natural Scroll (inversión de ejes para arrastre) y sensibilidad calibrada específicamente para dispositivos móviles.

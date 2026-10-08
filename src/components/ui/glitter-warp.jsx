@@ -46,12 +46,14 @@ export function GlitterWarp({
   speed, glitter, trail, // overrides opcionales de la variante
   mouseInfluence,
   motion = 1, // 0..1: escala velocidad y giro de cualquier variante
+  sizeMult = 1,
+  speedMult = 1,
   className = "",
   style = {},
 }) {
   const canvasRef = useRef(null);
   const live = useRef({});
-  live.current = { speed, glitter, trail, background, mouseInfluence, motion };
+  live.current = { speed, glitter, trail, background, mouseInfluence, motion, sizeMult, speedMult };
   const colorKey = colors.join(",");
 
   useEffect(() => {
@@ -136,9 +138,10 @@ export function GlitterWarp({
       last = now;
       const t = now / 1000;
       const L = live.current;
-      const spd = (L.speed ?? preset.speed) * L.motion;
+      const spd = (L.speed ?? preset.speed) * L.motion * (L.speedMult || 1);
       const gl = L.glitter ?? preset.glitter;
       const tr = L.trail ?? preset.trail;
+      const baseSizeMult = (L.sizeMult || 1);
 
       // calidad adaptativa: promedia 45 frames, si >22ms baja 15% (mín 35%)
       acc += dt; frames++;
@@ -211,7 +214,7 @@ export function GlitterWarp({
         const layer = (b / nc) | 0, a = buf[b];
         ctx.globalAlpha = LAYER_A[layer] * intro;
         ctx.strokeStyle = palette[b - layer * nc];
-        ctx.lineWidth = LAYER_W[layer] * preset.size;
+        ctx.lineWidth = LAYER_W[layer] * preset.size * baseSizeMult;
         ctx.beginPath();
         for (let j = 0, m = n * 4; j < m; j += 4) {
           ctx.moveTo(a[j], a[j + 1]);

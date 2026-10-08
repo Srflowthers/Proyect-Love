@@ -41,6 +41,7 @@ export const fetchAllClients = async () => {
 };
 
 export const PLANS = {
+  free: { id: 'free', name: 'Gratis (Free)', maxBytes: 50 * 1024 * 1024, maxImages: 15, icon: '🆓', priceMonthly: '0', priceAnnual: '0' },
   pololos: { id: 'pololos', name: 'Pololos (Básico)', maxBytes: 200 * 1024 * 1024, maxImages: 60, icon: '💕', priceMonthly: '1.000', priceAnnual: '8.000' },
   novios: { id: 'novios', name: 'Novios (Plus)', maxBytes: 2 * 1024 * 1024 * 1024, maxImages: 500, icon: '💍', priceMonthly: '4.990', priceAnnual: '39.920' },
   matrimonio: { id: 'matrimonio', name: 'Matrimonio (Premium)', maxBytes: 5 * 1024 * 1024 * 1024, maxImages: 1500, icon: '⛪', priceMonthly: '14.990', priceAnnual: '119.920' },

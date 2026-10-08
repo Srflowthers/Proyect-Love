@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 import { DEMO_IMAGES } from '@/data/demoImages';
 import CanvasGallery from '@/components/ui/canvas-gallery';
@@ -173,7 +173,21 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
     return defaultUri;
   };
 
-  // Spotify Logic
+  // Lógica de Playlist Unificada (MP3/WAV + Spotify)
+  const customAudioRef = useRef(null);
+  const [currentAudioIndex, setCurrentAudioIndex] = useState(0);
+
+  const playlist = React.useMemo(() => {
+    let audios = userData?.customAudios?.length > 0 
+      ? [...userData.customAudios] 
+      : (userData?.customAudioUrl ? [{ url: userData.customAudioUrl, name: 'Canción' }] : []);
+      
+    if (userData?.spotifyUrl && !audios.some(a => a.isSpotify || (a.url && a.url.includes('spotify')))) {
+       audios.push({ url: userData.spotifyUrl, name: 'Spotify Legacy', isSpotify: true });
+    }
+    return audios;
+  }, [userData?.customAudios, userData?.customAudioUrl, userData?.spotifyUrl]);
+
   useEffect(() => {
     const script = document.createElement("script");
     script.src = "https://open.spotify.com/embed/iframe-api/v1";
@@ -184,13 +198,18 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
       const element = document.getElementById('spotify-global-iframe');
       if (!element) return;
       const options = {
-        uri: getSpotifyUri(userData?.spotifyUrl),
+        uri: getSpotifyUri(''),
         width: 300,
         height: 80,
         theme: '0'
       };
       const callback = (EmbedController) => {
         window.spotifyController = EmbedController;
+        EmbedController.addListener('playback_update', e => {
+          if (e.data.position === e.data.duration && e.data.duration > 0 && e.data.position > 0) {
+            setCurrentAudioIndex(prev => (prev + 1) % playlist.length);
+          }
+        });
       };
       IFrameAPI.createController(element, options, callback);
     };
@@ -201,14 +220,51 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
         document.body.removeChild(script);
       }
     };
-  }, []);
+  }, [playlist.length]);
 
-  // Si cambia el userData (después de montar) y el controller ya existe, actualizar la canción
   useEffect(() => {
-    if (userData?.spotifyUrl && window.spotifyController) {
-      window.spotifyController.loadUri(getSpotifyUri(userData.spotifyUrl));
+    if (playlist.length === 0) {
+      if (customAudioRef.current) customAudioRef.current.pause();
+      if (window.spotifyController) window.spotifyController.pause();
+      return;
     }
-  }, [userData?.spotifyUrl]);
+
+    const currentTrack = playlist[currentAudioIndex];
+    if (!currentTrack) return;
+
+    const isSpotify = currentTrack.isSpotify || (currentTrack.url && currentTrack.url.includes('spotify'));
+
+    if (isSpotify) {
+      if (customAudioRef.current) customAudioRef.current.pause();
+      if (window.spotifyController) {
+        window.spotifyController.loadUri(getSpotifyUri(currentTrack.url));
+        if (musicActive) window.spotifyController.play();
+      }
+    } else {
+      if (window.spotifyController) window.spotifyController.pause();
+      
+      if (!customAudioRef.current) {
+        customAudioRef.current = new Audio(currentTrack.url);
+      } else if (customAudioRef.current.src !== currentTrack.url) {
+        customAudioRef.current.src = currentTrack.url;
+      }
+      
+      if (musicActive) {
+        customAudioRef.current.play().catch(e => console.error("Play error", e));
+      }
+
+      const handleEnded = () => {
+        setCurrentAudioIndex(prev => (prev + 1) % playlist.length);
+      };
+
+      customAudioRef.current.addEventListener('ended', handleEnded);
+      return () => {
+        if (customAudioRef.current) {
+          customAudioRef.current.removeEventListener('ended', handleEnded);
+        }
+      };
+    }
+  }, [playlist, currentAudioIndex, musicActive]);
 
   // Routing Logic
   useEffect(() => {
@@ -323,10 +379,40 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
       style={viewMode !== 'home' ? { height: '100svh' } : undefined}
     >
 
-      {/* Contenedor Global del Iframe de Spotify API */}
-      <div className="fixed opacity-0 pointer-events-none -z-50">
-        <div id="spotify-global-iframe"></div>
-      </div>
+      {/* Reproductor de Audio o Contenedor Global de Spotify */}
+      {(userData?.customAudios?.length > 0 || userData?.customAudioUrl) ? (
+        <div className={`fixed bottom-4 left-4 z-[100] transition-all duration-1000 ${musicActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+          <div className="bg-black/60 backdrop-blur-md border border-purple-500/30 rounded-xl p-3 shadow-[0_0_15px_rgba(168,85,247,0.3)] flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center animate-pulse shrink-0">
+              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
+            </div>
+            <div className="max-w-[120px] md:max-w-[200px]">
+              <p className="text-white text-xs font-bold uppercase tracking-wider truncate">
+                {userData?.customAudios?.[currentAudioIndex]?.name || 'Tu Canción Especial'}
+              </p>
+              <p className="text-purple-300 text-[10px] italic">Reproduciéndose en el Universo</p>
+            </div>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                if (customAudioRef.current) {
+                  if (customAudioRef.current.paused) customAudioRef.current.play();
+                  else customAudioRef.current.pause();
+                }
+              }}
+              className="ml-2 w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition-colors pointer-events-auto"
+            >
+              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="fixed opacity-0 pointer-events-none -z-50">
+          <div id="spotify-global-iframe"></div>
+        </div>
+      )}
 
       {viewMode === 'home' && (
         <div className="fixed inset-0 z-0 pointer-events-none">
@@ -350,6 +436,8 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
           <GlitterWarp
             variant={userData?.universeVariant || 'tunnel'}
             colors={PALETTES[userData?.universePalette || 'Cósmico']}
+            sizeMult={userData?.universeParticleSize}
+            speedMult={userData?.universeParticleSpeed}
             background="transparent"
           />
         </div>
@@ -371,7 +459,6 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
               className={`w-full h-full relative group transition-transform duration-100 ${clickCount > 0 ? 'scale-[0.98]' : 'scale-100'} active:scale-[0.95]`}
               onClick={() => {
                 if (clickCount === 0) {
-                  if (window.spotifyController) window.spotifyController.play();
                   setMusicActive(true);
                   setClickCount(1);
                 } else if (clickCount === 1) {

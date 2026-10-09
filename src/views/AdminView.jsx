@@ -190,8 +190,8 @@ const AdminView = ({ user, initialTab = 'clients' }) => {
                 <div className="p-8 text-center text-gray-500">No hay clientes registrados aún.</div>
               ) : (
                 clients.filter(c => filterPlan === 'all' || c.plan === filterPlan).map((client) => {
-                  const totalImages = client.galleryImages ? client.galleryImages.length : 0;
-                  const totalBytes = client.galleryImages ? client.galleryImages.reduce((sum, img) => sum + (img.bytes || 0), 0) : 0;
+                  const totalImages = client.imageCount || 0;
+                  const totalBytes = client.imageBytes || 0;
                   const hasFlight = !!client.hasFlightMode;
                   const currentPlan = plans[client.plan] || plans.pololos || DEFAULT_PLANS.pololos;
                   const usagePercent = Math.min(100, (totalBytes / currentPlan.maxBytes) * 100);

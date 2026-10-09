@@ -33,6 +33,16 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
   const [loading, setLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState(''); // '', 'saving', 'saved', 'error'
   
+  // Bandera Maestra de Arquitectura: Cambiada mediante variables de entorno para Producción
+  const USE_R2_STORAGE = import.meta.env.VITE_USE_R2 === 'true' || false;
+  
+  // Paginación de Imágenes
+  const [nextCursor, setNextCursor] = useState(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [totalImages, setTotalImages] = useState(0);
+  const [totalBytes, setTotalBytes] = useState(0);
+  const observerRef = useRef(null);
+
   const isInitialLoad = useRef(true);
   const debounceTimerRef = useRef(null);
 
@@ -184,6 +194,48 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
   const [planData, setPlanData] = useState(PLANS.pololos);
   const [isExpired, setIsExpired] = useState(false);
 
+  // Función para cargar más imágenes usando el Cursor
+  const loadMoreImages = async () => {
+    if (!nextCursor || isLoadingMore || !user) return;
+    setIsLoadingMore(true);
+    try {
+      const token = await user.getIdToken();
+      const imgRes = await fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '')}/api/images?limit=20&cursor=${nextCursor}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (imgRes.ok) {
+        const imgData = await imgRes.json();
+        if (imgData.items && imgData.items.length > 0) {
+          setImages(prev => [...prev, ...imgData.items]);
+        }
+        setNextCursor(imgData.nextCursor || null);
+      }
+    } catch (e) {
+      console.error("Error cargando más imágenes:", e);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  // Intersection Observer para disparar la carga infinita
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && nextCursor && !isLoadingMore) {
+        loadMoreImages();
+      }
+    }, { threshold: 0.1 });
+
+    if (observerRef.current) {
+      observer.observe(observerRef.current);
+    }
+
+    return () => {
+      if (observerRef.current) {
+        observer.unobserve(observerRef.current);
+      }
+    };
+  }, [nextCursor, isLoadingMore, user]);
+
   // Cargar datos actuales de Firestore
   useEffect(() => {
     const loadUserData = async () => {
@@ -214,7 +266,24 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
             customAudioUrl: data.customAudioUrl || '',
             customAudios: data.customAudios || (data.customAudioUrl ? [{ url: data.customAudioUrl, name: 'Canción Principal' }] : [])
           });
-          setImages(data.galleryImages || []);
+          
+          // Cargamos la primera página de imágenes (Límite 20)
+          try {
+            const imgRes = await fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '')}/api/images?limit=20`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (imgRes.ok) {
+              const imgData = await imgRes.json();
+              setImages(imgData.items || []);
+              setNextCursor(imgData.nextCursor || null);
+            }
+          } catch (e) {
+            console.error("Error fetching images:", e);
+          }
+
+          setTotalImages(data.galleryImages ? data.galleryImages.length : data.imageCount || 0);
+          setTotalBytes(data.galleryImages ? data.galleryImages.reduce((sum, img) => sum + (img.bytes || 0), 0) : data.imageBytes || 0);
+
           if (data.plan && PLANS[data.plan]) {
             setPlanData(PLANS[data.plan]);
           }
@@ -355,14 +424,31 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
+    // Límite estricto por archivo para evitar que Cloudinary rechace la subida (Free tier)
+    // o que el navegador colapse al intentar subir gigabytes de golpe en una sola petición.
+    // [PREPARADO PARA R2]: Si activamos R2, el límite sube a 5GB por video.
+    const MAX_VIDEO_SIZE = USE_R2_STORAGE ? 5 * 1024 * 1024 * 1024 : 100 * 1024 * 1024; // 5GB R2 / 100 MB Cloudinary
+    const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20 MB
+
+    for (let file of files) {
+      if (file.type.startsWith('video/') && file.size > MAX_VIDEO_SIZE) {
+        alert(`El video "${file.name}" supera el límite máximo de 100MB por archivo. Por favor recórtalo o comprímelo.`);
+        return;
+      }
+      if (file.type.startsWith('image/') && file.size > MAX_IMAGE_SIZE) {
+        alert(`La imagen "${file.name}" supera el límite de 20MB por archivo.`);
+        return;
+      }
+    }
+
     // Límite de cantidad de fotos del plan
-    if (images.length + uploadQueueRef.current.length + files.length > planData.maxImages) {
+    if (totalImages + uploadQueueRef.current.length + files.length > planData.maxImages) {
       alert(`¡Límite de imágenes excedido! Tu plan actual (${planData.name}) permite un máximo de ${planData.maxImages} fotos.`);
       return;
     }
 
     // Límite de MB del plan
-    const currentBytes = images.reduce((sum, img) => sum + (img.bytes || 0), 0);
+    const currentBytes = totalBytes;
     const newFilesBytes = files.reduce((sum, file) => sum + file.size, 0); // Estimación basada en archivo original
     if (currentBytes + newFilesBytes > planData.maxBytes) {
       const maxMB = (planData.maxBytes / (1024 * 1024)).toFixed(0);
@@ -410,10 +496,10 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
     setUploadQueue([...uploadQueueRef.current]); // Para UI
 
     if (!uploadingRef.current) {
-      setUploadProgress({ current: 1, total: compressedFiles.length });
+      setUploadProgress({ current: 1, total: filesToProcess.length });
       processQueue();
     } else {
-      setUploadProgress(prev => ({ ...prev, total: prev.total + compressedFiles.length }));
+      setUploadProgress(prev => ({ ...prev, total: prev.total + filesToProcess.length }));
     }
   };
 
@@ -431,78 +517,88 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
         const fileToUpload = uploadQueueRef.current[0];
 
         try {
-          // 1. Pedir firma
-          const sigRes = await fetch(`${apiUrl}/api/upload-signature`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
+          let finalPublicId, finalSecureUrl, finalFormat, finalBytes, finalWidth, finalHeight;
 
-          if (!sigRes.ok) {
-            const err = await sigRes.json();
-            throw new Error(err.message || 'Error en firma');
+          if (USE_R2_STORAGE) {
+            // [FUTURO: Lógica de subida masiva a Cloudflare R2]
+            // [SIMULADOR DE SUBIDA MASIVA A R2]
+            setMessage(`Simulando subida masiva a R2 para ${(fileToUpload.size / (1024*1024)).toFixed(1)} MB...`);
+            
+            // Simular el retraso de una subida rápida (2.5 segundos)
+            await new Promise(resolve => setTimeout(resolve, 2500));
+            
+            // Generar identificadores falsos para que el Frontend y Backend se lo crean
+            const randomId = Math.random().toString(36).substring(7);
+            
+            finalPublicId = `r2-mock-${randomId}`;
+            // Usamos videos o imágenes de prueba reales para que la galería no se vea rota
+            finalSecureUrl = fileToUpload.type.startsWith('video/') 
+              ? 'https://www.w3schools.com/html/mov_bbb.mp4' 
+              : `https://via.placeholder.com/1080x1920.png?text=R2+Mock+Upload`;
+            finalBytes = fileToUpload.size;
+            finalFormat = fileToUpload.type.split('/')[1];
+            finalWidth = 1080;
+            finalHeight = 1920;
+
+          } else {
+            // [ACTUAL: Lógica de subida a Cloudinary]
+            // 1. Pedir firma
+            const sigRes = await fetch(`${apiUrl}/api/upload-signature`, {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!sigRes.ok) {
+              const err = await sigRes.json();
+              throw new Error(err.message || 'Error en firma');
+            }
+            const { apiKey, timestamp, signature, folder, uploadUrl } = await sigRes.json();
+
+            // 2. Subir a Cloudinary
+            const cloudFormData = new FormData();
+            cloudFormData.append('file', fileToUpload);
+            cloudFormData.append('api_key', apiKey);
+            cloudFormData.append('timestamp', timestamp);
+            cloudFormData.append('signature', signature);
+            cloudFormData.append('folder', folder);
+
+            const cloudRes = await fetch(uploadUrl, { method: 'POST', body: cloudFormData });
+            if (!cloudRes.ok) throw new Error(`Error subiendo a Cloudinary`);
+            const cloudData = await cloudRes.json();
+
+            finalPublicId = cloudData.public_id;
+            finalSecureUrl = cloudData.secure_url;
+            finalBytes = cloudData.bytes;
+            finalFormat = cloudData.format;
+            finalWidth = cloudData.width || 0;
+            finalHeight = cloudData.height || 0;
           }
-          const { apiKey, timestamp, signature, folder, uploadUrl } = await sigRes.json();
 
-          // 2. Subir a Cloudinary
-          const cloudFormData = new FormData();
-          cloudFormData.append('file', fileToUpload);
-          cloudFormData.append('api_key', apiKey);
-          cloudFormData.append('timestamp', timestamp);
-          cloudFormData.append('signature', signature);
-          cloudFormData.append('folder', folder);
-
-          const cloudRes = await fetch(uploadUrl, { method: 'POST', body: cloudFormData });
-          if (!cloudRes.ok) throw new Error(`Error subiendo a Cloudinary`);
-          const cloudData = await cloudRes.json();
-
-          // 3. Confirmar con Backend
+          // 3. Confirmar con Backend y guardar
           const confirmRes = await fetch(`${apiUrl}/api/images/confirm`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              public_id: cloudData.public_id,
-              secure_url: cloudData.secure_url,
-              bytes: cloudData.bytes,
-              format: cloudData.format,
-              width: cloudData.width,
-              height: cloudData.height
+              public_id: finalPublicId,
+              secure_url: finalSecureUrl,
+              bytes: finalBytes,
+              format: finalFormat,
+              width: finalWidth,
+              height: finalHeight
             })
           });
 
-          if (!confirmRes.ok) throw new Error('Fallo confirmación.');
-
-          // 4. Guardar en Firestore Atómicamente con URL Optimizada
-          // Si es video no aplicamos las transformaciones de imagen estricta igual, Cloudinary lo maneja.
-          let optimizedUrl = cloudData.secure_url;
-          if (cloudData.resource_type === 'image') {
-            const urlParts = cloudData.secure_url.split('/upload/');
-            optimizedUrl = `${urlParts[0]}/upload/f_auto,q_auto,w_800/${urlParts[1]}`;
+          if (!confirmRes.ok) {
+            const errData = await confirmRes.json().catch(() => ({}));
+            throw new Error(`Fallo confirmación: ${errData.details || errData.message || confirmRes.statusText}`);
           }
+          const confirmData = await confirmRes.json();
 
-          const newImg = {
-            src: optimizedUrl,
-            original_url: cloudData.secure_url,
-            isVideo: cloudData.resource_type === 'video',
-            public_id: cloudData.public_id,
-            bytes: cloudData.bytes || 0
-          };
-
-          const getRes = await fetch(`${apiUrl}/api/users/me`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          const snap = await getRes.json();
-          let currentImages = [];
-          if (snap.exists && snap.data.galleryImages) {
-            currentImages = snap.data.galleryImages;
+          if (confirmData.code === 'SUCCESS' && confirmData.image) {
+            setImages(prev => [...prev, confirmData.image]);
+            setTotalImages(prev => prev + 1);
+            setTotalBytes(prev => prev + (confirmData.image.bytes || 0));
           }
-          const updatedImages = [...currentImages, newImg];
-          const patchRes = await fetch(`${apiUrl}/api/users/me`, {
-            method: 'PATCH',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ galleryImages: updatedImages })
-          });
-          if (!patchRes.ok) throw new Error("Error guardando foto en backend");
-          setImages(updatedImages);
           
           setSaveStatus('saved');
           setTimeout(() => setSaveStatus(''), 2500);
@@ -559,15 +655,19 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
 
       if (!delRes.ok) throw new Error('No se pudo borrar la imagen en el servidor seguro.');
 
-      // 2. Borrar de Firestore (ahora usando el API)
+      // El backend ya eliminó las fotos desde /api/images/delete.
+      
       const updatedImages = images.filter(img => img.public_id !== imageToDelete.public_id);
 
-      const patchRes = await fetch(`${apiUrl}/api/users/me`, {
-        method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ galleryImages: updatedImages })
-      });
-      if (!patchRes.ok) throw new Error("Error al eliminar imagen en DB");
+      const delData = await delRes.json();
+      if (delData.code === 'SUCCESS' && delData.images) {
+         setImages(delData.images);
+      } else {
+         setImages(updatedImages);
+      }
+      
+      setTotalImages(prev => prev - 1);
+      setTotalBytes(prev => prev - (imageToDelete.bytes || 0));
 
       setImages(updatedImages);
       setMessage('Imagen eliminada.');
@@ -665,12 +765,12 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
 
       const updatedImages = images.filter(img => !publicIdsToDelete.includes(img.public_id));
 
-      const patchRes = await fetch(`${apiUrl}/api/users/me`, {
-        method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ galleryImages: updatedImages })
-      });
-      if (!patchRes.ok) throw new Error("Error al actualizar la base de datos");
+      // 2. Ya no enviamos PATCH a users/me para proteger los datos en caso de paginación.
+      // El backend ya eliminó las fotos desde /api/images/delete.
+      
+      const deletedBytes = imagesToDelete.reduce((acc, img) => acc + (img.bytes || 0), 0);
+      setTotalImages(prev => prev - imagesToDelete.length);
+      setTotalBytes(prev => prev - deletedBytes);
 
       setImages(updatedImages);
       setIsSelectionMode(false);
@@ -896,7 +996,7 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
                 <svg className="w-6 h-6 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                 Galería de Fotos
               </h2>
-              <p className="text-sm text-gray-400 mb-8">Sube fotos para llenar tu Universo 3D. Tienes {images.length} fotos de {planData.maxImages} permitidas.</p>
+              <p className="text-sm text-gray-400 mb-8">Sube fotos para llenar tu Universo 3D. Tienes {totalImages} fotos de {planData.maxImages} permitidas.</p>
 
               <div className="mb-10 relative">
                 <input
@@ -976,6 +1076,17 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
                   ))}
                 </div>
               )}
+              
+              {/* Trigger del Scroll Infinito */}
+              {nextCursor && (
+                <div ref={observerRef} className="w-full py-8 flex justify-center">
+                  <svg className="w-8 h-8 text-pink-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </div>
+              )}
+
               {images.length === 0 && (
                 <div className="text-center py-12 text-gray-600">
                   <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>

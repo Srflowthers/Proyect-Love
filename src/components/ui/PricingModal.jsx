@@ -1,222 +1,587 @@
-import React, { useState } from 'react';
-import { PLANS } from '@/services/userService';
+import React, { useState, useEffect } from 'react';
 import { Turnstile } from '@marsidev/react-turnstile';
 
+const PLANS = [
+  { 
+    id: "gratis", 
+    name: "Gratis", 
+    tagline: "Para armar tu primera galería.", 
+    mensual: 0, 
+    anual: 0,
+    features: [
+      ["100 MB de espacio", true],
+      ["Bóveda Privada: Archivos 100% encriptados", true],
+      ["Fotos en calidad original", false],
+      ["Galería 3D", false],
+      ["Soporte para videos", false, true, true],
+      ["Árbol de los Recuerdos", false, true, true],
+      ["Archivos grandes", false, true, true]
+    ] 
+  },
+  { 
+    id: "pololos", 
+    name: "Pololos", 
+    tagline: "Fotos y videos en alta calidad.", 
+    mensual: 990, 
+    anual: 5990, 
+    discount: 50,
+    featured: true,
+    badge: "Más popular",
+    trialDays: 7,
+    features: [
+      ["15 GB de espacio", true],
+      ["Árbol de los Recuerdos interactivo", false],
+      ["Fotos y videos en alta calidad", false],
+      ["Privacidad y encriptación garantizada", false],
+      ["Hasta 250 MB por archivo", false],
+      ["Incluye todos los beneficios del plan Gratis", false]
+    ] 
+  },
+  { 
+    id: "novios", 
+    name: "Novios", 
+    tagline: "Más espacio para más recuerdos.", 
+    mensual: 1990, 
+    anual: 14990, 
+    discount: 30,
+    features: [
+      ["50 GB de espacio", true],
+      ["Incluye todos los beneficios del plan Pololos", false],
+      ["Seguridad de grado bancario", false],
+      ["Hasta 1 GB por archivo", false],
+      ["Ideal para viajes y aniversarios", false]
+    ] 
+  },
+  { 
+    id: "matrimonio", 
+    name: "Matrimonio", 
+    tagline: "Todo tu gran día, sin recortes.", 
+    mensual: 3290, 
+    anual: 24990,
+    discount: 20,
+    features: [
+      ["100 GB de espacio", true],
+      ["Incluye todos los beneficios del plan Novios", false],
+      ["Videos en calidad 4K", false],
+      ["Hasta 5 GB por archivo", false],
+      ["Descarga completa de tu galería en ZIP", false]
+    ] 
+  }
+];
+
+const clp = (n) => new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(n);
+const perMonth = (p) => Math.round(p.anual / 12 / 10) * 10;
+const savePct = (p) => p.discount !== undefined ? p.discount : (p.mensual ? Math.round((1 - p.anual / (p.mensual * 12)) * 100) : 0);
+
+const CheckIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="shrink-0">
+    <path d="M3 8.5l3.2 3L13 4.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const CrossIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="shrink-0">
+    <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
 const PricingModal = ({ onLogin, onClose }) => {
-  const [selectedPlan, setSelectedPlan] = useState('pololos');
-  const [isAnnual, setIsAnnual] = useState(false);
+  const [period, setPeriod] = useState("anual");
+  const [selectedPlanId, setSelectedPlanId] = useState("novios");
   const [turnstileToken, setTurnstileToken] = useState(null);
 
-  const formatMB = (bytes) => {
-    if (bytes >= 1024 * 1024 * 1024) {
-      return (bytes / (1024 * 1024 * 1024)).toFixed(0) + ' GB';
-    }
-    return (bytes / (1024 * 1024)).toFixed(0) + ' MB';
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
+
+  const getPriceBlock = (p) => {
+    if (!p.mensual) return { amount: "$0", unit: "", note: "Sin costo, sin tarjeta" };
+    if (period === "mensual") return { amount: clp(p.mensual), unit: "/mes", note: "Se cobra cada mes" };
+    return { 
+      amount: clp(perMonth(p)), 
+      unit: "/mes", 
+      note: `Se cobra ${clp(p.anual)} una vez al año · ahorras ${savePct(p)} %`
+    };
   };
 
-  const getPlanDetails = (planId) => {
-    switch(planId) {
-      case 'pololos':
-        return [
-          { included: true, text: 'Galería 3D Interactiva' },
-          { included: true, text: 'Música de Fondo (Spotify)' },
-          { included: true, text: 'Hasta 60 Fotos aprox.' },
-          { included: false, text: 'Árbol de Recuerdos 3D' },
-          { included: false, text: 'Avión de Papel (Modo Vuelo)' }
-        ];
-      case 'novios':
-        return [
-          { included: true, text: 'Todo lo del plan Básico' },
-          { included: true, text: 'Hasta 500 Fotos aprox.' },
-          { included: true, text: 'Árbol de Recuerdos 3D' },
-          { included: false, text: 'Avión de Papel (Modo Vuelo)' },
-          { included: false, text: 'Soporte Prioritario' }
-        ];
-      case 'matrimonio':
-        return [
-          { included: true, text: 'Todo lo del plan Novios' },
-          { included: true, text: 'Hasta 1.500 Fotos aprox.' },
-          { included: true, text: 'Avión de Papel (Modo Vuelo)' },
-          { included: true, text: 'Ideal para eventos y bodas' },
-          { included: false, text: 'Almacenamiento Masivo' }
-        ];
-      case 'familia':
-        return [
-          { included: true, text: 'Todos los beneficios Premium' },
-          { included: true, text: 'Hasta 4.000 Fotos aprox.' },
-          { included: true, text: 'Avión de Papel (Modo Vuelo)' },
-          { included: true, text: 'Almacenamiento Masivo (15GB)' },
-          { included: true, text: 'Soporte Prioritario 24/7' }
-        ];
-      default: return [];
+  const handleContinue = () => {
+    if (onLogin && turnstileToken) {
+      onLogin(turnstileToken);
+    } else if (onLogin && import.meta.env.VITE_FIREBASE_API_KEY) {
+      onLogin("dev_token");
     }
   };
+
+  const maxSave = Math.max(...PLANS.map(savePct));
+  const selectedPlan = PLANS.find(x => x.id === selectedPlanId);
+  const totalText = !selectedPlan.mensual 
+    ? "sin costo" 
+    : period === "anual" 
+      ? `${clp(selectedPlan.anual)} al año` 
+      : `${clp(selectedPlan.mensual)} al mes`;
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm cursor-pointer" 
+    <div className="fixed inset-0 z-[10000] overflow-y-auto bg-[#0c0a10]">
+      <button 
         onClick={onClose}
-      ></div>
-      
-      {/* Estilos de Fuego Realista y Orgánico */}
-      <style>{`
-        @keyframes flame-move {
-          0% { background-position: 0% 50%; }
-          30% { background-position: 100% 50%; }
-          70% { background-position: 0% 50%; }
-          100% { background-position: 100% 50%; }
-        }
-        @keyframes organic-flicker {
-          0%   { opacity: 1; transform: scale(1) translateY(0); }
-          20%  { opacity: 0.6; transform: scale(1.05) translateY(-1px); }
-          40%  { opacity: 0.9; transform: scale(1.02) translateY(0); }
-          60%  { opacity: 0.4; transform: scale(1.08) translateY(-2px); }
-          80%  { opacity: 0.8; transform: scale(1.03) translateY(-1px); }
-          100% { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        .flame-border {
-          position: relative;
-          background: linear-gradient(90deg, #ff0000 0%, #ff5a00 25%, #ff9a00 50%, #ff5a00 75%, #ff0000 100%);
-          background-size: 300% auto;
-          animation: flame-move 2.5s ease-in-out infinite alternate;
-          padding: 2px;
-          border-radius: 9999px;
-          z-index: 10;
-        }
-        .flame-border::before {
-          content: '';
-          position: absolute;
-          inset: -4px;
-          background: inherit;
-          background-size: inherit;
-          animation: flame-move 2.5s ease-in-out infinite alternate, organic-flicker 1.8s ease-in-out infinite;
-          filter: blur(8px);
-          opacity: 0.8;
-          z-index: -1;
-          border-radius: inherit;
-        }
-      `}</style>
+        className="absolute top-6 right-6 z-50 w-10 h-10 bg-[#1b1724] hover:bg-[#2a2438] rounded-full flex items-center justify-center text-white border border-[rgba(255,255,255,.09)] transition-colors"
+      >
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+      </button>
 
-      {/* Modal */}
-      <div className="relative w-full max-w-7xl bg-[#111] border border-pink-500/30 rounded-2xl shadow-[0_0_50px_rgba(236,72,153,0.15)] overflow-hidden flex flex-col max-h-[95vh]">
-        <div className="p-3 text-center border-b border-gray-800 shrink-0 relative flex flex-col items-center justify-center">
-          <h2 className="text-xl font-serif italic text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400">
-            Elige tu Universo
-          </h2>
-          
-          {/* Toggle Mensual/Anual */}
-          <div className="flex items-center justify-center gap-3 mt-2">
-            <span className={`text-xs font-semibold transition-colors ${!isAnnual ? 'text-white' : 'text-gray-500'}`}>Mensual</span>
-            <button 
-              onClick={() => setIsAnnual(!isAnnual)}
-              className="relative w-12 h-6 rounded-full bg-gray-800 border border-gray-600 transition-colors focus:outline-none"
-            >
-              <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-pink-500 transition-transform duration-300 ${isAnnual ? 'translate-x-6' : 'translate-x-0'}`}></div>
-            </button>
-            <span className={`text-xs font-semibold transition-colors flex items-center gap-2 ${isAnnual ? 'text-white' : 'text-gray-500'}`}>
-              Anual
-              <span className="bg-pink-600 text-white text-[9px] px-1.5 py-0.5 rounded-full uppercase tracking-wider hidden sm:inline-block">
-                Ahorra 4 Meses
-              </span>
-            </span>
-          </div>
-        </div>
-        
-        <div className="p-3 overflow-y-auto overflow-x-hidden flex-1">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {Object.values(PLANS).map(plan => {
-              const isSelected = selectedPlan === plan.id;
-              const details = getPlanDetails(plan.id);
-              
-              return (
-                <div 
-                  key={plan.id}
-                  onClick={() => setSelectedPlan(plan.id)}
-                  className={`relative flex flex-col p-3 rounded-xl cursor-pointer transition-all duration-300 border-2 ${
-                    isSelected 
-                      ? 'bg-pink-900/20 border-pink-500 scale-[1.02] shadow-[0_0_15px_rgba(236,72,153,0.3)] z-10' 
-                      : 'bg-black border-gray-800 hover:border-gray-600'
-                  }`}
+      <div className="pricing-container">
+        <main className="wrap">
+          <header>
+            <h1>Elige tu Universo</h1>
+            <p>Empieza gratis y mejora cuando tu historia necesite más espacio. Puedes cambiar de plan cuando quieras desde tu panel.</p>
+            <div className="period">
+              <div className="seg" role="group" aria-label="Periodo de cobro">
+                <button 
+                  type="button" 
+                  onClick={() => setPeriod('mensual')} 
+                  aria-pressed={period === 'mensual'}
                 >
-                  {/* Badge Popular/Recomendado */}
-                  {plan.id === 'pololos' && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <div className="flame-border">
-                        <div className="bg-[#111] text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 text-[9px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider relative z-10">
-                          Más Elegido
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {plan.id === 'novios' && (
-                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-pink-600 to-purple-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-lg shadow-pink-500/30">
-                      Recomendado
-                    </div>
-                  )}
+                  Mensual
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setPeriod('anual')} 
+                  aria-pressed={period === 'anual'}
+                >
+                  Anual
+                </button>
+              </div>
+              <span className="save" id="save-badge">Ahorra hasta {maxSave} % con el plan anual</span>
+            </div>
+          </header>
 
-                  <h3 className={`text-sm font-bold text-center mb-1 flex items-center justify-center gap-1 ${isSelected ? 'text-pink-400' : 'text-gray-200'}`}>
-                    <span className="text-lg">{plan.icon}</span> {plan.name}
-                  </h3>
-                  
-                  {/* Precio Dinámico */}
-                  <div className="text-center mb-1">
-                    <span className="text-xl font-black text-white">${isAnnual ? plan.priceAnnual : plan.priceMonthly}</span>
-                    <span className="text-gray-500 text-[10px]"> {isAnnual ? '/año' : '/mes'}</span>
-                    {plan.id === 'pololos' && !isAnnual && (
-                      <div className="text-green-400 text-[10px] font-bold mt-0.5 animate-pulse">¡1ra Semana Gratis!</div>
-                    )}
+          <div className="grid" role="radiogroup" aria-label="Planes">
+            {PLANS.map((p) => {
+              const pr = getPriceBlock(p);
+              return (
+                <label key={p.id} className={`plan ${p.featured ? "featured" : ""}`}>
+                  <input 
+                    type="radio" 
+                    name="plan" 
+                    value={p.id} 
+                    checked={selectedPlanId === p.id}
+                    onChange={() => setSelectedPlanId(p.id)}
+                  />
+                  <div className="body">
+                    {p.badge && <span className="tag">{p.badge}</span>}
+                    <h2>{p.name}</h2>
+                    <p className="tagline">{p.tagline}</p>
+                    <div className="price">
+                      <span className="amount">{pr.amount}</span>
+                      <span className="unit">{pr.unit}</span>
+                    </div>
+                    <p className="note">{pr.note}</p>
+                    {p.trialDays && <span className="trial">{p.trialDays} días gratis al empezar</span>}
+                    <div className="rule"></div>
+                    <ul>
+                      {p.features.map(([text, isStrong, isDim, isCross], idx) => (
+                        <li key={idx} className={isDim ? "dim" : ""}>
+                          {isCross ? <CrossIcon /> : <CheckIcon />}
+                          <span>{isStrong ? <strong>{text}</strong> : text}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-
-                  <div className="text-center mb-2 border-b border-gray-800 pb-2">
-                    <span className="text-[11px] text-pink-300 font-semibold">{formatMB(plan.maxBytes)} de Espacio</span>
-                  </div>
-                  
-                  <ul className="flex-1 space-y-1.5">
-                    {details.map((item, i) => (
-                      <li key={i} className="flex items-center gap-1.5 text-[11px] leading-tight">
-                        {item.included ? (
-                          <svg className="w-3.5 h-3.5 text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
-                        ) : (
-                          <svg className="w-3.5 h-3.5 text-gray-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                        )}
-                        <span className={item.included ? 'text-gray-300' : 'text-gray-600 line-through'}>{item.text}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                </label>
               );
             })}
           </div>
-        </div>
-        
-        <div className="p-3 bg-[#1a1a1a] border-t border-gray-800 shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-gray-400 text-[11px] text-center sm:text-left leading-tight">
-            Empieza con el plan <strong className="text-pink-400">Pololos (Básico)</strong> y obtén <strong className="text-green-400">1 Semana Gratis</strong>.<br/>
-            Podrás solicitar una mejora directamente desde tu panel de configuración.
+          <p className="legal" id="legal">
+            Precios en pesos chilenos con IVA incluido. El plan anual se cobra una sola vez al año.
           </p>
-          <div className="flex flex-col items-center gap-2">
-            <Turnstile 
-              siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'} 
-              onSuccess={(token) => setTurnstileToken(token)} 
-              options={{ theme: 'dark', size: 'compact' }}
-            />
-            <button 
-              onClick={() => onLogin(turnstileToken)}
-              disabled={!turnstileToken}
-              className="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white rounded-full text-xs font-bold shadow-xl transition-all border border-pink-400 flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#fff"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#fff"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#fff"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#fff"/>
-              </svg>
-              Continuar con Google
-            </button>
+        </main>
+
+        <div className="bar">
+          <div className="bar-in">
+            <div className="sum" aria-live="polite">
+              <small>Tu selección</small>
+              <b>Plan {selectedPlan.name} {selectedPlan.mensual ? `· ${period} ` : ""}· {totalText}</b>
+            </div>
+            <div className="actions">
+              
+              <div id="turnstile-slot" className="overflow-hidden h-[65px] rounded-xl flex items-center justify-center">
+                <Turnstile 
+                  siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                  onSuccess={(token) => setTurnstileToken(token)}
+                  options={{ theme: 'dark', size: 'normal' }}
+                />
+              </div>
+
+              <button 
+                className={`cta ${!turnstileToken ? 'opacity-50 grayscale cursor-not-allowed' : ''}`} 
+                id="cta" 
+                type="button" 
+                onClick={handleContinue}
+                disabled={!turnstileToken && !import.meta.env.VITE_FIREBASE_API_KEY}
+              >
+                <span className="g" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 48 48">
+                    <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/>
+                    <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/>
+                    <path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/>
+                    <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/>
+                  </svg>
+                </span>
+                Continuar con Google
+              </button>
+            </div>
           </div>
         </div>
+
+        <style dangerouslySetInnerHTML={{ __html: `
+          .pricing-container {
+            --bg:#0c0a10; --surface:#14111a; --surface-2:#1b1724;
+            --line:rgba(255,255,255,.09); --line-strong:rgba(255,255,255,.18);
+            --text:#f3eef7; --muted:#9d94ab; --rose:#ec4899; --rose-soft:rgba(236,72,153,.14); --violet:#a66bff;
+            --ok:#5fd6a2;
+            --serif:"Cormorant Garamond",Georgia,"Times New Roman",serif;
+            --sans:"Jost",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+            
+            font-family: var(--sans);
+            color: var(--text);
+            background: radial-gradient(900px 420px at 50% -10%, rgba(236,72,153,.16), transparent 70%), var(--bg);
+            min-height: 100vh;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+          }
+          
+          .pricing-container * {
+            box-sizing: border-box;
+            margin: 0;
+          }
+
+          .pricing-container .wrap {
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 56px 20px 140px;
+          }
+          .pricing-container header {
+            text-align: center;
+            max-width: 560px;
+            margin: 0 auto 36px;
+          }
+          .pricing-container h1 {
+            font-family: var(--serif);
+            font-style: italic;
+            font-weight: 600;
+            font-size: clamp(2.2rem, 5vw, 3.2rem);
+            line-height: 1.1;
+            letter-spacing: .2px;
+          }
+          .pricing-container header p {
+            color: var(--muted);
+            margin-top: 12px;
+            font-size: 1.02rem;
+          }
+
+          /* Selector de periodo */
+          .pricing-container .period {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 14px;
+            margin-top: 28px;
+            flex-wrap: wrap;
+          }
+          .pricing-container .seg {
+            display: inline-flex;
+            padding: 4px;
+            border-radius: 999px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+          }
+          .pricing-container .seg button {
+            font: 500 .95rem var(--sans);
+            color: var(--muted);
+            background: none;
+            border: 0;
+            padding: 9px 22px;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: background .2s, color .2s;
+          }
+          .pricing-container .seg button[aria-pressed="true"] {
+            background: var(--surface-2);
+            color: var(--text);
+            box-shadow: 0 0 0 1px var(--line-strong) inset;
+          }
+          .pricing-container .save {
+            font-size: .85rem;
+            color: var(--ok);
+            background: rgba(95,214,162,.1);
+            border: 1px solid rgba(95,214,162,.25);
+            padding: 5px 12px;
+            border-radius: 999px;
+          }
+
+          /* Tarjetas */
+          .pricing-container .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            align-items: stretch;
+          }
+          .pricing-container .plan {
+            position: relative;
+            display: block;
+            cursor: pointer;
+          }
+          .pricing-container .plan input {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            opacity: 0;
+            width: 0;
+            height: 0;
+            margin: 0;
+            appearance: none;
+            pointer-events: none;
+          }
+          .pricing-container .body {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 26px 22px 24px;
+            border-radius: 18px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            transition: border-color .2s, transform .2s, background .2s;
+          }
+          .pricing-container .plan:hover .body {
+            border-color: var(--line-strong);
+          }
+          .pricing-container .plan input:focus-visible + .body {
+            outline: 2px solid var(--violet);
+            outline-offset: 3px;
+          }
+          .pricing-container .plan input:checked + .body {
+            border-color: var(--rose);
+            background: linear-gradient(180deg, var(--rose-soft), var(--surface) 55%);
+            box-shadow: 0 0 0 1px var(--rose) inset, 0 18px 50px -24px rgba(236,72,153,.55);
+          }
+          .pricing-container .plan.featured .body {
+            border-color: rgba(236,72,153,.45);
+          }
+          .pricing-container .tag {
+            position: absolute;
+            top: -11px;
+            left: 22px;
+            font-size: .78rem;
+            font-weight: 600;
+            color: #fff;
+            background: linear-gradient(90deg, var(--rose), var(--violet));
+            padding: 4px 12px;
+            border-radius: 999px;
+          }
+          .pricing-container .trial {
+            display: inline-block;
+            font-size: .8rem;
+            color: var(--ok);
+            margin-top: 8px;
+          }
+          .pricing-container h2 {
+            font-family: var(--serif);
+            font-style: italic;
+            font-weight: 600;
+            font-size: 1.7rem;
+            line-height: 1.1;
+          }
+          .pricing-container .tagline {
+            color: var(--muted);
+            font-size: .92rem;
+            margin-top: 4px;
+            min-height: 2.6em;
+          }
+          .pricing-container .price {
+            margin-top: 18px;
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+          }
+          .pricing-container .amount {
+            font-size: 2.3rem;
+            font-weight: 600;
+            letter-spacing: -.5px;
+            font-variant-numeric: tabular-nums;
+          }
+          .pricing-container .unit {
+            color: var(--muted);
+            font-size: .95rem;
+          }
+          .pricing-container .note {
+            color: var(--muted);
+            font-size: .85rem;
+            min-height: 1.4em;
+            margin-top: 2px;
+          }
+          .pricing-container .rule {
+            height: 1px;
+            background: var(--line);
+            margin: 18px 0;
+          }
+          .pricing-container ul {
+            list-style: none;
+            padding: 0;
+            display: grid;
+            gap: 10px;
+            font-size: .93rem;
+          }
+          .pricing-container li {
+            display: flex;
+            gap: 10px;
+            color: #d9d2e3;
+          }
+          .pricing-container li svg {
+            flex: none;
+            margin-top: 3px;
+            color: var(--rose);
+          }
+          .pricing-container li.dim {
+            color: var(--muted);
+          }
+          .pricing-container li.dim svg {
+            color: var(--muted);
+          }
+          .pricing-container li strong {
+            color: var(--text);
+            font-weight: 600;
+          }
+
+          /* Barra de confirmación */
+          .pricing-container .bar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(12,10,16,.92);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid var(--line);
+            padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
+            z-index: 50;
+          }
+          .pricing-container .bar-in {
+            max-width: 1120px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            justify-content: space-between;
+            flex-wrap: wrap;
+          }
+          .pricing-container .sum small {
+            display: block;
+            color: var(--muted);
+            font-size: .82rem;
+          }
+          .pricing-container .sum b {
+            font-weight: 600;
+            font-size: 1.02rem;
+          }
+          .pricing-container .actions {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+          }
+          .pricing-container #turnstile-slot {
+            min-height: 0;
+          }
+          .pricing-container .cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font: 600 1rem var(--sans);
+            color: #fff;
+            border: 0;
+            cursor: pointer;
+            padding: 13px 26px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--rose), var(--violet));
+            box-shadow: 0 10px 30px -12px rgba(236,72,153,.7);
+            transition: transform .15s, filter .15s;
+          }
+          .pricing-container .cta:hover {
+            filter: brightness(1.08);
+          }
+          .pricing-container .cta:active {
+            transform: scale(.98);
+          }
+          .pricing-container .cta:focus-visible {
+            outline: 2px solid #fff;
+            outline-offset: 3px;
+          }
+          .pricing-container .cta .g {
+            background: #fff;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            display: grid;
+            place-items: center;
+          }
+          .pricing-container .legal {
+            max-width: 1120px;
+            margin: 18px auto 0;
+            text-align: center;
+            color: var(--muted);
+            font-size: .82rem;
+          }
+
+          @media (max-width: 980px) {
+            .pricing-container .grid {
+              grid-template-columns: repeat(2, 1fr);
+            }
+          }
+          @media (max-width: 560px) {
+            .pricing-container .grid {
+              grid-template-columns: 1fr;
+            }
+            .pricing-container .tagline {
+              min-height: 0;
+            }
+            .pricing-container .bar {
+              padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+            }
+            .pricing-container .bar-in {
+              justify-content: center;
+              text-align: center;
+              gap: 8px;
+            }
+            .pricing-container .sum small {
+              display: none; /* Ocultamos solo el "Tu selección" */
+            }
+            .pricing-container .sum b {
+              font-size: 0.9rem; /* Texto del plan seleccionado más pequeño */
+              color: var(--text);
+            }
+            .pricing-container .cta {
+              width: 100%;
+              justify-content: center;
+              padding: 11px 20px;
+            }
+            .pricing-container .actions {
+              width: 100%;
+              flex-direction: column;
+              gap: 10px;
+            }
+            .pricing-container #turnstile-slot {
+              transform: scale(0.9); /* Achica un 10% el captcha para que no desentone en celulares */
+              transform-origin: center;
+            }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .pricing-container * {
+              transition: none !important;
+            }
+          }
+        `}} />
       </div>
     </div>
   );

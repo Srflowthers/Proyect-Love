@@ -19,6 +19,11 @@ function App() {
   const [isMobile, setIsMobile] = React.useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const [hideDock, setHideDock] = React.useState(false);
 
+  // Caché Global en Memoria para evitar peticiones redundantes
+  const [globalUserData, setGlobalUserData] = React.useState(null);
+  const [globalImages, setGlobalImages] = React.useState(null);
+  const [globalNextCursor, setGlobalNextCursor] = React.useState(undefined);
+
   React.useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
@@ -173,7 +178,17 @@ function App() {
 
   let activeView = null;
   if (view === 'settings') {
-    activeView = <SettingsView user={user} onSaveComplete={() => handleSetView('gallery')} initialTab={settingsTab} />;
+    activeView = <SettingsView 
+      user={user} 
+      onSaveComplete={() => handleSetView('gallery')} 
+      initialTab={settingsTab} 
+      globalUserData={globalUserData}
+      setGlobalUserData={setGlobalUserData}
+      globalImages={globalImages}
+      setGlobalImages={setGlobalImages}
+      globalNextCursor={globalNextCursor}
+      setGlobalNextCursor={setGlobalNextCursor}
+    />;
   } else if (userRole === 'admin' && view === 'admin') {
     activeView = (
       <div className="relative">
@@ -199,6 +214,12 @@ function App() {
           }} 
           onOpenAdmin={userRole === 'admin' ? () => handleSetView('admin') : undefined}
           onDockVisibilityChange={setHideDock}
+          globalUserData={globalUserData}
+          setGlobalUserData={setGlobalUserData}
+          globalImages={globalImages}
+          setGlobalImages={setGlobalImages}
+          globalNextCursor={globalNextCursor}
+          setGlobalNextCursor={setGlobalNextCursor}
         />
         
         {userRole === 'admin' && (

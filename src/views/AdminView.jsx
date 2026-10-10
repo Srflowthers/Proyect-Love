@@ -24,7 +24,7 @@ const AdminView = ({ user, initialTab = 'clients' }) => {
   // Modal para planes
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
-  const [planForm, setPlanForm] = useState({ id: '', name: '', maxBytes: '', maxImages: '', icon: '', priceMonthly: '', priceAnnual: '' });
+  const [planForm, setPlanForm] = useState({ id: '', name: '', maxBytes: '', icon: '', priceMonthly: '', priceAnnual: '' });
 
   const loadData = async () => {
     setLoading(true);
@@ -88,14 +88,13 @@ const AdminView = ({ user, initialTab = 'clients' }) => {
         id: plan.id || '',
         name: plan.name || '',
         maxBytes: plan.maxBytes || '',
-        maxImages: plan.maxImages || '',
         icon: plan.icon || '',
         priceMonthly: plan.priceMonthly || '',
         priceAnnual: plan.priceAnnual || ''
       });
     } else {
       setEditingPlan(null);
-      setPlanForm({ id: '', name: '', maxBytes: '', maxImages: '', icon: '', priceMonthly: '', priceAnnual: '' });
+      setPlanForm({ id: '', name: '', maxBytes: '', icon: '', priceMonthly: '', priceAnnual: '' });
     }
     setShowPlanModal(true);
   };
@@ -104,8 +103,7 @@ const AdminView = ({ user, initialTab = 'clients' }) => {
     e.preventDefault();
     const dataToSave = {
       ...planForm,
-      maxBytes: parseInt(planForm.maxBytes, 10),
-      maxImages: parseInt(planForm.maxImages, 10)
+      maxBytes: parseInt(planForm.maxBytes, 10)
     };
 
     let success = false;
@@ -193,7 +191,7 @@ const AdminView = ({ user, initialTab = 'clients' }) => {
                   const totalImages = client.imageCount || 0;
                   const totalBytes = client.imageBytes || 0;
                   const hasFlight = !!client.hasFlightMode;
-                  const currentPlan = plans[client.plan] || plans.pololos || DEFAULT_PLANS.pololos;
+                  const currentPlan = plans[client.plan] || plans.gratis || DEFAULT_PLANS.gratis;
                   const usagePercent = Math.min(100, (totalBytes / currentPlan.maxBytes) * 100);
 
                   // Calcular vencimiento
@@ -237,7 +235,7 @@ const AdminView = ({ user, initialTab = 'clients' }) => {
                         <div className="flex flex-col">
                           <label className="text-xs text-gray-500 uppercase tracking-wider mb-1">Plan Actual</label>
                           <select
-                            value={client.plan || 'pololos'}
+                            value={client.plan || 'gratis'}
                             onChange={(e) => handlePlanChange(client.id, e.target.value)}
                             className="bg-gray-900 border border-gray-700 text-sm rounded-lg px-2 py-1 text-gray-300 focus:outline-none focus:border-pink-500"
                           >
@@ -249,7 +247,7 @@ const AdminView = ({ user, initialTab = 'clients' }) => {
 
                         {/* Progreso de Almacenamiento */}
                         <div className="flex flex-col text-right w-40">
-                          <span className="text-sm font-semibold text-gray-300">{totalImages} <span className="text-gray-500 font-normal">/ {currentPlan.maxImages} Fotos</span></span>
+                          <span className="text-sm font-semibold text-gray-300">Uso de espacio</span>
                           <div className="flex items-center justify-between mt-1">
                             <span className="text-xs text-pink-400">{formatBytes(totalBytes)}</span>
                             <span className="text-xs text-gray-500">{formatBytes(currentPlan.maxBytes)}</span>
@@ -313,7 +311,7 @@ const AdminView = ({ user, initialTab = 'clients' }) => {
                     <div className="flex items-center gap-8">
                       <div className="text-sm text-right">
                         <p className="text-gray-400">Límites configurados</p>
-                        <p className="font-semibold text-pink-400">{plan.maxImages} Fotos / {formatBytes(plan.maxBytes)}</p>
+                        <p className="font-semibold text-pink-400">{formatBytes(plan.maxBytes)}</p>
                       </div>
                       <button onClick={() => openPlanModal(plan)} className="px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded-lg text-sm transition-all">
                         Editar Detalles
@@ -344,11 +342,7 @@ const AdminView = ({ user, initialTab = 'clients' }) => {
                 <label className="block text-xs text-gray-400 mb-1">Nombre Público (ej: "Pololos (Básico)")</label>
                 <input required value={planForm.name} onChange={e => setPlanForm({ ...planForm, name: e.target.value })} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">Máximo de Fotos</label>
-                  <input required type="number" min="1" value={planForm.maxImages} onChange={e => setPlanForm({ ...planForm, maxImages: e.target.value })} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white" />
-                </div>
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Máximo de Bytes (ej: 200MB = 209715200)</label>
                   <input required type="number" min="1" value={planForm.maxBytes} onChange={e => setPlanForm({ ...planForm, maxBytes: e.target.value })} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white" />

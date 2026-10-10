@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { loginWithGoogle } from '@/services/authService';
+import TermsModal from '@/components/ui/TermsModal';
 
 const LoginView = () => {
   const [authError, setAuthError] = useState('');
   const [turnstileToken, setTurnstileToken] = useState(null);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   const handleLogin = async () => {
     setAuthError('');
@@ -12,7 +15,7 @@ const LoginView = () => {
       setAuthError('Por favor, completa la verificación de seguridad (Turnstile).');
       return;
     }
-    const { error } = await loginWithGoogle(turnstileToken);
+    const { error } = await loginWithGoogle(turnstileToken, acceptedTerms);
     if (error) setAuthError(error);
   };
 
@@ -33,6 +36,19 @@ const LoginView = () => {
           />
         </div>
 
+        <div className="mb-6 flex items-start gap-3 text-left max-w-sm">
+          <input 
+            type="checkbox" 
+            id="terms" 
+            checked={acceptedTerms} 
+            onChange={(e) => setAcceptedTerms(e.target.checked)} 
+            className="mt-1 w-4 h-4 rounded border-gray-600 bg-gray-800 text-pink-500 focus:ring-pink-500"
+          />
+          <label htmlFor="terms" className="text-xs text-gray-400 cursor-pointer">
+            He leído y acepto los <a href="#" onClick={(e) => { e.preventDefault(); setShowTermsModal(true); }} className="text-pink-400 hover:underline">Términos y Condiciones</a> (Obligatorio solo para crear una cuenta nueva). Tenemos seguridad nivel bancario.
+          </label>
+        </div>
+
         <button 
           onClick={handleLogin}
           disabled={!turnstileToken}
@@ -48,8 +64,10 @@ const LoginView = () => {
           <span className="relative z-10 text-white font-medium tracking-wide">Iniciar sesión con Google</span>
         </button>
         
-        {authError && <p className="mt-4 text-red-400 text-sm">{authError}</p>}
+        {authError && <p className="mt-4 text-red-400 text-sm max-w-sm text-center">{authError}</p>}
       </div>
+
+      {showTermsModal && <TermsModal onClose={() => setShowTermsModal(false)} />}
     </div>
   );
 };

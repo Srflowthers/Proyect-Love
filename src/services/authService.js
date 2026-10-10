@@ -1,11 +1,19 @@
-import { signInWithPopup, signOut } from 'firebase/auth';
+import { signInWithPopup, signOut, getAdditionalUserInfo, deleteUser } from 'firebase/auth';
 import { auth, googleProvider } from '@/config/firebase';
 
 import { saveUserToDatabase } from './userService';
 
-export const loginWithGoogle = async (turnstileToken) => {
+export const loginWithGoogle = async (turnstileToken, acceptedTerms) => {
   try {
     const result = await signInWithPopup(auth, googleProvider);
+    const details = getAdditionalUserInfo(result);
+    
+    // Si es un usuario nuevo, DEBE haber aceptado los términos antes de hacer clic
+    if (details.isNewUser && !acceptedTerms) {
+      await deleteUser(result.user);
+      return { user: null, error: 'Para registrar una cuenta nueva, debes marcar la casilla aceptando los Términos y Condiciones.' };
+    }
+
     await saveUserToDatabase(result.user, turnstileToken);
     return { user: result.user, error: null };
   } catch (error) {

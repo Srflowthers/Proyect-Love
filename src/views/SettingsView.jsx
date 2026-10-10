@@ -8,7 +8,7 @@ import LetterPage from '@/components/ui/LetterPage';
 import { GlitterWarp, VARIANTS, PALETTES } from '@/components/ui/glitter-warp';
 import ProfileTab from './settings/ProfileTab';
 
-const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
+const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUserData, setGlobalUserData, globalImages, setGlobalImages, globalNextCursor, setGlobalNextCursor }) => {
   const [formData, setFormData] = useState({
     user1Name: '',
     user2Name: '',
@@ -33,9 +33,8 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
   const [loading, setLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState(''); // '', 'saving', 'saved', 'error'
   
-  // Bandera Maestra de Arquitectura: Cambiada mediante variables de entorno para Producción
-  const USE_R2_STORAGE = import.meta.env.VITE_USE_R2 === 'true' || false;
-  
+  // Bandera Maestra de Arquitectura: Forzado a TRUE para testing en local
+    
   // Paginación de Imágenes
   const [nextCursor, setNextCursor] = useState(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -83,7 +82,7 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
           setTimeout(() => setSaveStatus(''), 3000);
         }
       }
-    }, 8000); // Esperar 8s de inactividad antes de golpear el backend
+    }, 1500); // Esperar 1.5s de inactividad antes de golpear el backend
   }, [formData, user]);
 
   // Prevenir cierre accidental de pestaña si hay datos pendientes de guardar
@@ -191,7 +190,7 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
   // Nuevo sistema de cola en segundo plano
   const [uploadQueue, setUploadQueue] = useState([]);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
-  const [planData, setPlanData] = useState(PLANS.pololos);
+  const [planData, setPlanData] = useState(PLANS.gratis);
   const [isExpired, setIsExpired] = useState(false);
 
   // Función para cargar más imágenes usando el Cursor
@@ -239,6 +238,48 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
   // Cargar datos actuales de Firestore
   useEffect(() => {
     const loadUserData = async () => {
+      // CACHÉ GLOBAL: Si ya tenemos la info en memoria, evitamos pedirla de nuevo
+      if (globalUserData) {
+        const data = globalUserData;
+        setFormData({
+          user1Name: data.user1Name || '',
+          user2Name: data.user2Name || '',
+          anniversaryDate: data.anniversaryDate || '',
+          pets: data.pets || '',
+          kids: data.kids || '',
+          spotifyUrl: data.spotifyUrl || '',
+          customMessage: data.customMessage || '',
+          letterPages: (data.letterPages && data.letterPages[0] !== '') 
+                       ? data.letterPages 
+                       : ['Escribe aquí todo lo que sientes por esa persona especial...\n\nPuedes borrar este texto de ejemplo y utilizar todas las páginas que necesites para expresar tu amor y crear un recuerdo inolvidable.'],
+          letterTitle: data.letterTitle || 'Mi Primera Carta',
+          letterStyle: data.letterStyle || 'modern',
+          universeColor: data.universeColor || 'purple',
+          universePalette: data.universePalette || 'Cósmico',
+          universeVariant: data.universeVariant || 'tunnel',
+          customAudioUrl: data.customAudioUrl || '',
+          customAudios: data.customAudios || (data.customAudioUrl ? [{ url: data.customAudioUrl, name: 'Canción Principal' }] : [])
+        });
+        
+        if (globalImages) {
+          setImages(globalImages);
+          setNextCursor(globalNextCursor);
+        }
+
+        setTotalImages(data.galleryImages ? data.galleryImages.length : data.imageCount || 0);
+        setTotalBytes(data.galleryImages ? data.galleryImages.reduce((sum, img) => sum + (img.bytes || 0), 0) : data.imageBytes || 0);
+
+        if (data.plan && PLANS[data.plan]) {
+          setPlanData(PLANS[data.plan]);
+        }
+        if (data.planExpiresAt) {
+          const expDate = new Date(data.planExpiresAt);
+          setIsExpired(expDate.getTime() < Date.now());
+        }
+        setTimeout(() => { isInitialLoad.current = false; }, 1000);
+        return;
+      }
+
       try {
         const token = await user.getIdToken();
         const res = await fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '')}/api/users/me`, {
@@ -247,6 +288,8 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
         const snap = await res.json();
         if (snap.exists) {
           const data = snap.data;
+          if (setGlobalUserData) setGlobalUserData(data);
+
           setFormData({
             user1Name: data.user1Name || '',
             user2Name: data.user2Name || '',
@@ -274,8 +317,13 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
             });
             if (imgRes.ok) {
               const imgData = await imgRes.json();
-              setImages(imgData.items || []);
-              setNextCursor(imgData.nextCursor || null);
+              const fetchedImages = imgData.items || [];
+              setImages(fetchedImages);
+              if (setGlobalImages) setGlobalImages(fetchedImages);
+              
+              const fetchedCursor = imgData.nextCursor || null;
+              setNextCursor(fetchedCursor);
+              if (setGlobalNextCursor) setGlobalNextCursor(fetchedCursor);
             }
           } catch (e) {
             console.error("Error fetching images:", e);
@@ -375,38 +423,43 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
     }
 
     setUploading(true);
-    setMessage('Subiendo y procesando tu canción original...');
+    setMessage('Subiendo y procesando tu canción...');
 
     try {
       const token = await user.getIdToken();
       const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '');
 
-      // 1. Pedir firma
-      const sigRes = await fetch(`${apiUrl}/api/upload-signature`, {
+      // 1. Pedir firma para R2
+      const sigRes = await fetch(`${apiUrl}/api/r2-presigned-url-batch`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          files: [{
+            name: file.name,
+            format: file.type.split('/')[1] || 'mp3',
+            type: file.type
+          }]
+        })
       });
 
-      if (!sigRes.ok) throw new Error('Error de firma de seguridad');
-      const { apiKey, timestamp, signature, folder, uploadUrl } = await sigRes.json();
+      if (!sigRes.ok) throw new Error('Error al solicitar permisos de subida');
+      const { signatures } = await sigRes.json();
+      const sig = signatures[0];
 
-      // 2. Subir a Cloudinary como raw/video auto format
-      const cloudFormData = new FormData();
-      cloudFormData.append('file', file);
-      cloudFormData.append('api_key', apiKey);
-      cloudFormData.append('timestamp', timestamp);
-      cloudFormData.append('signature', signature);
-      cloudFormData.append('folder', folder);
+      // 2. Subir directamente a Cloudflare R2
+      const r2Res = await fetch(sig.uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type }
+      });
 
-      const cloudRes = await fetch(uploadUrl, { method: 'POST', body: cloudFormData });
-      if (!cloudRes.ok) throw new Error(`Error subiendo canción a la nube`);
-      const cloudData = await cloudRes.json();
+      if (!r2Res.ok) throw new Error(`Error de red al subir la canción`);
 
       // Agregar a la playlist (el useEffect de formData se encargará de guardarlo automáticamente)
-      const newAudios = [...(formData.customAudios || []), { url: cloudData.secure_url, name: file.name }];
+      const newAudios = [...(formData.customAudios || []), { url: sig.downloadUrl, name: file.name, public_id: sig.fileKey }];
       setFormData(prev => ({ 
         ...prev, 
-        customAudioUrl: cloudData.secure_url, // Mantenemos compatibilidad hacia atrás
+        customAudioUrl: sig.downloadUrl, // Mantenemos compatibilidad hacia atrás
         customAudios: newAudios
       }));
       setSaveStatus('saved');
@@ -426,8 +479,7 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
 
     // Límite estricto por archivo para evitar que Cloudinary rechace la subida (Free tier)
     // o que el navegador colapse al intentar subir gigabytes de golpe en una sola petición.
-    // [PREPARADO PARA R2]: Si activamos R2, el límite sube a 5GB por video.
-    const MAX_VIDEO_SIZE = USE_R2_STORAGE ? 5 * 1024 * 1024 * 1024 : 100 * 1024 * 1024; // 5GB R2 / 100 MB Cloudinary
+    const MAX_VIDEO_SIZE = 5 * 1024 * 1024 * 1024; // 5GB R2
     const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20 MB
 
     for (let file of files) {
@@ -441,18 +493,12 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
       }
     }
 
-    // Límite de cantidad de fotos del plan
-    if (totalImages + uploadQueueRef.current.length + files.length > planData.maxImages) {
-      alert(`¡Límite de imágenes excedido! Tu plan actual (${planData.name}) permite un máximo de ${planData.maxImages} fotos.`);
-      return;
-    }
-
-    // Límite de MB del plan
+    // Límite de capacidad (MB/GB) del plan (Única métrica restrictiva ahora)
     const currentBytes = totalBytes;
-    const newFilesBytes = files.reduce((sum, file) => sum + file.size, 0); // Estimación basada en archivo original
+    const newFilesBytes = files.reduce((sum, file) => sum + file.size, 0);
     if (currentBytes + newFilesBytes > planData.maxBytes) {
       const maxMB = (planData.maxBytes / (1024 * 1024)).toFixed(0);
-      alert(`¡Límite de almacenamiento excedido! Tu plan actual (${planData.name}) permite un máximo de ${maxMB} MB.`);
+      alert(`¡Límite de almacenamiento excedido! Tu plan actual (${planData.name}) permite un máximo de ${maxMB} MB totales. Borra archivos antiguos para hacer espacio o mejora tu plan.`);
       return;
     }
 
@@ -489,7 +535,7 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
       }
       uploadQueueRef.current = [...uploadQueueRef.current, ...compressedFiles];
     } else {
-      setMessage('Preparando archivos originales para subir (sin compresión)...');
+      setMessage('Preparando archivos para subir...');
       // Subimos los archivos directamente con la calidad original (límite backend: 200MB)
       uploadQueueRef.current = [...uploadQueueRef.current, ...filesToProcess];
     }
@@ -509,119 +555,133 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
     uploadingRef.current = true;
     setUploading(true);
 
+    let erroresDetectados = 0;
+    let archivosTotales = uploadQueueRef.current.length;
+
     try {
       const token = await user.getIdToken();
       const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '');
+      let batchQueue = [];
+      const MAX_BATCH_SIZE = 50;
 
       while (uploadQueueRef.current.length > 0) {
-        const fileToUpload = uploadQueueRef.current[0];
-
+        const filesToProcess = uploadQueueRef.current.slice(0, MAX_BATCH_SIZE);
+        
         try {
-          let finalPublicId, finalSecureUrl, finalFormat, finalBytes, finalWidth, finalHeight;
+          setMessage(`Preparando subida de ${filesToProcess.length} archivo(s)...`);
 
-          if (USE_R2_STORAGE) {
-            // [FUTURO: Lógica de subida masiva a Cloudflare R2]
-            // [SIMULADOR DE SUBIDA MASIVA A R2]
-            setMessage(`Simulando subida masiva a R2 para ${(fileToUpload.size / (1024*1024)).toFixed(1)} MB...`);
-            
-            // Simular el retraso de una subida rápida (2.5 segundos)
-            await new Promise(resolve => setTimeout(resolve, 2500));
-            
-            // Generar identificadores falsos para que el Frontend y Backend se lo crean
-            const randomId = Math.random().toString(36).substring(7);
-            
-            finalPublicId = `r2-mock-${randomId}`;
-            // Usamos videos o imágenes de prueba reales para que la galería no se vea rota
-            finalSecureUrl = fileToUpload.type.startsWith('video/') 
-              ? 'https://www.w3schools.com/html/mov_bbb.mp4' 
-              : `https://via.placeholder.com/1080x1920.png?text=R2+Mock+Upload`;
-            finalBytes = fileToUpload.size;
-            finalFormat = fileToUpload.type.split('/')[1];
-            finalWidth = 1080;
-            finalHeight = 1920;
-
-          } else {
-            // [ACTUAL: Lógica de subida a Cloudinary]
-            // 1. Pedir firma
-            const sigRes = await fetch(`${apiUrl}/api/upload-signature`, {
-              method: 'POST',
-              headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (!sigRes.ok) {
-              const err = await sigRes.json();
-              throw new Error(err.message || 'Error en firma');
-            }
-            const { apiKey, timestamp, signature, folder, uploadUrl } = await sigRes.json();
-
-            // 2. Subir a Cloudinary
-            const cloudFormData = new FormData();
-            cloudFormData.append('file', fileToUpload);
-            cloudFormData.append('api_key', apiKey);
-            cloudFormData.append('timestamp', timestamp);
-            cloudFormData.append('signature', signature);
-            cloudFormData.append('folder', folder);
-
-            const cloudRes = await fetch(uploadUrl, { method: 'POST', body: cloudFormData });
-            if (!cloudRes.ok) throw new Error(`Error subiendo a Cloudinary`);
-            const cloudData = await cloudRes.json();
-
-            finalPublicId = cloudData.public_id;
-            finalSecureUrl = cloudData.secure_url;
-            finalBytes = cloudData.bytes;
-            finalFormat = cloudData.format;
-            finalWidth = cloudData.width || 0;
-            finalHeight = cloudData.height || 0;
-          }
-
-          // 3. Confirmar con Backend y guardar
-          const confirmRes = await fetch(`${apiUrl}/api/images/confirm`, {
-            method: 'POST',
+          const presignedRes = await fetch(`${apiUrl}/api/r2-presigned-url-batch`, { 
+            method: 'POST', 
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              public_id: finalPublicId,
-              secure_url: finalSecureUrl,
-              bytes: finalBytes,
-              format: finalFormat,
-              width: finalWidth,
-              height: finalHeight
+            body: JSON.stringify({ 
+              files: filesToProcess.map(f => ({
+                name: f.name,
+                format: f.type.split('/')[1] || 'bin',
+                type: f.type
+              }))
             })
           });
-
-          if (!confirmRes.ok) {
-            const errData = await confirmRes.json().catch(() => ({}));
-            throw new Error(`Fallo confirmación: ${errData.details || errData.message || confirmRes.statusText}`);
-          }
-          const confirmData = await confirmRes.json();
-
-          if (confirmData.code === 'SUCCESS' && confirmData.image) {
-            setImages(prev => [...prev, confirmData.image]);
-            setTotalImages(prev => prev + 1);
-            setTotalBytes(prev => prev + (confirmData.image.bytes || 0));
+          
+          if (!presignedRes.ok) {
+            const err = await presignedRes.json();
+            throw new Error(err.message || 'Error solicitando firmas masivas');
           }
           
-          setSaveStatus('saved');
-          setTimeout(() => setSaveStatus(''), 2500);
+          const { signatures } = await presignedRes.json();
 
-        } catch (error) {
-          console.error("Error en archivo:", fileToUpload.name, error);
-          // Opcional: mostrar un toast de error, pero continuamos con la cola
+          for (let i = 0; i < filesToProcess.length; i++) {
+            const fileToUpload = filesToProcess[i];
+            const sig = signatures[i];
+
+            try {
+              setMessage(`Guardando archivo ${i + 1} de ${filesToProcess.length}...`);
+              const r2Res = await fetch(sig.uploadUrl, { 
+                method: 'PUT', 
+                body: fileToUpload,
+                headers: { 'Content-Type': fileToUpload.type }
+              });
+
+              if (!r2Res.ok) throw new Error(`Error de red al subir`);
+              
+              batchQueue.push({
+                public_id: `r2|${sig.fileKey}`,
+                secure_url: sig.downloadUrl,
+                bytes: fileToUpload.size,
+                format: fileToUpload.type.split('/')[1] || 'bin',
+                width: 1080,
+                height: 1920
+              });
+
+            } catch (error) {
+              erroresDetectados++;
+              console.error("Error en archivo:", fileToUpload.name, error);
+            }
+          }
+        } catch (globalBatchError) {
+          erroresDetectados += filesToProcess.length;
+          console.error("Error en batch presign:", globalBatchError);
         }
 
-        // Avanzar cola
-        uploadQueueRef.current.shift();
-        setUploadQueue([...uploadQueueRef.current]); // Actualizar UI
+        // Avanzar cola y actualizar progreso UI
+        uploadQueueRef.current = uploadQueueRef.current.slice(filesToProcess.length);
+        setUploadQueue([...uploadQueueRef.current]);
 
         if (uploadQueueRef.current.length > 0) {
-          setUploadProgress(prev => ({ ...prev, current: prev.current + 1 }));
+          setUploadProgress(prev => ({ ...prev, current: prev.current + filesToProcess.length }));
+        }
+
+        // Si el lote llegó al límite o la cola terminó, mandamos el confirm-batch
+        if (batchQueue.length >= MAX_BATCH_SIZE || uploadQueueRef.current.length === 0) {
+           if (batchQueue.length > 0) {
+             setMessage(`Finalizando guardado...`);
+             try {
+                const confirmRes = await fetch(`${apiUrl}/api/images/confirm-batch`, {
+                  method: 'POST',
+                  headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ images: batchQueue })
+                });
+
+                if (!confirmRes.ok) {
+                  const errData = await confirmRes.json().catch(() => ({}));
+                  throw new Error(`Fallo confirmación batch: ${errData.message || confirmRes.statusText}`);
+                }
+                
+                const confirmData = await confirmRes.json();
+                if (confirmData.code === 'SUCCESS' && confirmData.imagesAdded) {
+                  setImages(prev => {
+                     const newImages = [...prev, ...confirmData.imagesAdded];
+                     if (setGlobalImages) setGlobalImages(newImages); // Actualiza la caché global para la Galería
+                     return newImages;
+                  });
+                  setTotalImages(prev => prev + confirmData.imagesAdded.length);
+                  const bytesAdded = confirmData.imagesAdded.reduce((sum, img) => sum + (img.bytes || 0), 0);
+                  setTotalBytes(prev => prev + bytesAdded);
+                }
+                
+                setSaveStatus('saved');
+                setTimeout(() => setSaveStatus(''), 2500);
+             } catch (batchError) {
+                erroresDetectados += batchQueue.length;
+                console.error("Error confirmando lote:", batchError);
+             }
+             batchQueue = []; // Limpiar lote para el siguiente ciclo
+           }
         }
       }
 
-      if (uploadProgress.current > 1) { setMessage('¡Imágenes procesadas!'); }
-      setTimeout(() => { setMessage(''); }, 3000);
+      if (erroresDetectados > 0) {
+        setMessage(`Proceso terminado. ${erroresDetectados} de ${archivosTotales} archivo(s) no se pudieron guardar.`);
+      } else if (archivosTotales > 1) { 
+        setMessage('¡Imágenes guardadas con éxito!'); 
+      } else {
+        setMessage('¡Imagen guardada con éxito!'); 
+      }
+      setTimeout(() => { setMessage(''); }, 4500);
 
     } catch (globalError) {
       console.error("Error global de subida:", globalError);
+      setMessage('Ocurrió un error inesperado al subir las imágenes.');
+      setTimeout(() => { setMessage(''); }, 4500);
     } finally {
       uploadingRef.current = false;
       setUploading(false);
@@ -996,7 +1056,11 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
                 <svg className="w-6 h-6 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                 Galería de Fotos
               </h2>
-              <p className="text-sm text-gray-400 mb-8">Sube fotos para llenar tu Universo 3D. Tienes {totalImages} fotos de {planData.maxImages} permitidas.</p>
+              <p className="text-sm text-gray-400 mb-8">
+                Sube contenido para llenar tu Universo 3D. Has usado {(totalBytes / (1024 * 1024)).toFixed(1)} MB de {(planData.maxBytes / (1024 * 1024)).toFixed(1)} MB permitidos en tu plan.
+                <br/>
+                <span className="text-green-400 font-bold">Te quedan {((planData.maxBytes - totalBytes) / (1024 * 1024)).toFixed(1)} MB disponibles.</span>
+              </p>
 
               <div className="mb-10 relative">
                 <input
@@ -1215,12 +1279,35 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile' }) => {
                                   type: 'single_audio',
                                   title: '¿Eliminar Pista?',
                                   message: `¿Estás seguro de que deseas eliminar "${audio.name}" de la playlist?`,
-                                  onConfirm: () => {
+                                  onConfirm: async () => {
+                                    const audioToDelete = formData.customAudios[idx];
+                                    
+                                    // 1. Quitarlo de la playlist (se autoguarda)
                                     setFormData(prev => ({
                                       ...prev,
                                       customAudios: prev.customAudios.filter((_, i) => i !== idx)
                                     }));
                                     setDeleteModal(null);
+
+                                    // 2. Eliminar archivo físico en segundo plano
+                                    let pubId = audioToDelete.public_id;
+                                    if (!pubId && audioToDelete.url && audioToDelete.url.includes('Produccion/users/')) {
+                                      pubId = audioToDelete.url.substring(audioToDelete.url.indexOf('Produccion/users/')).split('?')[0];
+                                    }
+
+                                    if (pubId && !audioToDelete.isSpotify) {
+                                      try {
+                                        const token = await user.getIdToken();
+                                        const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '');
+                                        fetch(`${apiUrl}/api/images/delete`, {
+                                          method: 'POST',
+                                          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ public_id: `r2|${pubId}` })
+                                        }).catch(console.error);
+                                      } catch (e) {
+                                        console.error(e);
+                                      }
+                                    }
                                   }
                                 });
                               }}

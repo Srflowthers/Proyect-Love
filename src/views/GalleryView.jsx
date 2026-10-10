@@ -10,7 +10,7 @@ import { logout } from '@/services/authService';
 import Dock from '@/components/Dock';
 import { GlitterWarp, PALETTES } from '@/components/ui/glitter-warp';
 
-const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange }) => {
+const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange, globalUserData, setGlobalUserData, globalImages, setGlobalImages, globalNextCursor, setGlobalNextCursor }) => {
   const [images, setImages] = useState([]);
   const [nextCursor, setNextCursor] = useState(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -86,6 +86,18 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
     }
 
     const fetchUserData = async () => {
+      // CACHÉ GLOBAL: Si ya tenemos la información en memoria, la usamos y cortamos aquí.
+      if (globalUserData && globalImages) {
+        setUserData(globalUserData);
+        if (globalUserData.planExpiresAt) {
+          const expDate = new Date(globalUserData.planExpiresAt);
+          setIsExpired(expDate.getTime() < Date.now());
+        }
+        setImages(globalImages);
+        setNextCursor(globalNextCursor);
+        return;
+      }
+
       try {
         const token = await user.getIdToken();
         const res = await fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '')}/api/users/me`, {
@@ -96,6 +108,7 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
         if (snap.exists) {
           const data = snap.data;
           setUserData(data);
+          if (setGlobalUserData) setGlobalUserData(data);
 
           if (data.planExpiresAt) {
             const expDate = new Date(data.planExpiresAt);
@@ -109,8 +122,13 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
             });
             if (imgRes.ok) {
               const imgData = await imgRes.json();
-              setImages(imgData.items || []);
-              setNextCursor(imgData.nextCursor || null);
+              const fetchedImages = imgData.items || [];
+              setImages(fetchedImages);
+              if (setGlobalImages) setGlobalImages(fetchedImages);
+              
+              const fetchedCursor = imgData.nextCursor || null;
+              setNextCursor(fetchedCursor);
+              if (setGlobalNextCursor) setGlobalNextCursor(fetchedCursor);
             } else {
               setImages([]);
             }

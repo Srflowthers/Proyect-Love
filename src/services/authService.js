@@ -8,17 +8,20 @@ export const loginWithGoogle = async (turnstileToken, acceptedTerms) => {
     const result = await signInWithPopup(auth, googleProvider);
     const details = getAdditionalUserInfo(result);
     
-    // Si es un usuario nuevo, DEBE haber aceptado los términos antes de hacer clic
+    // Si es un usuario nuevo, DEBE haber aceptado los términos
     if (details.isNewUser && !acceptedTerms) {
       await deleteUser(result.user);
-      return { user: null, error: 'Para registrar una cuenta nueva, debes marcar la casilla aceptando los Términos y Condiciones.' };
+      return { user: null, error: 'Para registrar una cuenta nueva, debes aceptar los Términos y Condiciones.' };
     }
 
     await saveUserToDatabase(result.user, turnstileToken);
     return { user: result.user, error: null };
   } catch (error) {
     console.error("Error en login:", error);
-    return { user: null, error: 'Error al iniciar sesión con Google.' };
+    const msg = error.code === 'auth/popup-closed-by-user' 
+      ? 'Inicio de sesión cancelado.' 
+      : (error.message || 'Error al iniciar sesión con Google.');
+    return { user: null, error: msg };
   }
 };
 

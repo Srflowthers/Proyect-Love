@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Turnstile } from '@marsidev/react-turnstile';
+import TermsModal from '@/components/ui/TermsModal';
 
 const PLANS = [
   { 
@@ -89,6 +90,8 @@ const PricingModal = ({ onLogin, onClose }) => {
   const [period, setPeriod] = useState("anual");
   const [selectedPlanId, setSelectedPlanId] = useState("novios");
   const [turnstileToken, setTurnstileToken] = useState(null);
+  const [acceptedTerms, setAcceptedTerms] = useState(true);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -108,10 +111,14 @@ const PricingModal = ({ onLogin, onClose }) => {
   };
 
   const handleContinue = () => {
-    if (onLogin && turnstileToken) {
-      onLogin(turnstileToken);
-    } else if (onLogin && import.meta.env.VITE_FIREBASE_API_KEY) {
-      onLogin("dev_token");
+    setShowTermsModal(true);
+  };
+
+  const handleAcceptTermsAndLogin = () => {
+    setShowTermsModal(false);
+    const token = turnstileToken || (import.meta.env.DEV ? "dev_token" : null);
+    if (onLogin && token) {
+      onLogin(token, true);
     }
   };
 
@@ -206,7 +213,6 @@ const PricingModal = ({ onLogin, onClose }) => {
               <b>Plan {selectedPlan.name} {selectedPlan.mensual ? `· ${period} ` : ""}· {totalText}</b>
             </div>
             <div className="actions">
-              
               <div id="turnstile-slot" className="overflow-hidden h-[65px] rounded-xl flex items-center justify-center">
                 <Turnstile 
                   siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
@@ -216,11 +222,11 @@ const PricingModal = ({ onLogin, onClose }) => {
               </div>
 
               <button 
-                className={`cta ${!turnstileToken ? 'opacity-50 grayscale cursor-not-allowed' : ''}`} 
+                className={`cta ${!turnstileToken && !import.meta.env.DEV ? 'opacity-50 grayscale cursor-not-allowed' : ''}`} 
                 id="cta" 
                 type="button" 
                 onClick={handleContinue}
-                disabled={!turnstileToken && !import.meta.env.VITE_FIREBASE_API_KEY}
+                disabled={!turnstileToken && !import.meta.env.DEV}
               >
                 <span className="g" aria-hidden="true">
                   <svg width="14" height="14" viewBox="0 0 48 48">
@@ -583,6 +589,12 @@ const PricingModal = ({ onLogin, onClose }) => {
           }
         `}} />
       </div>
+      {showTermsModal && (
+        <TermsModal 
+          onClose={() => setShowTermsModal(false)} 
+          onAccept={handleAcceptTermsAndLogin} 
+        />
+      )}
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React from 'react';
 
-const TermsModal = ({ onClose }) => {
+const TermsModal = ({ onClose, onAccept }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
       <div className="bg-[#111] border border-gray-700 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl animate-scaleUp overflow-hidden">
@@ -44,10 +44,32 @@ const TermsModal = ({ onClose }) => {
           </ul>
         </div>
 
-        <div className="p-4 border-t border-gray-800 bg-gray-900/50 flex justify-end">
-          <button onClick={onClose} className="px-6 py-2 bg-pink-600 hover:bg-pink-500 text-white font-bold rounded-xl transition-colors">
-            Entendido
-          </button>
+        <div className="p-4 border-t border-gray-800 bg-gray-900/50 flex justify-end gap-3">
+          {onAccept ? (
+            <>
+              <button 
+                type="button"
+                onClick={onClose} 
+                className="px-5 py-2.5 rounded-xl border border-gray-700 text-gray-300 hover:bg-gray-800 transition-colors font-medium text-sm"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="button"
+                onClick={onAccept} 
+                className="px-6 py-2.5 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg transition-all text-sm flex items-center gap-2"
+              >
+                <span>Acepto los Términos y Continuar</span>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </button>
+            </>
+          ) : (
+            <button onClick={onClose} className="px-6 py-2 bg-pink-600 hover:bg-pink-500 text-white font-bold rounded-xl transition-colors">
+              Entendido
+            </button>
+          )}
         </div>
       </div>
     </div>

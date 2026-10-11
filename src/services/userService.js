@@ -9,7 +9,7 @@ const getAuthHeaders = async () => {
 
 export const saveUserToDatabase = async (user, turnstileToken) => {
   try {
-    const token = await user.getIdToken();
+    const token = await user.getIdToken(true);
     const res = await fetch(`${API_URL}/api/users/me`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },

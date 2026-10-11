@@ -97,9 +97,12 @@ function App() {
         {showPricing && (
           <PricingModal 
             onClose={() => setShowPricing(false)} 
-            onLogin={(turnstileToken) => {
+            onLogin={async (turnstileToken, acceptedTerms) => {
               setShowPricing(false);
-              loginWithGoogle(turnstileToken);
+              const { error } = await loginWithGoogle(turnstileToken, acceptedTerms);
+              if (error) {
+                alert(error);
+              }
             }} 
           />
         )}

@@ -4,9 +4,11 @@ import imageCompression from 'browser-image-compression';
 import { PLANS } from '@/services/userService';
 import { logout } from '@/services/authService';
 import Dock from '@/components/Dock';
-import LetterPage from '@/components/ui/LetterPage';
 import { GlitterWarp, VARIANTS, PALETTES } from '@/components/ui/glitter-warp';
 import ProfileTab from './settings/ProfileTab';
+import LettersTab from './settings/LettersTab';
+import ImagesTab from './settings/ImagesTab';
+import MusicTab from './settings/MusicTab';
 
 const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUserData, setGlobalUserData, globalImages, setGlobalImages, globalNextCursor, setGlobalNextCursor }) => {
   const [formData, setFormData] = useState({
@@ -963,404 +965,49 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
 
           {/* TAB 2: LETTERS */}
           {activeTab === 'pages' && (
-            <div className="animate-fadeIn">
-              <h2 className="text-xl font-bold text-gray-200 mb-2 flex items-center gap-2">
-                <svg className="w-6 h-6 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                Cartas 3D
-              </h2>
-              <p className="text-sm text-gray-400 mb-8">Escribe cartas largas. Cada página se representará como una carta arrugada en tu galería 3D.</p>
-              
-              <form onSubmit={(e) => e.preventDefault()}>
-                <div className="mb-8">
-                  <label className="block text-xs text-gray-400 mb-2 uppercase tracking-wider font-semibold">Estilo de Papel 3D</label>
-                  <select name="letterStyle" value={formData.letterStyle} onChange={handleChange} className="w-full bg-black border border-gray-700 rounded-xl p-4 text-white focus:border-purple-500 outline-none transition-colors mb-4">
-                    <option value="modern">Moderna (Papel Crema)</option>
-                    <option value="parchment">Antigua (Pergamino)</option>
-                    <option value="burnt">Antigua (Bordes Quemados)</option>
-                  </select>
-                </div>
-
-                <div className="space-y-6">
-                  {/* Título de la carta */}
-                  <div className="bg-black border border-gray-800 p-5 rounded-2xl relative">
-                    <label className="block text-sm text-purple-400 font-bold uppercase tracking-widest mb-3">Título de la Carta (Opcional)</label>
-                    <input
-                      type="text"
-                      name="letterTitle"
-                      value={formData.letterTitle}
-                      onChange={handleChange}
-                      placeholder="Ej: Para el amor de mi vida"
-                      className="w-full bg-transparent text-gray-200 text-lg outline-none border-b border-gray-800 focus:border-purple-500 pb-2 transition-colors"
-                    />
-                  </div>
-                  {formData.letterPages.map((pageText, index) => (
-                    <div key={index} className="bg-black border border-gray-800 p-5 rounded-2xl relative group flex flex-col lg:flex-row gap-6">
-                      <div className="flex-1 flex flex-col">
-                        <div className="flex justify-between items-center mb-3">
-                          <label className="block text-sm text-purple-400 font-bold uppercase tracking-widest">Página {index + 1}</label>
-                          {formData.letterPages.length > 1 && (
-                            <button type="button" onClick={() => {
-                                const newPages = formData.letterPages.filter((_, i) => i !== index);
-                                setFormData({ ...formData, letterPages: newPages });
-                              }} 
-                              className="text-red-500 bg-red-500/10 p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" title="Eliminar Página">
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            </button>
-                          )}
-                        </div>
-                        <textarea
-                          value={pageText}
-                          onChange={(e) => {
-                            const newPages = [...formData.letterPages];
-                            newPages[index] = e.target.value;
-                            setFormData({ ...formData, letterPages: newPages });
-                          }}
-                          rows={12}
-                          placeholder="Escribe aquí los pensamientos más profundos..."
-                          className="w-full h-full min-h-[300px] bg-transparent text-gray-200 outline-none resize-y"
-                        />
-                      </div>
-                      
-                      {/* Vista Previa de la Página Individual */}
-                      <div className="w-full lg:w-[320px] shrink-0 flex flex-col items-center lg:border-l border-gray-800 lg:pl-6 pt-4 lg:pt-0">
-                        <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-4">Vista Previa 3D (Pág {index + 1})</p>
-                        <div className="w-full h-[420px] bg-gray-900/40 rounded-xl overflow-hidden flex items-center justify-center cursor-grab active:cursor-grabbing border border-white/5">
-                          <LetterPage 
-                            text={pageText || "..."} 
-                            title={formData.letterTitle}
-                            userName={formData.user2Name || 'Ti'} 
-                            signature={formData.user1Name || 'Yo'} 
-                            index={index} 
-                            isLastPage={index === formData.letterPages.length - 1} 
-                            theme={formData.letterStyle} 
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <button type="button" onClick={() => setFormData({ ...formData, letterPages: [...formData.letterPages, ''] })} className="w-full py-4 mt-6 border-2 border-dashed border-gray-700 text-gray-400 hover:text-purple-400 hover:border-purple-500/50 rounded-xl transition-all font-semibold">
-                  + Agregar Nueva Página
-                </button>
-
-                {/* Guardado Automático Activado */}
-              </form>
-            </div>
+            <LettersTab 
+              formData={formData} 
+              setFormData={setFormData} 
+              handleChange={handleChange} 
+            />
           )}
 
           {/* TAB 3: IMAGES */}
           {activeTab === 'images' && (
-            <div className="animate-fadeIn">
-              <h2 className="text-xl font-bold text-gray-200 mb-2 flex items-center gap-2">
-                <svg className="w-6 h-6 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                Galería de Fotos
-              </h2>
-              <p className="text-sm text-gray-400 mb-8">
-                Sube contenido para llenar tu Universo 3D. Has usado {(totalBytes / (1024 * 1024)).toFixed(1)} MB de {(planData.maxBytes / (1024 * 1024)).toFixed(1)} MB permitidos en tu plan.
-                <br/>
-                <span className="text-green-400 font-bold">Te quedan {((planData.maxBytes - totalBytes) / (1024 * 1024)).toFixed(1)} MB disponibles.</span>
-              </p>
-
-              <div className="mb-10 relative">
-                <input
-                  type="file" multiple accept={planData.id === 'free' ? 'image/*' : 'image/*,video/mp4,video/quicktime,video/webm'} onChange={handleImageUpload}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                  title={planData.id === 'free' ? "Añadir fotos a la cola" : "Añadir fotos y videos a la cola"}
-                />
-                <div className={`w-full py-10 border-2 border-dashed ${uploadQueue.length > 0 ? 'border-pink-400 bg-pink-900/20' : 'border-gray-700 hover:border-pink-500/50 bg-black hover:bg-[#151515]'} rounded-2xl flex flex-col items-center justify-center transition-all`}>
-                  {uploadQueue.length > 0 ? (
-                    <>
-                      <svg className="w-12 h-12 text-pink-400 mb-3 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      <span className="text-pink-200 font-bold text-lg text-center">
-                        Procesando ({uploadProgress.current - 1} de {uploadProgress.total})
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-16 h-16 bg-pink-900/30 rounded-full flex items-center justify-center mb-4 text-pink-400">
-                        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-                      </div>
-                      <span className="text-gray-300 font-bold text-lg">Toca para añadir Fotos</span>
-                      <span className="text-gray-500 text-sm mt-1">Soporta selección múltiple</span>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {images.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {images.map((img, idx) => (
-                    <div 
-                      key={idx} 
-                      className={`aspect-square rounded-xl overflow-hidden border-2 relative group shadow-lg transition-all ${selectedImages.has(img) ? 'border-pink-500 scale-95 opacity-80' : 'border-gray-800'}`}
-                      onClick={(e) => handleItemClick(img, e)}
-                      onTouchStart={() => handleTouchStart(img)}
-                      onTouchEnd={handleTouchEnd}
-                      onTouchMove={handleTouchEnd}
-                    >
-                      {/* Checkbox Icon */}
-                      <div 
-                        className={`absolute top-2 left-2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all z-20 cursor-pointer ${selectedImages.has(img) ? 'bg-pink-500 border-pink-500' : 'border-white/50 bg-black/30 opacity-0 group-hover:opacity-100'}`} 
-                        onClick={(e) => { e.stopPropagation(); setIsSelectionMode(true); toggleSelection(img); }}
-                      >
-                        {selectedImages.has(img) && <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>}
-                      </div>
-
-                      {img.isVideo ? (
-                        <video src={img.src} className="w-full h-full object-cover" muted />
-                      ) : (
-                        <img src={img.src} alt="Recuerdo" className="w-full h-full object-cover" />
-                      )}
-                      
-                      {!isSelectionMode && (
-                        <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-all duration-300 gap-3 backdrop-blur-sm pointer-events-none md:pointer-events-auto">
-                          <a
-                            href={img.original_url || img.src}
-                            target="_blank"
-                            rel="noreferrer"
-                            download
-                            className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-bold rounded-lg shadow-xl pointer-events-auto"
-                          >
-                            Descargar Original
-                          </a>
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); requestDeleteImage(img); }}
-                            className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-bold rounded-lg shadow-xl pointer-events-auto"
-                          >
-                            Eliminar
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              {/* Trigger del Scroll Infinito */}
-              {nextCursor && (
-                <div ref={observerRef} className="w-full py-8 flex justify-center">
-                  <svg className="w-8 h-8 text-pink-400 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                </div>
-              )}
-
-              {images.length === 0 && (
-                <div className="text-center py-12 text-gray-600">
-                  <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                  <p>Aún no has subido fotos. ¡Agrega la primera arriba!</p>
-                </div>
-              )}
-            </div>
+            <ImagesTab 
+              images={images}
+              planData={planData}
+              totalBytes={totalBytes}
+              handleImageUpload={handleImageUpload}
+              uploadQueue={uploadQueue}
+              uploadProgress={uploadProgress}
+              selectedImages={selectedImages}
+              handleItemClick={handleItemClick}
+              handleTouchStart={handleTouchStart}
+              handleTouchEnd={handleTouchEnd}
+              isSelectionMode={isSelectionMode}
+              setIsSelectionMode={setIsSelectionMode}
+              toggleSelection={toggleSelection}
+              requestDeleteImage={requestDeleteImage}
+              nextCursor={nextCursor}
+              observerRef={observerRef}
+            />
           )}
 
           {/* TAB 4: MÚSICA */}
           {activeTab === 'music' && (
-            <div className="animate-fadeIn">
-              <h2 className="text-xl font-bold text-gray-200 mb-2 flex items-center gap-2">
-                <svg className="w-6 h-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
-                Tu Música de Fondo
-              </h2>
-              <p className="text-sm text-gray-400 mb-8">Personaliza la banda sonora que sonará al entrar a tu Universo.</p>
-
-              <form onSubmit={(e) => e.preventDefault()} className="space-y-8">
-                
-                {/* Caja 1: Subir MP3 */}
-                <div className="bg-[#111] border border-gray-800 rounded-2xl p-6">
-                  <label className="block text-sm text-green-400 mb-4 uppercase tracking-wider font-bold flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
-                    Sube Tu Propia Canción (Plan Premium)
-                  </label>
-                  <p className="text-xs text-gray-400 mb-4">Esta música tiene prioridad absoluta. Si subes un MP3 o WAV, reemplazará a Spotify automáticamente.</p>
-                  
-                  <div className={`w-full border-2 border-dashed ${planData.id === 'free' ? 'border-gray-800 bg-gray-900/50' : 'border-green-600/50 bg-green-900/10 hover:border-green-500'} rounded-xl p-8 text-center relative transition-all min-h-[200px] flex flex-col justify-center items-center`}>
-                    {planData.id === 'free' ? (
-                      <div className="text-gray-500 flex flex-col items-center">
-                        <svg className="w-12 h-12 mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>
-                        <p className="text-base font-bold text-gray-400">Opción Premium Bloqueada</p>
-                        <p className="text-xs mt-1 max-w-xs">Los planes gratis solo pueden usar enlaces de Spotify. ¡Sube de plan para agregar tu archivo original!</p>
-                      </div>
-                    ) : (
-                      <>
-                        <input
-                          type="file"
-                          accept="audio/*"
-                          onChange={handleAudioUpload}
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                          title="Subir archivo MP3 o WAV"
-                        />
-                        <div className="flex flex-col items-center text-green-300">
-                          <svg className="w-12 h-12 mb-3 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
-                          <span className="font-bold text-lg">
-                            Añadir Canción a la Playlist
-                          </span>
-                          <p className="text-xs text-gray-400 mt-2">Soporta archivos .mp3 y .wav</p>
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Render Playlist */}
-                  {formData.customAudios && formData.customAudios.length > 0 && (
-                    <div className="mt-8 space-y-3">
-                      <h3 className="text-sm text-green-400 font-bold uppercase tracking-wider mb-4 border-b border-gray-800 pb-2">Tu Playlist (Prioridad)</h3>
-                      {formData.customAudios.map((audio, idx) => (
-                        <div 
-                          key={idx} 
-                          draggable
-                          onDragStart={(e) => {
-                            setDraggedAudioIdx(idx);
-                            e.dataTransfer.effectAllowed = 'move';
-                          }}
-                          onDragOver={(e) => {
-                            e.preventDefault();
-                            e.dataTransfer.dropEffect = 'move';
-                          }}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            if (draggedAudioIdx === null || draggedAudioIdx === idx) return;
-                            const newAudios = [...formData.customAudios];
-                            const [draggedItem] = newAudios.splice(draggedAudioIdx, 1);
-                            newAudios.splice(idx, 0, draggedItem);
-                            setFormData({ ...formData, customAudios: newAudios });
-                            setDraggedAudioIdx(null);
-                          }}
-                          onDragEnd={() => setDraggedAudioIdx(null)}
-                          className={`flex items-center justify-between bg-black/50 border border-gray-800 p-4 rounded-xl hover:border-gray-700 transition-colors cursor-grab active:cursor-grabbing ${draggedAudioIdx === idx ? 'opacity-50 border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]' : ''}`}
-                        >
-                          <div className="flex items-center gap-3 overflow-hidden flex-1 pointer-events-none">
-                            <div className="flex items-center gap-3 pointer-events-auto w-full">
-                              <svg className="w-5 h-5 text-gray-600 shrink-0 cursor-grab hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" title="Arrastra para reordenar"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8h16M4 16h16" /></svg>
-                              {audio.isSpotify || (audio.url && audio.url.includes('spotify')) ? (
-                                <div className="w-8 h-8 rounded-full bg-[#1DB954]/20 flex items-center justify-center text-[#1DB954] shrink-0">
-                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.24 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.381 4.26-1.261 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.54-1.02.72-1.56.3z"/></svg>
-                                </div>
-                              ) : (
-                                <button 
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); togglePlayPreview(audio.url, idx); }}
-                                  className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all ${playingAudioIdx === idx ? 'bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.5)]' : 'bg-green-900/30 text-green-400 hover:bg-green-800/50'}`}
-                                >
-                                  {playingAudioIdx === idx ? (
-                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                                  ) : (
-                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                                  )}
-                                </button>
-                              )}
-                              <input
-                                type="text"
-                                value={audio.name || `Pista de audio ${idx + 1}`}
-                                onPointerDown={(e) => e.stopPropagation()} 
-                                onChange={(e) => {
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    customAudios: prev.customAudios.map((a, i) => i === idx ? { ...a, name: e.target.value } : a)
-                                  }));
-                                }}
-                                className="bg-transparent border-none text-gray-300 font-medium text-sm md:text-base outline-none focus:text-white focus:ring-0 w-full hover:bg-white/5 px-2 py-1 rounded transition-colors"
-                                title="Haz clic para editar el nombre"
-                                placeholder="Nombre de la canción..."
-                              />
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button 
-                              type="button" 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeleteModal({
-                                  type: 'single_audio',
-                                  title: '¿Eliminar Pista?',
-                                  message: `¿Estás seguro de que deseas eliminar "${audio.name}" de la playlist?`,
-                                  onConfirm: async () => {
-                                    const audioToDelete = formData.customAudios[idx];
-                                    
-                                    // 1. Quitarlo de la playlist (se autoguarda)
-                                    setFormData(prev => ({
-                                      ...prev,
-                                      customAudios: prev.customAudios.filter((_, i) => i !== idx)
-                                    }));
-                                    setDeleteModal(null);
-
-                                    // 2. Eliminar archivo físico en segundo plano
-                                    let pubId = audioToDelete.public_id;
-                                    if (!pubId && audioToDelete.url && audioToDelete.url.includes('Produccion/users/')) {
-                                      pubId = audioToDelete.url.substring(audioToDelete.url.indexOf('Produccion/users/')).split('?')[0];
-                                    }
-
-                                    if (pubId && !audioToDelete.isSpotify) {
-                                      try {
-                                        const token = await user.getIdToken();
-                                        const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '');
-                                        fetch(`${apiUrl}/api/images/delete`, {
-                                          method: 'POST',
-                                          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ public_id: `r2|${pubId}` })
-                                        }).catch(console.error);
-                                      } catch (e) {
-                                        console.error(e);
-                                      }
-                                    }
-                                  }
-                                });
-                              }}
-                              className="text-gray-400 hover:text-red-500 p-2 hover:bg-red-500/10 rounded-lg transition-colors"
-                              title="Eliminar"
-                            >
-                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                </div>
-
-                <div className="flex items-center gap-4 py-2 opacity-50">
-                  <div className="flex-1 h-px bg-gray-700"></div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-gray-500">O Alternativamente</span>
-                  <div className="flex-1 h-px bg-gray-700"></div>
-                </div>
-
-                {/* Caja 2: Spotify */}
-                <div className="bg-[#111] border border-gray-800 rounded-2xl p-6">
-                  <label className="block text-sm text-green-500 mb-2 uppercase tracking-wider font-bold">Añadir Canción de Spotify</label>
-                  <p className="text-xs text-gray-400 mb-4">Pega el link aquí y añádelo a la lista de reproducción superior. Podrás combinarlo con tus propios audios.</p>
-                  <div className="flex gap-2">
-                    <input 
-                      type="text" 
-                      id="spotifyInput"
-                      placeholder="Ej: https://open.spotify.com/track/..." 
-                      className="flex-1 bg-black border border-gray-700 rounded-xl p-4 text-white focus:border-green-500 outline-none transition-colors" 
-                    />
-                    <button 
-                      type="button"
-                      onClick={() => {
-                        const val = document.getElementById('spotifyInput').value;
-                        if (val && val.includes('spotify')) {
-                          const newAudios = [...(formData.customAudios || []), { url: val, name: 'Canción de Spotify', isSpotify: true }];
-                          setFormData({...formData, customAudios: newAudios});
-                          document.getElementById('spotifyInput').value = '';
-                        }
-                      }}
-                      className="px-6 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl transition-colors whitespace-nowrap"
-                    >
-                      Añadir
-                    </button>
-                  </div>
-                </div>
-
-                {/* Botón de Guardar Eliminado por Auto-Save */}
-              </form>
-            </div>
+            <MusicTab 
+              formData={formData}
+              setFormData={setFormData}
+              planData={planData}
+              handleAudioUpload={handleAudioUpload}
+              draggedAudioIdx={draggedAudioIdx}
+              setDraggedAudioIdx={setDraggedAudioIdx}
+              playingAudioIdx={playingAudioIdx}
+              togglePlayPreview={togglePlayPreview}
+              setDeleteModal={setDeleteModal}
+              user={user}
+            />
           )}
 
         </div>

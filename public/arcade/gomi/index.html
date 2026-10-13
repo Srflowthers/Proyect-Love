@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <title>Gominola - Arcade del Amor</title>
+
+  <!-- Control de acceso e integración en iframe Arcade -->
+  <script>
+    (function () {
+      try {
+        if (window.self === window.top) {
+          window.location.replace('/?auth_required=arcade');
+          return;
+        }
+        var authKey = sessionStorage.getItem('arcade_session_auth');
+        var p = new URLSearchParams(window.location.search);
+        if (!authKey && !p.get('auth')) {
+          window.location.replace('/?auth_required=arcade');
+        }
+      } catch (e) {
+        window.location.replace('/?auth_required=arcade');
+      }
+    })();
+  </script>
+
+  <!-- Tipografías de Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Figtree:wght@500;700;800&display=swap" rel="stylesheet">
+
+  <!-- Hoja de estilos desacoplada -->
+  <link rel="stylesheet" href="gomi.css">
+</head>
+<body>
+
+<div class="wrap">
+  <!-- Cabecera descriptiva (oculta en modo arcade iframe para maximizar pantalla) -->
+  <header>
+    <h1>Gominola</h1>
+    <p>Cada ronda tiene una meta de puntos. Junta tres corazones y explota todo el tablero.</p>
+  </header>
+
+  <main class="game">
+    <!-- Sección principal del tablero y controles -->
+    <section class="stage" aria-label="Tablero de juego">
+      <!-- Marcadores de estado superior -->
+      <div class="stats">
+        <div class="stat">
+          <span class="label">Puntaje</span>
+          <b id="score">0</b>
+        </div>
+        <div class="stat">
+          <span class="label">Meta</span>
+          <b id="target">0</b>
+        </div>
+        <div class="stat">
+          <span class="label">Movimientos</span>
+          <b id="moves">25</b>
+        </div>
+      </div>
+
+      <!-- Barra de progreso hacia la meta -->
+      <div class="goal" aria-hidden="true"><i id="prog"></i></div>
+      <div class="goalrow">
+        <span id="roundLbl">Ronda 1</span>
+        <span id="goalTxt"></span>
+      </div>
+
+      <!-- Área central: Habilidades laterales y Tablero Canvas -->
+      <div class="board-with-skills">
+        <!-- Barra lateral de poderes / habilidades activas -->
+        <aside class="skills-sidebar" aria-label="Poderes especiales">
+          <button class="skill" id="sk-hammer" type="button" aria-pressed="false" title="Martillo: elimina cruz completa">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="8" y="7.5" width="12" height="5" rx="1.5" transform="rotate(45 14 10)"/>
+              <path d="M4 20l8-8"/>
+            </svg>
+            <span>Martillo</span>
+            <span class="ct" id="ct-hammer">1</span>
+          </button>
+
+          <button class="skill" id="sk-bolt" type="button" aria-pressed="false" title="Rayo: elimina diagonales">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M13 2L5 14h6l-1 8 8-12h-6z"/>
+            </svg>
+            <span>Rayo</span>
+            <span class="ct" id="ct-bolt">0</span>
+          </button>
+
+          <button class="skill" id="sk-rainbow" type="button" aria-pressed="false" title="Arcoíris: elimina un color completo">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 18a9 9 0 0 1 18 0"/>
+              <path d="M7 18a5 5 0 0 1 10 0"/>
+              <path d="M11 18a1 1 0 0 1 2 0"/>
+            </svg>
+            <span>Color</span>
+            <span class="ct" id="ct-rainbow">0</span>
+          </button>
+        </aside>
+
+        <!-- Contenedor del lienzo de juego (Canvas) y efectos flotantes -->
+        <div class="boardwrap" id="bw">
+          <canvas id="cv" role="img" aria-label="Tablero de piezas románticas de 8 por 8. Desliza o toca dos piezas vecinas para intercambiarlas."></canvas>
+          <div class="toast" id="toast" role="status"></div>
+          <canvas class="fx" id="fx" aria-hidden="true"></canvas>
+
+          <!-- Modales y superposiciones de final de ronda / última oportunidad -->
+          <div class="ov" id="ov" hidden>
+            <!-- Resultado de la ronda -->
+            <div class="card" id="resCard">
+              <h2 id="ovTitle"></h2>
+              <div class="delta" id="ovDelta"></div>
+              <p id="ovLine"></p>
+              <p class="newrank" id="ovRank"></p>
+              <button class="btn" id="nextBtn" type="button">Siguiente ronda</button>
+            </div>
+
+            <!-- Última oportunidad -->
+            <div class="card" id="lcCard" hidden>
+              <h2>¡Última oportunidad!</h2>
+              <p id="lcText"></p>
+              <div class="lcrow">
+                <div><span class="label">Movimientos</span><b id="lcMoves"></b></div>
+                <div><span class="label">Nueva meta</span><b id="lcTarget"></b></div>
+                <div><span class="label">Si fallas</span><b id="lcRisk"></b></div>
+              </div>
+              <button class="btn" id="lcYes" type="button">Aceptar el reto</button>
+              <button class="btn ghost" id="lcNo" type="button">Terminar la ronda</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ayuda y configuración adicional -->
+      <div id="skillHint" style="display:none"></div>
+      <p class="tip">Desliza o toca dos piezas vecinas. 4 en línea crean una rayada y 5 una bomba. Los corazones son raros: junta 3 y explota TODO.</p>
+      <div class="sndrow">
+        <button class="btn ghost small" id="sndBtn" type="button" aria-pressed="true">Sonido activado</button>
+      </div>
+    </section>
+
+    <!-- Tarjeta de Rango (visible en vista expandida/standalone) -->
+    <section class="panel" id="rankCard" aria-label="Tu rango">
+      <div class="rk-head">
+        <div class="badge" id="badge">III</div>
+        <div>
+          <div class="label">Rango actual</div>
+          <div class="rk-name" id="rkName">Bronce III</div>
+        </div>
+      </div>
+      <div class="rp"><span id="rpNum">0</span><small>puntos de rango</small></div>
+      <div class="lvl">
+        <div class="track"><i id="bar"></i></div>
+        <div class="row"><span id="nextTxt"></span><span id="cushion"></span></div>
+      </div>
+      <div class="meta">
+        <div><span class="label">Mejor</span><b id="peak">0</b></div>
+        <div><span class="label">Racha</span><b id="streak">0</b></div>
+        <div><span class="label">Rondas</span><b id="rounds">0</b></div>
+      </div>
+      <button class="btn ghost reset" id="resetBtn" type="button">Reiniciar rango a cero</button>
+    </section>
+
+    <!-- Tarjeta de Historial -->
+    <section class="panel" id="histCard" aria-label="Últimas rondas">
+      <div class="label">Últimas rondas</div>
+      <p class="empty" id="histEmpty">Todavía no terminas ninguna ronda.</p>
+      <ul id="hist"></ul>
+    </section>
+  </main>
+</div>
+
+<!-- Lógica del juego desacoplada -->
+<script src="gomi.js"></script>
+
+</body>
+</html>

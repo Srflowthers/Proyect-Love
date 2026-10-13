@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <title>Tetris de Pareja - Arcade del Amor</title>
+
+  <!-- Control de acceso e integración en iframe Arcade -->
+  <script>
+    (function () {
+      try {
+        if (window.self === window.top) {
+          window.location.replace('/?auth_required=arcade');
+          return;
+        }
+        var authKey = sessionStorage.getItem('arcade_session_auth');
+        var p = new URLSearchParams(window.location.search);
+        if (!authKey && !p.get('auth')) {
+          window.location.replace('/?auth_required=arcade');
+        }
+      } catch (e) {
+        window.location.replace('/?auth_required=arcade');
+      }
+    })();
+  </script>
+
+  <!-- Hoja de estilos desacoplada -->
+  <link rel="stylesheet" href="tetris.css">
+</head>
+<body>
+
+<div id="banner" style="display:none !important"></div>
+
+<div class="row">
+  <!-- Columna izquierda: Guía y Controles de Teclado / Táctil -->
+  <aside class="side side-left">
+    <div class="card card-controls">
+      <div class="ctrl-header">
+        <span style="font-size:1.15rem;">⌨️</span>
+        <small style="text-transform:uppercase;letter-spacing:0.8px;font-weight:800;color:#f472b6;">Controles</small>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-item">
+          <div class="ctrl-keys">
+            <kbd class="kbd-key">◀</kbd>
+            <kbd class="kbd-key">▶</kbd>
+          </div>
+          <span class="ctrl-text">Mover pieza</span>
+        </div>
+        <div class="ctrl-item">
+          <div class="ctrl-keys">
+            <kbd class="kbd-key">▼</kbd>
+          </div>
+          <span class="ctrl-text">Bajar rápido</span>
+        </div>
+        <div class="ctrl-item">
+          <div class="ctrl-keys">
+            <kbd class="kbd-key">▲</kbd>
+            <kbd class="kbd-key kbd-space">Espacio</kbd>
+          </div>
+          <span class="ctrl-text ctrl-rot">Rotar figura</span>
+        </div>
+        <div class="ctrl-item">
+          <div class="ctrl-keys">
+            <kbd class="kbd-key kbd-enter">Enter ↵</kbd>
+          </div>
+          <span class="ctrl-text ctrl-drop">Caída de golpe</span>
+        </div>
+        <div class="ctrl-item">
+          <div class="ctrl-keys">
+            <kbd class="kbd-key kbd-e">E</kbd>
+          </div>
+          <span class="ctrl-text">Salvación</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botones táctiles de acción rápida integrados en la barra lateral -->
+    <div class="card card-pad" style="padding: 10px 14px !important;">
+      <small style="text-transform:uppercase;letter-spacing:0.5px;font-weight:700;color:rgba(255,255,255,0.7);display:block;margin-bottom:6px;">Acciones Rápidas</small>
+      <div class="pad pad-side">
+        <button data-a="L" type="button" title="Mover Izquierda">◀</button>
+        <button data-a="D" type="button" title="Bajar">▼</button>
+        <button data-a="R" type="button" title="Mover Derecha">▶</button>
+        <button data-a="T" type="button" title="Rotar (Espacio)">⟳</button>
+        <button data-a="H" type="button" title="Caer de Golpe (Enter)">⤓</button>
+        <button data-a="M" type="button" title="Silenciar / Activar Sonido">🔊</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Tablero central de juego Canvas y superposición de inicio/fin -->
+  <main class="boardwrap">
+    <canvas id="c" width="300" height="600" role="img" aria-label="Tablero de Tetris cooperativo"></canvas>
+    <div id="fps">-- FPS</div>
+    <div id="ov">
+      <div id="ovt" style="font-size:1.35rem;font-weight:800;letter-spacing:0.5px">TETRIS ARCADE</div>
+      <input id="nm" type="hidden" value="Jugador">
+      <button id="start" type="button">Empezar a Jugar</button>
+    </div>
+  </main>
+
+  <!-- Columna derecha: Marcador, Récord, Nivel y Salvación -->
+  <aside class="side">
+    <div class="card card-score">
+      <small style="text-transform:uppercase;letter-spacing:0.5px;font-weight:700;">Puntaje</small>
+      <b id="sc-total">0</b>
+      <small id="sc-lines" style="display:block;margin-top:2px;">0 líneas</small>
+    </div>
+
+    <div class="card card-record">
+      <small style="text-transform:uppercase;letter-spacing:0.5px;font-weight:700;">🏆 Récord</small>
+      <b id="sc-record">0</b>
+    </div>
+
+    <div class="card">
+      <small id="sc-level" style="font-weight:700;font-size:0.88rem;">Nivel 1</small>
+      <small id="sc-speed" style="display:block;margin-top:3px;color:rgba(255,255,255,0.75);">⚡ Vel 1</small>
+    </div>
+
+    <div class="card" id="sk">
+      <small>🛟 Salvación</small>
+      <div id="skb"><i id="skf"></i></div>
+      <small id="skt" style="display:block;margin-top:2px;">0 / 1000 pts</small>
+      <button id="sku" type="button" disabled>Usar (E)</button>
+    </div>
+
+    <!-- Elementos legacy para compatibilidad con selectores secundarios -->
+    <div style="display:none !important">
+      <div id="her"></div><div id="him"></div>
+      <span id="s0"></span><span id="s1"></span><span id="l0"></span><span id="l1"></span>
+      <span id="st"></span><span id="lv"></span><span id="sp"></span>
+    </div>
+  </aside>
+</div>
+
+<!-- Gamepad táctil flotante inferior (modo móvil estrecho) -->
+<nav class="pad pad-bottom" aria-label="Controles táctiles móviles">
+  <button data-a="L" type="button">◀</button>
+  <button data-a="R" type="button">▶</button>
+  <button data-a="D" type="button">▼</button>
+  <button data-a="T" type="button">⟳</button>
+  <button data-a="H" type="button">⤓</button>
+  <button data-a="M" type="button">🔊</button>
+</nav>
+
+<!-- Lógica desacoplada del juego -->
+<script src="tetris.js"></script>
+
+</body>
+</html>

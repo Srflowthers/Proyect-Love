@@ -1,0 +1,666 @@
+/* ==========================================================================
+   GOMINOLA - ARCADE DEL AMOR (HOJA DE ESTILOS)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. VARIABLES Y SISTEMA DE DISEÑO
+   -------------------------------------------------------------------------- */
+:root {
+  --bg: #F2EEF9;
+  --ink: #241A38;
+  --muted: #6A6086;
+  --panel: #FFFFFF;
+  --line: #DFD7EF;
+  --track: #E6DFF3;
+  --board: #3A2A5C;
+  --board2: #443268;
+  --accent: #BE2E9C;
+  --on-accent: #FFFFFF;
+  --good: #16875A;
+  --bad: #CF2F47;
+  --gold: #F5A400;
+  --display: 'Bagel Fat One', 'Arial Rounded MT Bold', system-ui, sans-serif;
+  --body: 'Figtree', system-ui, sans-serif;
+  color-scheme: dark !important;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #16101F;
+    --ink: #F3EEFB;
+    --muted: #A99EC6;
+    --panel: #211833;
+    --line: #352A4D;
+    --track: #33284A;
+    --board: #2B2044;
+    --board2: #34274F;
+    --accent: #F266D0;
+    --on-accent: #1B1030;
+    --good: #4FD58F;
+    --bad: #FF7083;
+    --gold: #FFC247;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #16101F;
+  --ink: #F3EEFB;
+  --muted: #A99EC6;
+  --panel: #211833;
+  --line: #352A4D;
+  --track: #33284A;
+  --board: #2B2044;
+  --board2: #34274F;
+  --accent: #F266D0;
+  --on-accent: #1B1030;
+  --good: #4FD58F;
+  --bad: #FF7083;
+  --gold: #FFC247;
+  color-scheme: dark;
+}
+
+/* --------------------------------------------------------------------------
+   2. REINICIO Y ESTRUCTURA BASE
+   -------------------------------------------------------------------------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-padding-top: env(safe-area-inset-top, 0px);
+}
+
+html, body {
+  background: transparent !important;
+  animation: none !important;
+  margin: 0;
+  padding: 2px;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font: 500 15px/1.45 var(--body);
+  color: var(--ink);
+}
+
+img {
+  max-width: 100%;
+}
+
+[hidden]:not([hidden="until-found i"]) {
+  display: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   3. CONTENEDOR PRINCIPAL Y LAYOUT
+   -------------------------------------------------------------------------- */
+.wrap {
+  width: 100%;
+  max-width: 100% !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  display: grid;
+  gap: 4px !important;
+}
+
+header {
+  display: none !important;
+}
+
+header h1 {
+  font: 400 clamp(30px, 6vw, 44px)/1 var(--display);
+  margin: 0 0 6px;
+  letter-spacing: .01em;
+}
+
+header p {
+  margin: 0;
+  color: var(--muted);
+  max-width: 60ch;
+}
+
+.game {
+  display: block !important;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.stage {
+  grid-area: stage;
+  display: grid;
+  gap: 4px !important;
+  min-width: 0;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px;
+  min-width: 0;
+}
+
+/* --------------------------------------------------------------------------
+   4. MARCADORES SUPERIORES (STATS) Y METAS
+   -------------------------------------------------------------------------- */
+.label {
+  font-size: 9px !important;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px !important;
+}
+
+.stat {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 4px 8px !important;
+}
+
+.stat b {
+  display: block;
+  font: 800 16px/1.1 var(--body) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.goal {
+  height: 6px !important;
+  border-radius: 99px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.goal i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  border-radius: 99px;
+  transition: width .35s ease;
+}
+
+.goal i.done {
+  background: var(--good);
+}
+
+.goalrow {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 10px !important;
+  color: var(--muted);
+  margin-top: -2px !important;
+}
+
+/* --------------------------------------------------------------------------
+   5. TABLERO DE JUEGO Y BARRA DE PODERES
+   -------------------------------------------------------------------------- */
+.board-with-skills {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0 auto;
+}
+
+.skills-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.skills-sidebar .skill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 52px;
+  padding: 4px 2px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  cursor: pointer;
+  position: relative;
+  font-size: 9px;
+  font-weight: 700;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.skills-sidebar .skill span {
+  margin-top: 2px;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.skills-sidebar .skill .ct {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #e8467c;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+}
+
+.skills-sidebar .skill:active {
+  transform: scale(0.92);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.skills-sidebar .skill.empty {
+  opacity: .55;
+}
+
+.skills-sidebar .skill.empty .ct {
+  background: var(--muted);
+  color: var(--panel);
+}
+
+.skills-sidebar .skill.on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent);
+}
+
+.skills-sidebar .skill:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   6. CANVAS Y EFECTOS VISUALES
+   -------------------------------------------------------------------------- */
+.boardwrap {
+  position: relative;
+  width: 100%;
+  max-width: 580px;
+  margin-inline: auto;
+  aspect-ratio: 1;
+}
+
+canvas {
+  display: block;
+  border-radius: 22px;
+  touch-action: none;
+  cursor: pointer;
+  max-width: 100%;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+canvas.aim {
+  cursor: crosshair;
+  box-shadow: 0 0 0 3px var(--accent);
+}
+
+.fx {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.toast {
+  z-index: 6;
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  transform: translate(-50%, -8px);
+  background: var(--ink);
+  color: var(--bg);
+  font-weight: 800;
+  font-size: 13px;
+  padding: 7px 14px;
+  border-radius: 99px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease, transform .25s ease;
+  white-space: nowrap;
+  max-width: 92%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.toast.on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* --------------------------------------------------------------------------
+   7. MODALES, RESULTADOS Y ÚLTIMA OPORTUNIDAD
+   -------------------------------------------------------------------------- */
+.ov {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(20, 10, 40, .74);
+  backdrop-filter: blur(4px);
+  border-radius: 22px;
+  padding: 14px;
+}
+
+.ov[hidden], [hidden] {
+  display: none !important;
+}
+
+.ov .card {
+  background: var(--panel);
+  border-radius: 20px;
+  padding: 20px 18px;
+  width: 100%;
+  max-width: 340px;
+  text-align: center;
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+}
+
+.ov h2 {
+  font: 400 26px/1.1 var(--display);
+  margin: 0;
+}
+
+.ov .delta {
+  font: 800 56px/1 var(--body);
+  font-variant-numeric: tabular-nums;
+}
+
+.ov .delta.up {
+  color: var(--good);
+}
+
+.ov .delta.down {
+  color: var(--bad);
+}
+
+.ov p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.ov .newrank {
+  font-weight: 800;
+}
+
+.lcrow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.lcrow > div:last-child {
+  display: none;
+}
+
+.lcrow div {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 8px 4px;
+  display: grid;
+  gap: 2px;
+}
+
+.lcrow .label {
+  font-size: 10px;
+}
+
+.lcrow b {
+  font: 800 19px/1.2 var(--body);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------------------
+   8. BOTONES Y CONTROLES INTERACTIVOS
+   -------------------------------------------------------------------------- */
+.btn {
+  font: 800 15px var(--body);
+  padding: 12px 18px;
+  border-radius: 12px;
+  border: 0;
+  background: var(--accent);
+  color: var(--on-accent);
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.btn:hover {
+  filter: brightness(1.08);
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn.ghost {
+  background: transparent;
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+}
+
+.btn.warn {
+  background: var(--bad);
+  color: #fff;
+  border-color: transparent;
+}
+
+.btn.small {
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+.btn:focus-visible, canvas:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Ocultar elementos auxiliares en modo embebido arcade */
+.love, .tip, .sndrow {
+  display: none !important;
+}
+
+#rankCard, #histCard, #ovDelta, #ovRank {
+  display: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   9. TARJETA DE RANGO E HISTORIAL (MODO INDEPENDIENTE)
+   -------------------------------------------------------------------------- */
+.rk-head {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.badge {
+  --tier: #C47A3D;
+  width: 76px;
+  height: 84px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: var(--tier);
+  clip-path: polygon(50% 0, 94% 24%, 94% 76%, 50% 100%, 6% 76%, 6% 24%);
+  font: 400 28px var(--display);
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, .28);
+  transition: background .4s;
+}
+
+.rk-name {
+  font: 400 clamp(24px, 5vw, 30px)/1.05 var(--display);
+  overflow-wrap: anywhere;
+}
+
+.rp {
+  font: 800 38px/1 var(--body);
+  font-variant-numeric: tabular-nums;
+  margin-top: 4px;
+}
+
+.rp small {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.lvl {
+  margin-top: 14px;
+  display: grid;
+  gap: 6px;
+}
+
+.track {
+  height: 12px;
+  border-radius: 99px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.track i {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--accent), var(--gold));
+  transition: width .7s cubic-bezier(.2, .8, .2, 1);
+}
+
+.lvl .row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.meta {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.meta div {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+
+.meta b {
+  display: block;
+  font: 800 18px/1.2 var(--body);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.reset {
+  margin-top: 14px;
+  width: 100%;
+}
+
+#hist {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+#hist li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+#hist .no {
+  color: var(--muted);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+#hist .sc {
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+#hist .d {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+#hist .d.up {
+  color: var(--good);
+}
+
+#hist .d.down {
+  color: var(--bad);
+}
+
+.empty {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 10px 0 0;
+}
+
+/* --------------------------------------------------------------------------
+   10. ANIMACIONES Y ACCESIBILIDAD
+   -------------------------------------------------------------------------- */
+@keyframes badgepop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.35) rotate(-6deg); }
+  70% { transform: scale(.92) rotate(3deg); }
+  100% { transform: scale(1); }
+}
+
+.badge.pop {
+  animation: badgepop .8s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track i,
+  .goal i,
+  .toast {
+    transition: none;
+  }
+  .badge.pop {
+    animation: none;
+  }
+}

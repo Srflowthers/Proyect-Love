@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <title>Pool 3D 2v2 - Arcade del Amor</title>
+
+  <!-- Control de acceso e integración en iframe Arcade -->
+  <script>
+    (function () {
+      try {
+        if (window.self === window.top) {
+          window.location.replace('/?auth_required=arcade');
+          return;
+        }
+        var authKey = sessionStorage.getItem('arcade_session_auth');
+        var p = new URLSearchParams(window.location.search);
+        if (!authKey && !p.get('auth')) {
+          window.location.replace('/?auth_required=arcade');
+        }
+      } catch (e) {
+        window.location.replace('/?auth_required=arcade');
+      }
+    })();
+  </script>
+
+  <!-- Hoja de estilos desacoplada -->
+  <link rel="stylesheet" href="pool.css">
+</head>
+<body>
+
+  <!-- Barra superior de turnos, cámaras y controles de partida -->
+  <header class="bar">
+    <div class="seats" id="seats"></div>
+    <div class="btns">
+      <button id="mode" type="button">Cámara de tiro</button>
+      <button id="v1" type="button">Cenital</button>
+      <button id="v2" type="button">Perspectiva</button>
+      <button id="zi" type="button" title="Acercar">＋</button>
+      <button id="zo" type="button" title="Alejar">－</button>
+      <button data-t="0" class="sel" type="button">Verde</button>
+      <button data-t="1" type="button">Azul</button>
+      <button data-t="2" type="button">Burdeos</button>
+      <button id="new" type="button">Nueva</button>
+      <select id="selCue" aria-label="Seleccionar taco"></select>
+      <select id="selBg" style="display:none"></select>
+    </div>
+  </header>
+
+  <!-- Mensajes de estado del turno -->
+  <div id="msg" role="status"></div>
+
+  <!-- Escenario 3D de la mesa de billar -->
+  <main id="stage">
+    <!-- Barra vertical medidora de potencia -->
+    <div id="pw">
+      <div id="pf"></div>
+      <div id="pw-label">FUERZA</div>
+    </div>
+
+    <!-- Indicador flotante de turno y ayuda contextual -->
+    <div id="stage-badge" class="stage-badge">
+      <span id="stage-turn-chip" class="chip on R">Turno</span>
+      <span id="stage-tip-text">Clic Der: Rotar · Clic Izq: Disparar</span>
+    </div>
+
+    <!-- Controles táctiles HUD (móviles y tablets) -->
+    <div id="stage-touch-hud" class="stage-hud">
+      <div class="hud-aim-cluster">
+        <button id="btnAimLeft" class="hud-btn" aria-label="Girar izquierda" title="Girar izquierda">◀</button>
+        <button id="btnAimRight" class="hud-btn" aria-label="Girar derecha" title="Girar derecha">▶</button>
+      </div>
+      <div class="hud-fire-cluster">
+        <button id="btnStageShoot" class="hud-btn-shoot">
+          <span class="shoot-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
+            </svg>
+          </span>
+          <span class="shoot-text">MANTÉN Y SUELTA</span>
+          <span id="shootPowerText" class="shoot-power">0%</span>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Botón de disparo alternativo (oculto en iframe arcade) -->
+  <div style="text-align:center;margin-top:8px">
+    <button id="fire" style="display:none">Mantén para cargar · suelta para disparar</button>
+  </div>
+
+  <!-- Bandeja de bolas embocadas (Rojo = Lisas 1-7, Azul = Rayadas 9-15) -->
+  <footer class="tray">
+    <div id="trR"></div>
+    <div id="trB"></div>
+  </footer>
+
+  <p class="hint" style="display:none">PC: Clic Derecho para rotar vista · Clic Izquierdo (mantén y suelta) para disparar. Móvil: Desliza para apuntar y pulsa DISPARAR.</p>
+
+  <!-- Dependencia externa 3D: Three.js r128 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- Lógica desacoplada de Pool 3D -->
+  <script src="pool.js"></script>
+</body>
+</html>

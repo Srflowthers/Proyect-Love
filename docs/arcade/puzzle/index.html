@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <title>Reconstruye nuestro recuerdo - Rompecabezas Arcade</title>
+
+  <!-- Control de acceso e integración en iframe Arcade -->
+  <script>
+    (function () {
+      try {
+        if (window.self === window.top) {
+          window.location.replace('/?auth_required=arcade');
+          return;
+        }
+        var authKey = sessionStorage.getItem('arcade_session_auth');
+        var p = new URLSearchParams(window.location.search);
+        if (!authKey && !p.get('auth')) {
+          window.location.replace('/?auth_required=arcade');
+        }
+      } catch (e) {
+        window.location.replace('/?auth_required=arcade');
+      }
+    })();
+  </script>
+
+  <!-- Tipografías de Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Nunito:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- Hoja de estilos desacoplada -->
+  <link rel="stylesheet" href="puzzle.css">
+</head>
+<body>
+
+<main class="lp-root" id="lp">
+  <!-- PANTALLA INICIAL: Selección y recorte de fotografía -->
+  <section class="lp-screen" id="lpIntro">
+    <h1>Reconstruye nuestro recuerdo</h1>
+    <p class="lp-sub">Cada pieza nos acerca un poco más</p>
+
+    <!-- Zona de arrastre y previsualización de imagen -->
+    <div class="lp-drop">
+      <div class="lp-host" id="lpHost" hidden>
+        <img id="lpPrev" alt="Vista previa" draggable="false">
+        <div class="lp-crop" id="lpCrop" hidden>
+          <i data-h="nw"></i>
+          <i data-h="ne"></i>
+          <i data-h="sw"></i>
+          <i data-h="se"></i>
+        </div>
+      </div>
+      <span id="lpHint">Elige una fotografía de tu dispositivo</span>
+    </div>
+
+    <!-- Ajustes de recorte -->
+    <div class="lp-levels" id="lpFit" hidden>
+      <button class="lp-btn lp-small lp-fit sel" data-m="whole" type="button">Imagen entera</button>
+      <button class="lp-btn lp-small lp-fit" data-m="crop" type="button">Elegir recorte</button>
+    </div>
+    <p class="lp-tip" id="lpTip" hidden>Arrastra el recuadro o sus esquinas para elegir la parte que quieres usar.</p>
+
+    <!-- Selector de dificultad (30 a 500 piezas) -->
+    <div class="lp-levels" role="radiogroup" aria-label="Dificultad">
+      <button class="lp-btn lp-small lp-lv" role="radio" data-n="30" type="button">30 piezas<small>Muy fácil</small></button>
+      <button class="lp-btn lp-small lp-lv sel" role="radio" data-n="60" type="button">60 piezas<small>Fácil</small></button>
+      <button class="lp-btn lp-small lp-lv" role="radio" data-n="120" type="button">120 piezas<small>Media</small></button>
+      <button class="lp-btn lp-small lp-lv" role="radio" data-n="240" type="button">240 piezas<small>Difícil</small></button>
+      <button class="lp-btn lp-small lp-lv lp-imp" role="radio" data-n="500" type="button">500 piezas<small>¡Imposible! 💀</small></button>
+    </div>
+
+    <!-- Botones de acción inicial -->
+    <div class="lp-row">
+      <label class="lp-btn lp-pick">
+        Seleccionar fotografía
+        <input type="file" id="lpFile" accept="image/*,.heic,.heif,.avif">
+      </label>
+      <button class="lp-btn" id="lpRandomBtn" type="button" style="display:none">🎲 Otra foto de nosotros</button>
+      <button class="lp-btn lp-primary" id="lpCreate" type="button" disabled>Crear rompecabezas</button>
+    </div>
+    <p class="lp-err" id="lpErr" role="alert"></p>
+  </section>
+
+  <!-- PANTALLA DE JUEGO: Tablero, piezas flotantes y controles -->
+  <section id="lpGame" class="lp-screen" hidden>
+    <h1>Reconstruye nuestro recuerdo</h1>
+    <p class="lp-sub">Cada pieza nos acerca un poco más</p>
+
+    <div class="lp-row">
+      <button class="lp-btn lp-small" id="lpChange" type="button">← Cambiar fotografía</button>
+      <button class="lp-btn lp-small" id="lpSnd" type="button" aria-pressed="true" aria-label="Sonido">🔊 Sonido</button>
+    </div>
+
+    <!-- Barra de progreso y cronómetro -->
+    <div class="lp-stats">
+      <div class="lp-meta">
+        <span id="lpCount">0 de 60 piezas</span>
+        <span id="lpTime">00:00</span>
+      </div>
+      <div class="lp-bar"><i id="lpFill"></i></div>
+    </div>
+
+    <!-- Barra de herramientas activas -->
+    <div class="lp-row">
+      <button class="lp-btn lp-small" id="lpMix" type="button">Mezclar piezas</button>
+      <button class="lp-btn lp-small" id="lpReset" type="button">Reiniciar juego</button>
+      <button class="lp-btn lp-small" id="lpRef" type="button" aria-pressed="false">Ver imagen de referencia</button>
+      <button class="lp-btn lp-small" id="lpHelp" type="button">💡 Ayuda (1)</button>
+    </div>
+
+    <!-- Escenario del rompecabezas -->
+    <div class="lp-stage" id="lpStage">
+      <div class="lp-board" id="lpBoard"></div>
+      <div class="lp-tray" id="lpTray"></div>
+    </div>
+
+    <!-- Pantalla de victoria al completar -->
+    <div class="lp-done" id="lpDone" hidden>
+      <h2>Nuestro recuerdo está completo ❤️</h2>
+      <p class="lp-sub" id="lpDoneTime"></p>
+      <button class="lp-btn lp-primary" id="lpAgain" type="button">Volver a jugar</button>
+    </div>
+  </section>
+
+  <!-- Capas visuales de fondo y efectos especiales -->
+  <div class="lp-bg" id="lpBg" aria-hidden="true"></div>
+  <canvas id="lpFx" aria-hidden="true"></canvas>
+  <div class="lp-flash" id="lpFlash"></div>
+  <div class="lp-toast" id="lpToast" role="status"></div>
+</main>
+
+<!-- Lógica desacoplada del rompecabezas -->
+<script src="puzzle.js"></script>
+
+</body>
+</html>

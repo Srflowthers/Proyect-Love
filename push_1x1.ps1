@@ -3,7 +3,7 @@ $commits = Get-Content "commits.json" -Encoding UTF8 | ConvertFrom-Json
 foreach ($commit in $commits) {
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host "Agregando archivo: $($commit.archivo)" -ForegroundColor Yellow
-    git add $commit.archivo
+    git add -A $commit.archivo
     
     # Check if there are changes to commit for this file
     $status = git status --porcelain $commit.archivo

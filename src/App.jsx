@@ -1,10 +1,12 @@
 import React, { Suspense, lazy } from 'react';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '@/hooks/useAuth';
 import { loginWithGoogle } from '@/services/authService';
 const AdminView = lazy(() => import('@/views/AdminView'));
 import GalleryView from '@/views/GalleryView';
 import SettingsView from '@/views/SettingsView';
+import GamesView from '@/views/GamesView';
 import Dock from '@/components/Dock';
 import PricingModal from '@/components/ui/PricingModal';
 import { logout } from '@/services/authService'; 
@@ -14,15 +16,42 @@ function App() {
   // Los clientes ven la galería por defecto. El admin ve el panel.
   const [view, setView] = React.useState(null); 
   const [showPricing, setShowPricing] = React.useState(false);
+  const [targetAfterLogin, setTargetAfterLogin] = React.useState(null);
   const [settingsTab, setSettingsTab] = React.useState('profile');
   const [adminTab, setAdminTab] = React.useState('clients');
   const [isMobile, setIsMobile] = React.useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const [hideDock, setHideDock] = React.useState(false);
+  const [gamesMenuOpen, setGamesMenuOpen] = React.useState(false);
 
   // Caché Global en Memoria para evitar peticiones redundantes
   const [globalUserData, setGlobalUserData] = React.useState(null);
   const [globalImages, setGlobalImages] = React.useState(null);
   const [globalNextCursor, setGlobalNextCursor] = React.useState(undefined);
+
+  // Detectar redirección de seguridad desde minijuegos protegidos (?auth_required=arcade)
+  React.useEffect(() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('auth_required') === 'arcade') {
+        setShowPricing(true);
+        setTargetAfterLogin('games');
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    } catch (e) {
+      console.warn('Error parsing url params:', e);
+    }
+  }, []);
+
+  // Mantener token de arcade y redirigir si el usuario intentó acceder a juegos
+  React.useEffect(() => {
+    if (user?.uid) {
+      sessionStorage.setItem('arcade_session_auth', user.uid);
+      if (targetAfterLogin === 'games') {
+        handleSetView('games');
+        setTargetAfterLogin(null);
+      }
+    }
+  }, [user, targetAfterLogin]);
 
   React.useEffect(() => {
     const handleResize = () => {
@@ -40,10 +69,15 @@ function App() {
       window.history.replaceState({ view: 'admin' }, '');
     }
     if (userRole === 'client' && !view) {
-      handleSetView('gallery');
-      window.history.replaceState({ view: 'gallery' }, '');
+      if (targetAfterLogin === 'games') {
+        handleSetView('games');
+        setTargetAfterLogin(null);
+      } else {
+        handleSetView('gallery');
+        window.history.replaceState({ view: 'gallery' }, '');
+      }
     }
-  }, [userRole, view]);
+  }, [userRole, view, targetAfterLogin]);
 
   // Manejar el botón de "Atrás" del navegador
   React.useEffect(() => {
@@ -97,11 +131,18 @@ function App() {
         {showPricing && (
           <PricingModal 
             onClose={() => setShowPricing(false)} 
+            initialNotice={targetAfterLogin === 'games' ? 'Los minijuegos requieren iniciar sesión con Plan Free o superior (con verificación anti-bot Cloudflare)' : null}
             onLogin={async (turnstileToken, acceptedTerms) => {
               setShowPricing(false);
-              const { error } = await loginWithGoogle(turnstileToken, acceptedTerms);
+              const { user: loggedInUser, error } = await loginWithGoogle(turnstileToken, acceptedTerms);
               if (error) {
                 alert(error);
+              } else if (loggedInUser) {
+                sessionStorage.setItem('arcade_session_auth', loggedInUser.uid);
+                if (targetAfterLogin === 'games') {
+                  handleSetView('games');
+                  setTargetAfterLogin(null);
+                }
               }
             }} 
           />
@@ -153,6 +194,18 @@ function App() {
       onClick: () => { handleSetView('gallery'); }
     },
     {
+      icon: (
+        <svg className="w-6 h-6 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="6" width="20" height="12" rx="6" />
+          <path d="M6 12h4m-2-2v4" />
+          <line x1="15" y1="11" x2="15.01" y2="11" strokeWidth="3" />
+          <line x1="18" y1="13" x2="18.01" y2="13" strokeWidth="3" />
+        </svg>
+      ),
+      label: 'Juegos',
+      onClick: () => { handleSetView('games'); }
+    },
+    {
       icon: <svg className="w-6 h-6 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76" /></svg>,
       label: 'Cartas',
       onClick: () => { setSettingsTab('pages'); handleSetView('settings'); }
@@ -179,6 +232,24 @@ function App() {
     }
   ];
 
+  const gamesDockItems = [
+    {
+      icon: (
+        <svg className={`${isMobile ? 'w-6 h-6' : 'w-3.5 h-3.5'} text-pink-400 group-hover:scale-110 transition-transform`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          {isMobile ? (
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+          ) : (
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+          )}
+        </svg>
+      ),
+      label: 'Plegar Menú',
+      className: '!border-pink-500/50 !bg-pink-500/20 shadow-[0_0_12px_rgba(236,72,153,0.4)]',
+      onClick: () => setGamesMenuOpen(false)
+    },
+    ...dockItems
+  ];
+
   let activeView = null;
   if (view === 'settings') {
     activeView = <SettingsView 
@@ -192,6 +263,17 @@ function App() {
       globalNextCursor={globalNextCursor}
       setGlobalNextCursor={setGlobalNextCursor}
     />;
+  } else if (view === 'games') {
+    activeView = (
+      <GamesView 
+        user={user} 
+        onBack={() => handleSetView('gallery')}
+        globalUserData={globalUserData}
+        setGlobalUserData={setGlobalUserData}
+        globalImages={globalImages}
+        setGlobalImages={setGlobalImages}
+      />
+    );
   } else if (userRole === 'admin' && view === 'admin') {
     activeView = (
       <div className="relative">
@@ -241,16 +323,72 @@ function App() {
     <>
       {activeView}
 
-      {/* GLOBAL DOCK - Oculto solo en inmersión */}
+      {/* GLOBAL DOCK: En vista de juegos se colapsa con el efecto bacán de magnificación física */}
       {user && !hideDock && createPortal(
-        <Dock 
-          direction={isMobile ? "horizontal" : "vertical"}
-          items={dockItems}
-          panelHeight={60}
-          baseItemSize={45}
-          magnification={65}
-          distance={150}
-        />,
+        view === 'games' ? (
+          <div className={`fixed z-[99999] pointer-events-auto ${
+            isMobile ? 'bottom-4 left-1/2 -translate-x-1/2' : 'left-2 top-1/2 -translate-y-1/2'
+          }`}>
+            <AnimatePresence mode="wait">
+              {!gamesMenuOpen ? (
+                /* Botón único colapsado (grande en móvil, mini en PC) */
+                <motion.button
+                  key="collapsed-games-btn"
+                  initial={{ scale: 0, opacity: 0, y: isMobile ? 15 : 0, x: isMobile ? 0 : -15 }}
+                  animate={{ scale: 1, opacity: 1, y: 0, x: 0 }}
+                  exit={{ scale: 0, opacity: 0, y: isMobile ? 15 : 0, x: isMobile ? 0 : -15 }}
+                  whileHover={{ scale: 1.15 }}
+                  whileTap={{ scale: 0.9 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                  onClick={() => setGamesMenuOpen(true)}
+                  className={`dock-item !bg-black/90 hover:!bg-black !border !border-pink-500/50 hover:!border-pink-400 text-white flex items-center justify-center shadow-[0_0_20px_rgba(236,72,153,0.5)] cursor-pointer group ${
+                    isMobile ? '!w-14 !h-14 !rounded-2xl' : '!w-8 !h-8 !rounded-lg'
+                  }`}
+                  title="Abrir Menú de Navegación"
+                  aria-label="Abrir Menú"
+                >
+                  <div className={`flex items-center justify-center ${isMobile ? 'flex-row gap-1.5 w-6 h-6' : 'flex-col gap-0.5 w-3.5 h-3.5'}`}>
+                    <span className={`${isMobile ? 'w-1.5 h-6' : 'w-3 h-0.5'} bg-pink-400 rounded-full transition-all`} />
+                    <span className={`${isMobile ? 'w-1.5 h-6' : 'w-3 h-0.5'} bg-white rounded-full transition-all`} />
+                    <span className={`${isMobile ? 'w-1.5 h-6' : 'w-3 h-0.5'} bg-pink-400 rounded-full transition-all`} />
+                  </div>
+                  <span className={`absolute bg-pink-500 rounded-full shadow-[0_0_10px_rgba(236,72,153,0.9)] animate-pulse ${
+                    isMobile ? '-top-1 -right-1 w-3.5 h-3.5' : '-top-0.5 -right-0.5 w-2 h-2'
+                  }`} />
+                </motion.button>
+              ) : (
+                /* El DOCK real con el EFECTO BACÁN (grande y horizontal en móvil, mini y vertical en PC) */
+                <motion.div
+                  key="expanded-games-dock"
+                  initial={{ opacity: 0, y: isMobile ? 20 : 0, x: isMobile ? 0 : -20, scale: 0.85 }}
+                  animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: isMobile ? 20 : 0, x: isMobile ? 0 : -20, scale: 0.85 }}
+                  transition={{ type: "spring", stiffness: 350, damping: 24 }}
+                  className="relative"
+                >
+                  <Dock 
+                    direction={isMobile ? "horizontal" : "vertical"}
+                    className={isMobile ? "dock-mini-h" : "dock-mini"}
+                    items={gamesDockItems}
+                    panelHeight={isMobile ? 64 : 32}
+                    baseItemSize={isMobile ? 50 : 24}
+                    magnification={isMobile ? 68 : 38}
+                    distance={isMobile ? 130 : 90}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ) : (
+          <Dock 
+            direction={isMobile ? "horizontal" : "vertical"}
+            items={dockItems}
+            panelHeight={isMobile ? 64 : 60}
+            baseItemSize={isMobile ? 50 : 45}
+            magnification={isMobile ? 68 : 65}
+            distance={150}
+          />
+        ),
         document.body
       )}
     </>

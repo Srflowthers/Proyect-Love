@@ -45,7 +45,7 @@ export default function ProfileTab({ formData, setFormData, handleChange }) {
 
         <div className="pt-4 border-t border-gray-800">
           <label className="block text-xs text-gray-400 mb-3 uppercase tracking-wider font-semibold">Color del Fondo (Base)</label>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <label className={`cursor-pointer rounded-xl border-2 p-1 transition-all ${formData.universeColor === 'purple' ? 'border-pink-500 scale-105 shadow-[0_0_15px_rgba(236,72,153,0.3)]' : 'border-transparent hover:border-gray-600'}`}>
               <input type="radio" name="universeColor" value="purple" checked={formData.universeColor === 'purple'} onChange={handleChange} className="hidden" />
               <div className="w-full h-16 rounded-lg bg-gradient-to-br from-purple-950 via-pink-900 to-black"></div>
@@ -70,6 +70,19 @@ export default function ProfileTab({ formData, setFormData, handleChange }) {
               <input type="radio" name="universeColor" value="black" checked={formData.universeColor === 'black'} onChange={handleChange} className="hidden" />
               <div className="w-full h-16 rounded-lg bg-gradient-to-br from-gray-900 via-[#111] to-black border border-gray-800"></div>
               <p className="text-[10px] text-center mt-2 font-bold text-gray-300">Vacío Elegante</p>
+            </label>
+            <label className={`cursor-pointer rounded-xl border-2 p-1 transition-all ${formData.universeColor === 'space' ? 'border-blue-400 scale-105 shadow-[0_0_15px_rgba(59,130,246,0.4)]' : 'border-transparent hover:border-gray-600'}`}>
+              <input type="radio" name="universeColor" value="space" checked={formData.universeColor === 'space'} onChange={handleChange} className="hidden" />
+              <div className="w-full h-16 rounded-lg bg-black border border-blue-500/30 relative overflow-hidden flex items-center justify-center">
+                {/* Sol miniatura */}
+                <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-gradient-to-br from-yellow-200 via-orange-400 to-red-500 shadow-[0_0_12px_rgba(250,204,21,0.8)]"></div>
+                {/* Tierra miniatura */}
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-600 via-emerald-600 to-blue-900 shadow-[0_0_8px_rgba(59,130,246,0.6)] border border-blue-400/40"></div>
+                {/* Estrellitas */}
+                <div className="absolute top-2 left-2 w-1 h-1 bg-white rounded-full opacity-80"></div>
+                <div className="absolute bottom-2 left-4 w-0.5 h-0.5 bg-white rounded-full opacity-60"></div>
+              </div>
+              <p className="text-[10px] text-center mt-2 font-bold text-blue-300">Espacio 3D (Tierra y Sol)</p>
             </label>
           </div>
         </div>

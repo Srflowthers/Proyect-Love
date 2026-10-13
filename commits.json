@@ -1,62 +1,162 @@
 [
   {
-    "archivo": "components.json",
-    "mensaje": "chore: configuración de registry privado para React Bits Pro"
+    "archivo": "README.md",
+    "mensaje": "docs: documentación de minijuegos arcade y políticas de seguridad anti-bot"
   },
   {
-    "archivo": "package.json",
-    "mensaje": "chore: actualización de dependencias y registro de shadcn UI"
+    "archivo": "src/services/authService.js",
+    "mensaje": "fix(auth): limpieza de token de sesión arcade al cerrar sesión"
   },
   {
-    "archivo": "package-lock.json",
-    "mensaje": "chore: actualización de lockfile"
+    "archivo": "src/components/ui/PricingModal.jsx",
+    "mensaje": "feat(pricing): soporte de aviso initialNotice para acceso a minijuegos"
   },
   {
-    "archivo": "src/App.jsx",
-    "mensaje": "feat: implementación de Dock global usando React Portals"
-  },
-  {
-    "archivo": "src/components/ui/LetterPage.jsx",
-    "mensaje": "fix: ajustes de renderización en LetterPage"
-  },
-  {
-    "archivo": "src/components/ui/luxury-sections.jsx",
-    "mensaje": "feat: actualización visual de luxury sections"
-  },
-  {
-    "archivo": "src/services/userService.js",
-    "mensaje": "feat: ajustes en lógica del servicio de usuarios"
-  },
-  {
-    "archivo": "src/views/AdminView.jsx",
-    "mensaje": "feat: mejoras en el panel de administración"
+    "archivo": "src/views/settings/ProfileTab.jsx",
+    "mensaje": "feat(profile): opción de tema espacial Espacio 3D en perfil"
   },
   {
     "archivo": "src/views/GalleryView.jsx",
-    "mensaje": "feat: GlitterWarp integrado como fondo animado y control de Dock"
-  },
-  {
-    "archivo": "src/views/SettingsView.jsx",
-    "mensaje": "feat: rediseño del catálogo de Efectos Especiales y Fondos Clásicos"
-  },
-  {
-    "archivo": "src/components/Dock.jsx",
-    "mensaje": "feat: nuevo componente Dock interactivo y global"
+    "mensaje": "feat(gallery): estilos de fondo y aura para tema espacial"
   },
   {
     "archivo": "src/components/Dock.css",
-    "mensaje": "style: estilos para el Dock en múltiples orientaciones"
+    "mensaje": "style(dock): soporte de dock colapsado para PC y modo horizontal móvil en juegos"
   },
   {
-    "archivo": "src/components/ui/button.tsx",
-    "mensaje": "feat: componente Button de shadcn UI"
+    "archivo": "src/views/games/gameIcons.jsx",
+    "mensaje": "feat(arcade): iconos SVG y distintivos para catálogo de minijuegos"
   },
   {
-    "archivo": "src/components/ui/glitter-warp.jsx",
-    "mensaje": "feat: nuevo componente premium GlitterWarp (Partículas 3D)"
+    "archivo": "src/views/games/arcadeCards.css",
+    "mensaje": "style(arcade): estilos y animaciones para tarjetas de juegos"
   },
   {
-    "archivo": "docs/",
-    "mensaje": "build: actualización de archivos compilados de producción"
+    "archivo": "src/views/games/ArcadeFrame.jsx",
+    "mensaje": "feat(arcade): marco de ejecución para minijuegos con partículas cósmicas"
+  },
+  {
+    "archivo": "src/views/games/LoveRoulette.jsx",
+    "mensaje": "feat(arcade): componente para minijuego Ruleta del Amor"
+  },
+  {
+    "archivo": "src/views/games/LoveScratch.jsx",
+    "mensaje": "feat(arcade): componente para minijuego Raspadito de Pareja"
+  },
+  {
+    "archivo": "src/views/games/LoveTrivia.jsx",
+    "mensaje": "feat(arcade): componente para minijuego Trivia de Recuerdos"
+  },
+  {
+    "archivo": "src/views/GamesView.jsx",
+    "mensaje": "feat(arcade): vista principal de minijuegos y catálogo interactivo"
+  },
+  {
+    "archivo": "src/App.jsx",
+    "mensaje": "feat(app): integración de GamesView y dock colapsable inteligente"
+  },
+  {
+    "archivo": "scripts/extract_arcade_games.cjs",
+    "mensaje": "tools: script de utilidad para sincronización de minijuegos"
+  },
+  {
+    "archivo": "public/arcade/gomi.html",
+    "mensaje": "feat(public): redirección segura para Gominola Romántica"
+  },
+  {
+    "archivo": "public/arcade/gomi/gomi.css",
+    "mensaje": "style(public): estilos para minijuego Gominola"
+  },
+  {
+    "archivo": "public/arcade/gomi/gomi.js",
+    "mensaje": "feat(public): lógica y física para minijuego Gominola Match-3"
+  },
+  {
+    "archivo": "public/arcade/gomi/index.html",
+    "mensaje": "feat(public): estructura y guardia anti-bypass para Gominola"
+  },
+  {
+    "archivo": "public/arcade/pool.html",
+    "mensaje": "feat(public): redirección segura para Pool 3D"
+  },
+  {
+    "archivo": "public/arcade/pool/pool.css",
+    "mensaje": "style(public): estilos de mesa y cámara para Pool 3D"
+  },
+  {
+    "archivo": "public/arcade/pool/pool.js",
+    "mensaje": "feat(public): motor Three.js y física 2D para Pool 3D 2v2"
+  },
+  {
+    "archivo": "public/arcade/pool/index.html",
+    "mensaje": "feat(public): estructura y guardia anti-bypass para Pool 3D"
+  },
+  {
+    "archivo": "public/arcade/puzzle.html",
+    "mensaje": "feat(public): redirección segura para Rompecabezas"
+  },
+  {
+    "archivo": "public/arcade/puzzle/puzzle.css",
+    "mensaje": "style(public): estilos panorámicos para Rompecabezas"
+  },
+  {
+    "archivo": "public/arcade/puzzle/puzzle.js",
+    "mensaje": "feat(public): lógica de armado con fotos de la pareja para Rompecabezas"
+  },
+  {
+    "archivo": "public/arcade/puzzle/index.html",
+    "mensaje": "feat(public): estructura y guardia anti-bypass para Rompecabezas"
+  },
+  {
+    "archivo": "public/arcade/sudoku.html",
+    "mensaje": "feat(public): redirección segura para Sudoku Pareja"
+  },
+  {
+    "archivo": "public/arcade/sudoku/sudoku.css",
+    "mensaje": "style(public): estilos de cuadrícula para Sudoku Pareja"
+  },
+  {
+    "archivo": "public/arcade/sudoku/sudoku.js",
+    "mensaje": "feat(public): motor generador y validador cooperativo para Sudoku"
+  },
+  {
+    "archivo": "public/arcade/sudoku/index.html",
+    "mensaje": "feat(public): estructura y selector de dificultad para Sudoku"
+  },
+  {
+    "archivo": "public/arcade/tetris.html",
+    "mensaje": "feat(public): redirección segura para Tetris Pareja"
+  },
+  {
+    "archivo": "public/arcade/tetris/tetris.css",
+    "mensaje": "style(public): estilos responsive para Tetris Pareja"
+  },
+  {
+    "archivo": "public/arcade/tetris/tetris.js",
+    "mensaje": "feat(public): lógica y controles táctiles para Tetris Pareja"
+  },
+  {
+    "archivo": "public/arcade/tetris/index.html",
+    "mensaje": "feat(public): estructura y guardia anti-bypass para Tetris Pareja"
+  },
+  {
+    "archivo": "docs/arcade/",
+    "mensaje": "build(docs): compilación de minijuegos arcade para producción"
+  },
+  {
+    "archivo": "docs/index.html",
+    "mensaje": "build(docs): actualización de index.html compilado para GitHub Pages"
+  },
+  {
+    "archivo": "docs/assets/",
+    "mensaje": "build(docs): bundles de scripts y estilos generados para producción"
+  },
+  {
+    "archivo": "commits.json",
+    "mensaje": "chore: registro de mapeo de commits para sincronización"
+  },
+  {
+    "archivo": "push_1x1.ps1",
+    "mensaje": "chore: script de automatización de commits individuales 1x1"
   }
 ]

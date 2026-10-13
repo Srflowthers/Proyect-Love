@@ -1,0 +1,427 @@
+/* ---- Animaciones Optimizadas a 60 FPS con Aceleración GPU pura ---- */
+[class^="a-"] {
+  transform-box: fill-box;
+  transform-origin: center;
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+@keyframes bob {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -1.8px, 0); }
+}
+
+@keyframes wob {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+}
+
+@keyframes beat {
+  0%, 60%, 100% { transform: scale(1); }
+  15% { transform: scale(1.35); }
+  30% { transform: scale(1); }
+  45% { transform: scale(1.22); }
+}
+
+@keyframes twinkle {
+  0%, 100% { transform: scale(0.3) rotate(0); opacity: 0.15; }
+  50% { transform: scale(1.15) rotate(45deg); opacity: 1; }
+}
+
+@keyframes jelly {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  25% { transform: translate3d(0, -2.2px, 0) scale(0.95, 1.07); }
+  50% { transform: translate3d(0, 0, 0) scale(1.09, 0.9); }
+  75% { transform: translate3d(0, -0.6px, 0) scale(0.99, 1.02); }
+}
+
+@keyframes poke {
+  0%, 50%, 100% { transform: translate3d(0, 0, 0); }
+  68% { transform: translate3d(-2.4px, 2.4px, 0); }
+  78% { transform: translate3d(1.2px, -1.2px, 0); }
+}
+
+@keyframes hit {
+  0%, 72%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  80% { transform: translate3d(1.1px, -1.1px, 0) scale(1.04); }
+}
+
+@keyframes glow {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+@keyframes shade {
+  0%, 100% { transform: scaleX(1); opacity: 0.3; }
+  50% { transform: scaleX(0.8); opacity: 0.18; }
+}
+
+@keyframes pop {
+  0% { transform: scale(0.6); }
+  100% { transform: scale(1); }
+}
+
+.a-jelly { animation: jelly 2.2s ease-in-out infinite; }
+.a-bob { animation: bob 2.2s ease-in-out infinite; }
+.a-bob2 { animation: bob 2.2s ease-in-out infinite -1.1s; }
+.a-wob { animation: wob 2.8s ease-in-out infinite; }
+.a-beat { animation: beat 1.8s ease-in-out infinite; }
+.a-tw { animation: twinkle 2.2s ease-in-out infinite; }
+.a-poke { animation: poke 2.6s ease-in-out infinite; }
+.a-hit { animation: hit 2.6s ease-in-out infinite; }
+.a-glow { animation: glow 1.8s ease-in-out infinite; }
+.a-shade { animation: shade 2.6s ease-in-out infinite; }
+
+/* ---- Escenas: Contención estricta de capas para 60 FPS sin repaint ---- */
+.arcade-scene {
+  position: relative;
+  overflow: hidden;
+  font-size: 16px;
+  isolation: isolate;
+  width: 100%;
+  height: 190px;
+  border-radius: 20px 20px 0 0;
+  contain: paint layout;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.arcade-scene > i {
+  position: absolute;
+  display: block;
+  font-style: normal;
+  will-change: transform, opacity;
+  transform: translateZ(0);
+}
+
+.s-gominola {
+  background: radial-gradient(circle at 50% 110%, #6a1a52, #1d0b30 70%);
+}
+
+.s-tetris {
+  background: repeating-linear-gradient(0deg, rgba(255, 122, 200, 0.09) 0 1px, transparent 1px 1.15em),
+              repeating-linear-gradient(90deg, rgba(255, 122, 200, 0.09) 0 1px, transparent 1px 1.15em),
+              linear-gradient(#1a0a2e, #2b0f40);
+}
+
+.s-sudoku {
+  background: repeating-linear-gradient(0deg, rgba(74, 168, 255, 0.14) 0 1px, transparent 1px 2.4em),
+              repeating-linear-gradient(90deg, rgba(74, 168, 255, 0.14) 0 1px, transparent 1px 2.4em),
+              linear-gradient(#0b1a33, #08111f);
+}
+
+.s-puzzle {
+  background: radial-gradient(circle at 50% 50%, #0e3a2d, #08141f 75%);
+}
+
+.s-pool {
+  background: radial-gradient(ellipse at 50% 45%, #23866a, #0c3d30 80%);
+  box-shadow: inset 0 0 0 0.55em #3b2013, inset 0 0 0 0.7em #1f100a;
+}
+
+.arcade-scene .fg {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 3;
+  pointer-events: none;
+  transform: translateZ(0);
+}
+
+.arcade-scene .fg::before {
+  content: "";
+  position: absolute;
+  width: 8.5em;
+  height: 8.5em;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(7, 5, 12, 0.7), transparent 70%);
+  transform: translateZ(0);
+}
+
+.arcade-scene .fg svg {
+  position: relative;
+  width: 5.5em;
+  height: 5.5em;
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--c) 60%, transparent));
+  transition: transform 0.25s cubic-bezier(0.3, 1.6, 0.5, 1);
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+.arcade-card:hover .fg svg {
+  transform: translate3d(0, 0, 0) scale(1.15) rotate(-6deg);
+}
+
+/* Gominola: caramelos que caen */
+.cd {
+  width: 1.6em;
+  height: 1.6em;
+  border-radius: 50%;
+  top: -15%;
+  left: var(--l);
+  background: radial-gradient(circle at 35% 30%, #fffa, var(--k) 55%, color-mix(in srgb, var(--k) 50%, #000));
+  animation: fall var(--d) linear infinite;
+  animation-delay: var(--dl);
+}
+
+.cd.sq {
+  border-radius: 0.5em;
+}
+
+@keyframes fall {
+  0% { top: -15%; opacity: 0; transform: translate3d(0, 0, 0) scale(1); }
+  8% { opacity: 1; }
+  78% { top: 76%; opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  88% { top: 76%; transform: translate3d(0, 0, 0) scale(1.5); opacity: 0.9; }
+  100% { top: 76%; transform: translate3d(0, 0, 0) scale(0); opacity: 0; }
+}
+
+/* Tetris: piezas que caen por pasos */
+.pc {
+  left: var(--l);
+  top: -30%;
+  width: 3.4em;
+  height: 2.4em;
+  animation: drop var(--d) steps(9, end) infinite;
+  animation-delay: var(--dl);
+}
+
+.pc b {
+  position: absolute;
+  width: 1.05em;
+  height: 1.05em;
+  left: calc(var(--x) * 1.12em);
+  top: calc(var(--y) * 1.12em);
+  border-radius: 0.25em;
+  background: color-mix(in srgb, var(--k) 35%, transparent);
+  border: 0.12em solid var(--k);
+}
+
+@keyframes drop {
+  0% { top: -30%; opacity: 0; }
+  6% { opacity: 1; }
+  88% { top: var(--e); opacity: 1; }
+  100% { top: var(--e); opacity: 0; }
+}
+
+/* Sudoku: números */
+.nm {
+  left: var(--l);
+  top: var(--t);
+  width: 2.4em;
+  height: 2.4em;
+  display: grid;
+  place-items: center;
+  font: 700 1.35em Jost, system-ui, sans-serif;
+  color: #bfe0ff;
+  text-shadow: 0 0 8px #4aa8ff;
+  animation: num 4.4s ease-in-out infinite;
+  animation-delay: var(--dl);
+}
+
+.nm.h {
+  color: #ff5aaa;
+  text-shadow: 0 0 10px #ff5aaa;
+}
+
+@keyframes num {
+  0%, 100% { opacity: 0; transform: translate3d(0, 0, 0) scale(0.3); }
+  14%, 68% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+/* Rompecabezas */
+.pz {
+  left: var(--l);
+  top: var(--t);
+  width: 2.3em;
+  height: 2.3em;
+  opacity: 0.85;
+  animation: drift var(--d) ease-in-out infinite;
+  animation-delay: var(--dl);
+}
+
+.pz svg {
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes drift {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(var(--r)); }
+  50% { transform: translate3d(var(--dx), var(--dy), 0) rotate(calc(var(--r) * -1)); }
+}
+
+/* Pool: bolas */
+.bl {
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 50%;
+  left: var(--x0);
+  top: var(--y0);
+  background: radial-gradient(circle at 35% 30%, #fffc, var(--k) 50%, color-mix(in srgb, var(--k) 45%, #000));
+  box-shadow: 0 0.2em 0.3em rgba(0, 0, 0, 0.35);
+  animation: roll var(--d) linear infinite;
+  animation-delay: var(--dl);
+}
+
+@keyframes roll {
+  0% { left: var(--x0); top: var(--y0); }
+  25% { left: var(--x1); top: var(--y1); }
+  50% { left: var(--x2); top: var(--y2); }
+  75% { left: var(--x3); top: var(--y3); }
+  100% { left: var(--x0); top: var(--y0); }
+}
+
+.pk {
+  width: 2em;
+  height: 2em;
+  border-radius: 50%;
+  background: #050308;
+}
+
+/* Air Hockey */
+@keyframes strike {
+  0%, 50%, 100% { transform: translate3d(0, 0, 0); }
+  66% { transform: translate3d(-1.6px, 1.6px, 0); }
+  76% { transform: translate3d(2.6px, -2.6px, 0); }
+  88% { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes puckgo {
+  0%, 72%, 100% { transform: translate3d(0, 0, 0); }
+  82% { transform: translate3d(2.6px, -2.6px, 0); }
+  92% { transform: translate3d(0.5px, -0.5px, 0); }
+}
+
+@keyframes streak {
+  0%, 70%, 100% { opacity: 0; }
+  78% { opacity: 1; }
+  92% { opacity: 0; }
+}
+
+.a-strike { animation: strike 2.6s ease-in-out infinite; }
+.a-puck { animation: puckgo 2.6s ease-in-out infinite; }
+.a-streak { animation: streak 2.6s ease-in-out infinite; }
+
+.s-airhockey {
+  background: radial-gradient(ellipse at 50% 50%, #0f3550, #07131f 80%);
+  box-shadow: inset 0 0 0 0.4em #12293a, inset 0 0 0 0.5em rgba(77, 225, 255, 0.5);
+}
+
+.s-airhockey::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 1px);
+  width: 2px;
+  background: rgba(77, 225, 255, 0.4);
+  z-index: 0;
+}
+
+.s-airhockey::after {
+  content: "";
+  position: absolute;
+  left: calc(50% - 2.4em);
+  top: calc(50% - 2.4em);
+  width: 4.8em;
+  height: 4.8em;
+  border: 2px solid rgba(77, 225, 255, 0.35);
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.gl {
+  width: 2em;
+  height: 6.5em;
+  top: calc(50% - 3.25em);
+  border: 2px solid rgba(77, 225, 255, 0.55);
+}
+
+.gl.l {
+  left: 0;
+  border-left: 0;
+  border-radius: 0 4em 4em 0;
+}
+
+.gl.r {
+  right: 0;
+  border-right: 0;
+  border-radius: 4em 0 0 4em;
+}
+
+.hp {
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 50%;
+  left: var(--x0);
+  top: var(--y0);
+  background: radial-gradient(circle, #0b2233 40%, #173d57);
+  border: 0.16em solid #4de1ff;
+  box-shadow: 0 0 0.9em #4de1ff, 0 0 0.3em #4de1ff inset;
+  animation: roll var(--d) linear infinite;
+}
+
+.ml {
+  width: 2.3em;
+  height: 2.3em;
+  border-radius: 50%;
+  left: var(--l);
+  top: var(--a);
+  background: radial-gradient(circle at 35% 30%, #fffb, var(--k) 45%, color-mix(in srgb, var(--k) 40%, #000));
+  box-shadow: 0 0.3em 0.4em rgba(0, 0, 0, 0.4);
+  animation: mal var(--d) ease-in-out infinite;
+  animation-delay: var(--dl);
+}
+
+.ml::after {
+  content: "";
+  position: absolute;
+  inset: 32%;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--k) 55%, #000);
+  opacity: 0.5;
+}
+
+@keyframes mal {
+  0%, 100% { top: var(--a); }
+  50% { top: var(--b); }
+}
+
+
+/* Tarjeta Arcade: Ultra Rápida (Sin backdrop-filter para garantizar 60 FPS fijos) */
+.arcade-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 1.25rem;
+  overflow: hidden;
+  background: rgba(25, 12, 38, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  text-align: center;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.arcade-card:hover {
+  transform: translate3d(0, -5px, 0);
+  border-color: color-mix(in srgb, var(--c) 70%, transparent);
+  box-shadow: 0 0 30px color-mix(in srgb, var(--c) 30%, transparent), 0 12px 28px rgba(0, 0, 0, 0.8);
+}
+
+.arcade-card-body {
+  padding: 1rem 1.25rem 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0.35rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before {
+    animation: none !important;
+    transition: none !important;
+  }
+}

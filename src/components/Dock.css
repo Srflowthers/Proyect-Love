@@ -117,3 +117,60 @@
   top: 50%;
   transform: translateY(-50%);
 }
+
+/* Modo compacto para juegos en PC (vertical a la izquierda) */
+.dock-mini {
+  gap: 6px !important;
+  padding: 6px 3px !important;
+  left: 8px !important;
+}
+
+.dock-mini .dock-item {
+  border-radius: 7px !important;
+}
+
+.dock-mini .dock-icon svg {
+  width: 13px !important;
+  height: 13px !important;
+}
+
+.dock-mini .dock-label {
+  font-size: 0.72rem !important;
+  padding: 0.15rem 0.5rem !important;
+  left: calc(100% + 0.4rem) !important;
+}
+
+/* Modo para juegos en Teléfono/Móvil (horizontal abajo, tamaño táctil generoso) */
+.dock-mini-h {
+  position: static !important;
+  transform: none !important;
+  gap: 10px !important;
+  padding: 8px 14px !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  background-color: rgba(18, 15, 23, 0.92) !important;
+  border: 1px solid rgba(236, 72, 153, 0.35) !important;
+  border-radius: 22px !important;
+  backdrop-filter: blur(18px) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.85), 0 0 20px rgba(236, 72, 153, 0.25) !important;
+  max-width: 96vw !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.dock-mini-h .dock-item {
+  border-radius: 14px !important;
+}
+
+.dock-mini-h .dock-icon svg {
+  width: 24px !important;
+  height: 24px !important;
+}
+
+.dock-mini-h .dock-label {
+  font-size: 0.82rem !important;
+  padding: 0.25rem 0.65rem !important;
+  bottom: calc(100% + 0.6rem) !important;
+  top: auto !important;
+}

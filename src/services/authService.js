@@ -27,6 +27,7 @@ export const loginWithGoogle = async (turnstileToken, acceptedTerms) => {
 
 export const logout = async () => {
   try {
+    sessionStorage.removeItem('arcade_session_auth');
     await signOut(auth);
   } catch (error) {
     console.error("Error cerrando sesión:", error);

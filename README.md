@@ -61,3 +61,36 @@ los cambios (incluida la carpeta `docs/` actualizada).
 - **Universo 3D Dinámico**: Generación aleatoria de la semilla del universo 3D en cada sesión para garantizar un clúster de entrada siempre único.
 - **Drift Diagonal (Zoom Infinito)**: Algoritmo matemático para que el avance en Z mueva de forma imperceptible los ejes X/Y, creando constelaciones siempre nuevas al dar la vuelta al universo.
 - **Controles Táctiles (Móvil)**: Natural Scroll (inversión de ejes para arrastre) y sensibilidad calibrada específicamente para dispositivos móviles.
+
+## 7. Arcade del Amor (Minijuegos Cooperativos)
+
+Ecosistema modular de minijuegos independientes aislados en `public/arcade/` y coordinados desde `src/views/GamesView.jsx`:
+
+1. **🧩 Rompecabezas de Recuerdos (`puzzle.html`)**:
+   - **Modal de piezas**: Selector directo de dificultad (**30 piezas / Muy fácil**, **60 piezas / Fácil**, **120 piezas / Media**, **240 piezas / Difícil**, **500 piezas / ¡Imposible!**).
+   - **Foto propia aleatoria**: Selecciona automáticamente una imagen al azar de la galería de la pareja y permite cambiar a otra con el botón *🎲 Otra foto de nosotros*.
+   - **100% Pantalla panorámica**: Tablero central y distribución de piezas aprovechando al 100% los bordes laterales izquierdo y derecho en pantallas de PC y laptops.
+2. **🔢 Sudoku de a Dos (`sudoku.html`)**:
+   - **Modal de dificultad**: Selección directa de **Fácil** (6×6), **Normal** (9×9) y **Difícil** (12×12) sin mostrar números de cuadrícula en la UI.
+   - **Modo cooperativo**: Dos jugadores por turnos con sistema de pistas y puntuación en pareja.
+3. **🧱 Tetris Pareja (`tetris.html`)**:
+   - Tetris cooperativo adaptado para pantalla completa y optimizado con controles táctiles y de teclado.
+4. **🍬 Gominola Match-3 (`gomi.html`)**:
+   - Juego de combinación de caramelos y corazones con efectos en Canvas.
+5. **🎱 Pool 3D (`pool.html`)**:
+   - Billar 3D con física realista y partidas por turnos.
+
+---
+
+## 8. Políticas de Acceso y Seguridad: Protección de Rutas y Anti-Bot
+
+- **Autenticación Obligatoria (Plan Free como mínimo)**:
+  - Los minijuegos de la Zona Arcade están protegidos: **solo pueden ser jugados por usuarios registrados y autenticados** (con al menos el Plan Free/Gratis o planes superiores de pago).
+  - Usuarios no autenticados o visitantes anónimos **no pueden acceder ni jugar** ningún minijuego.
+- **Protección Anti-Bypass y Filtro Anti-Bot (Cloudflare Turnstile)**:
+  - Todo intento de acceder a los juegos (`/arcade/*.html` o navegación no logueada) es interceptado de forma inmediata por guardias de seguridad en `<head>` (`window.self === window.top` check y token de sesión).
+  - Los accesos no autorizados son redirigidos automáticamente a `/?auth_required=arcade`, desplegando el modal de autenticación (`PricingModal`).
+  - El usuario debe completar satisfactoriamente el widget **Cloudflare Turnstile Anti-Bot** y autenticarse con su cuenta de Google antes de obtener acceso al Arcade.
+- **Personalización para el Usuario Registrado**:
+  - En el **Rompecabezas**: Al estar autenticado con al menos Plan Free, el sistema carga de forma segura y automática las **fotos propias** de la pareja para armar desafíos aleatorios.
+

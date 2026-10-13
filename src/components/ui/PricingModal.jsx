@@ -86,7 +86,7 @@ const CrossIcon = () => (
   </svg>
 );
 
-const PricingModal = ({ onLogin, onClose }) => {
+const PricingModal = ({ onLogin, onClose, initialNotice }) => {
   const [period, setPeriod] = useState("anual");
   const [selectedPlanId, setSelectedPlanId] = useState("novios");
   const [turnstileToken, setTurnstileToken] = useState(null);
@@ -142,6 +142,24 @@ const PricingModal = ({ onLogin, onClose }) => {
       <div className="pricing-container">
         <main className="wrap">
           <header>
+            {initialNotice && (
+              <div style={{
+                marginBottom: '1rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.5rem 1rem',
+                borderRadius: '9999px',
+                background: 'rgba(236,72,153,0.15)',
+                border: '1px solid rgba(236,72,153,0.4)',
+                color: '#fbcfe8',
+                fontSize: '0.8rem',
+                fontWeight: 600
+              }}>
+                <span>🎮</span>
+                <span>{initialNotice}</span>
+              </div>
+            )}
             <h1>Elige tu Universo</h1>
             <p>Empieza gratis y mejora cuando tu historia necesite más espacio. Puedes cambiar de plan cuando quieras desde tu panel.</p>
             <div className="period">

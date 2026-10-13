@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<html lang="es" data-theme="dark">
+<html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="color-scheme" content="dark">
-  <title>Pool 3D 2v2 - Arcade del Amor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <title>Pool 3D 2v2</title>
 
   <!-- Control de acceso e integración en iframe Arcade -->
   <script>
@@ -25,83 +24,82 @@
     })();
   </script>
 
-  <!-- Hoja de estilos desacoplada -->
+  <!-- Estilos desacoplados -->
   <link rel="stylesheet" href="pool.css">
 </head>
 <body>
-
-  <!-- Barra superior de turnos, cámaras y controles de partida -->
-  <header class="bar">
-    <div class="seats" id="seats"></div>
-    <div class="btns">
-      <button id="mode" type="button">Cámara de tiro</button>
-      <button id="v1" type="button">Cenital</button>
-      <button id="v2" type="button">Perspectiva</button>
-      <button id="zi" type="button" title="Acercar">＋</button>
-      <button id="zo" type="button" title="Alejar">－</button>
-      <button data-t="0" class="sel" type="button">Verde</button>
-      <button data-t="1" type="button">Azul</button>
-      <button data-t="2" type="button">Burdeos</button>
-      <button id="new" type="button">Nueva</button>
-      <select id="selCue" aria-label="Seleccionar taco"></select>
-      <select id="selBg" style="display:none"></select>
+  <div id="stage">
+    <!-- Marcador y turnos superior -->
+    <div id="top">
+      <div class="tc R" id="tL"></div>
+      <div id="mid">
+        <span id="seats"></span>
+        <div id="msg"></div>
+      </div>
+      <div class="tc B" id="tR"></div>
     </div>
-  </header>
 
-  <!-- Mensajes de estado del turno -->
-  <div id="msg" role="status"></div>
-
-  <!-- Escenario 3D de la mesa de billar -->
-  <main id="stage">
-    <!-- Barra vertical medidora de potencia -->
+    <!-- Medidor de fuerza vertical -->
     <div id="pw">
       <div id="pf"></div>
-      <div id="pw-label">FUERZA</div>
+      <span>FUERZA</span>
     </div>
 
-    <!-- Indicador flotante de turno y ayuda contextual -->
-    <div id="stage-badge" class="stage-badge">
-      <span id="stage-turn-chip" class="chip on R">Turno</span>
-      <span id="stage-tip-text">Clic Der: Rotar · Clic Izq: Disparar</span>
+    <!-- Notificaciones animadas / Toast épico -->
+    <div id="toast" aria-live="polite">
+      <strong id="toastTitle"></strong>
+      <span id="toastText"></span>
     </div>
 
-    <!-- Controles táctiles HUD (móviles y tablets) -->
-    <div id="stage-touch-hud" class="stage-hud">
-      <div class="hud-aim-cluster">
-        <button id="btnAimLeft" class="hud-btn" aria-label="Girar izquierda" title="Girar izquierda">◀</button>
-        <button id="btnAimRight" class="hud-btn" aria-label="Girar derecha" title="Girar derecha">▶</button>
+    <!-- Bandeja flotante inferior de bolas embocadas -->
+    <div id="trWrap" hidden>
+      <b>🕳️</b>
+      <div id="trAll"></div>
+    </div>
+
+    <!-- Botón de ajustes -->
+    <button id="gear" title="Menú">⚙</button>
+
+    <!-- Menú flotante de configuración y reglas -->
+    <div id="menu" hidden>
+      <div class="row">
+        <button id="mode">🎯 Cámara de tiro</button>
+        <button id="v1">Cenital</button>
+        <button id="v2">Perspectiva</button>
+        <button id="zi">＋</button>
+        <button id="zo">－</button>
       </div>
-      <div class="hud-fire-cluster">
-        <button id="btnStageShoot" class="hud-btn-shoot">
-          <span class="shoot-icon">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
-            </svg>
-          </span>
-          <span class="shoot-text">MANTÉN Y SUELTA</span>
-          <span id="shootPowerText" class="shoot-power">0%</span>
-        </button>
+      <div class="row">
+        <button data-t="0" class="sel">Verde</button>
+        <button data-t="1">Azul</button>
+        <button data-t="2">Burdeos</button>
+        <button id="new">🔄 Nueva partida</button>
+        <button id="epicBtn" class="sel">🎬 Cámara épica: ON</button>
       </div>
+      <div class="row">
+        <select id="selCue"></select>
+        <select id="selBg"></select>
+        <button id="btnExit" style="background:#8b1b1b;border-color:#b92929;color:#fff;font-weight:600;">🚪 Volver al Catálogo</button>
+      </div>
+      <p class="hint">Arrastra para apuntar (360°). Mantén la barra FUERZA (o Espacio) y suelta para disparar. Rueda = zoom.</p>
+      <details class="rules">
+        <summary>📖 Reglas del juego (Bola 8, 2 equipos)</summary>
+        <ol>
+          <li><b>Mesa abierta:</b> al inicio nadie tiene grupo. La primera bola (no la 8) que un equipo emboca <u>sin falta</u> le asigna ese grupo (lisas 1-7 o rayadas 9-15) y el otro equipo recibe el opuesto. Se ve arriba en cada equipo.</li>
+          <li><b>Turnos:</b> si embocas una bola de tu grupo sin falta, sigues. Si embocas una del rival, esa bola cuenta para ellos y pierdes el turno (salvo que también embocaras una tuya).</li>
+          <li><b>Primer contacto:</b> la blanca debe tocar primero una bola de tu grupo (en mesa abierta, cualquiera menos la 8). La 8 solo se puede tocar primero cuando ya embocaste todas las tuyas.</li>
+          <li><b>Banda:</b> si no emboca ninguna bola, alguna bola debe tocar banda tras el primer contacto.</li>
+          <li><b>Falta</b> (embocar la blanca, no tocar bola, contacto equivocado o ninguna banda): el rival coloca la blanca donde quiera (la arrastra y la suelta donde quiera).</li>
+          <li><b>Bola 8:</b> se emboca al final. Ganas si la emboca tu equipo legalmente (sin falta y con tus 7 ya embocadas). Pierdes si la emboca antes de tiempo o con falta. Si cae en la rotura, vuelve al triángulo.</li>
+        </ol>
+      </details>
     </div>
-  </main>
-
-  <!-- Botón de disparo alternativo (oculto en iframe arcade) -->
-  <div style="text-align:center;margin-top:8px">
-    <button id="fire" style="display:none">Mantén para cargar · suelta para disparar</button>
   </div>
 
-  <!-- Bandeja de bolas embocadas (Rojo = Lisas 1-7, Azul = Rayadas 9-15) -->
-  <footer class="tray">
-    <div id="trR"></div>
-    <div id="trB"></div>
-  </footer>
-
-  <p class="hint" style="display:none">PC: Clic Derecho para rotar vista · Clic Izquierdo (mantén y suelta) para disparar. Móvil: Desliza para apuntar y pulsa DISPARAR.</p>
-
-  <!-- Dependencia externa 3D: Three.js r128 -->
+  <!-- Three.js r128 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-  <!-- Lógica desacoplada de Pool 3D -->
+  <!-- Lógica desacoplada de Pool 3D 2v2 -->
   <script src="pool.js"></script>
 </body>
 </html>

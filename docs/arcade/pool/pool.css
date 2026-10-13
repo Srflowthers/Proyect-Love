@@ -1,367 +1,474 @@
-/* ==========================================================================
-   POOL 3D 2v2 - ARCADE DEL AMOR (HOJA DE ESTILOS)
-   ========================================================================== */
-
-/* --------------------------------------------------------------------------
-   1. VARIABLES Y SISTEMA DE DISEÑO
-   -------------------------------------------------------------------------- */
 :root {
   box-sizing: border-box;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  --bg: transparent;
-  --fg: #eeeeee;
-  --card: rgba(28, 31, 35, 0.7);
+  --bg: #0c0e11;
+  --fg: #eee;
+  --card: #1c1f23;
   --red: #c0392b;
   --blue: #2471a3;
-  color-scheme: dark !important;
+  padding: 0;
 }
-
-/* --------------------------------------------------------------------------
-   2. REINICIO Y CONTENEDOR BASE A PANTALLA COMPLETA
-   -------------------------------------------------------------------------- */
-*, *::before, *::after {
-  box-sizing: border-box;
-}
-
 html {
   scroll-padding-top: env(safe-area-inset-top, 0px);
-  background: transparent !important;
+  height: 100%;
+  overflow: hidden;
 }
-
 body {
   margin: 0;
-  padding: 2px;
-  background: transparent !important;
+  padding: 0;
+  background: #000;
   color: var(--fg);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  animation: none !important;
+  font-family: system-ui, sans-serif;
+  height: 100%;
   overflow: hidden;
-  -webkit-tap-highlight-color: transparent;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
 }
-
-/* --------------------------------------------------------------------------
-   3. BARRA SUPERIOR DE TURNOS, CÁMARAS Y PAÑO
-   -------------------------------------------------------------------------- */
 .bar {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
-  justify-content: center !important;
-  margin-bottom: 2px !important;
-  width: 100%;
-  max-width: 960px;
+  justify-content: space-between;
+  margin-bottom: 6px;
 }
-
-.seats, .btns {
+.seats,
+.btns {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  align-items: center;
 }
-
 .chip {
-  padding: 4px 10px;
+  padding: 5px 11px;
   border-radius: 99px;
   color: #fff;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   opacity: .4;
-  transition: opacity 0.2s ease, box-shadow 0.2s ease;
 }
-
 .chip.on {
   opacity: 1;
   box-shadow: 0 0 0 3px #f5c542;
 }
-
 .R { background: var(--red); }
 .B { background: var(--blue); }
-
-button, select {
+button {
   font: inherit;
-  font-size: 11px !important;
-  padding: 3px 8px !important;
+  font-size: 13px;
+  padding: 6px 10px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid #8886;
   background: var(--card);
   color: var(--fg);
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.1s ease;
 }
-
-button:hover {
-  background: rgba(45, 50, 56, 0.85);
-}
-
-button:active {
-  transform: scale(0.96);
-}
-
 button.sel {
   outline: 2px solid #f5c542;
 }
-
-#msg {
-  text-align: center;
-  font-weight: 600;
-  font-size: 11px !important;
-  min-height: 1.1em !important;
-  margin: 1px 0 !important;
-  color: #f1f2f6;
-}
-
-/* --------------------------------------------------------------------------
-   4. ESCENARIO 3D Y CANVAS
-   -------------------------------------------------------------------------- */
 #stage {
-  position: relative;
-  width: 100% !important;
-  max-width: 100% !important;
-  height: clamp(320px, 75vh, 620px) !important;
-  aspect-ratio: auto !important;
-  margin: 0 auto !important;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
+  position: fixed;
+  inset: 0;
+  width: auto;
+  max-width: none;
+  aspect-ratio: auto;
+  border-radius: 0;
+  margin: 0;
+  overflow: hidden;
+  background: #000;
   touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
 }
-
 #stage canvas {
-  width: 100% !important;
-  height: 100% !important;
+  width: 100%;
+  height: 100%;
   display: block;
-  background: transparent !important;
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-  transform: translateZ(0);
-  backface-visibility: hidden;
 }
-
-/* --------------------------------------------------------------------------
-   5. MEDIDOR VERTICAL DE FUERZA (POWER METER)
-   -------------------------------------------------------------------------- */
+#top {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) 10px 0;
+  pointer-events: none;
+}
+#mid {
+  flex: 1;
+  text-align: center;
+  text-shadow: 0 1px 4px #000;
+  min-width: 0;
+}
+#msg {
+  font-size: 13px;
+  margin: 4px 0 0;
+  min-height: 1.2em;
+}
+.tc {
+  background: #000b;
+  border-radius: 10px;
+  padding: 6px 9px;
+  border-top: 4px solid;
+  opacity: .8;
+}
+.tc.R { border-color: var(--red); }
+.tc.B { border-color: var(--blue); }
+.tc.on {
+  opacity: 1;
+  box-shadow: 0 0 0 2px #f5c542;
+}
+.th {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  font-size: 13px;
+  margin-bottom: 5px;
+}
+.th span {
+  font-weight: 700;
+  color: #f5c542;
+}
+.th em {
+  margin-left: auto;
+  font-style: normal;
+  opacity: .8;
+}
+.sl {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  min-height: 26px;
+  align-items: center;
+}
+small {
+  opacity: .6;
+  font-size: 12px;
+}
+.mb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  box-shadow: inset -3px -3px 5px #0006, inset 2px 2px 4px #fff8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.mb i {
+  font: 700 9px system-ui;
+  font-style: normal;
+  background: #f4f1e8;
+  color: #111;
+  border-radius: 50%;
+  width: 13px;
+  height: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mb.dn {
+  opacity: .22;
+  filter: grayscale(.6);
+}
 #pw {
   position: absolute;
+  z-index: 6;
   right: 12px;
-  top: 15%;
-  width: 14px;
-  height: 70%;
-  background: rgba(0, 0, 0, 0.7);
-  border: 1.5px solid rgba(255, 255, 255, 0.25);
-  border-radius: 10px;
+  top: 20%;
+  width: 30px;
+  height: 58%;
+  background: #0008;
+  border: 2px solid #fff4;
+  border-radius: 15px;
   overflow: hidden;
-  box-shadow: 0 0 14px rgba(0, 0, 0, 0.6);
-  pointer-events: none;
-  z-index: 15;
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: none;
 }
-
+#pw span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  writing-mode: vertical-rl;
+  font: 700 10px system-ui;
+  letter-spacing: 2px;
+  pointer-events: none;
+  text-shadow: 0 1px 3px #000;
+}
 #pf {
   position: absolute;
   bottom: 0;
   width: 100%;
   height: 0;
-  background: linear-gradient(0deg, #22c55e 0%, #eab308 50%, #ef4444 100%);
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
-  transition: height 0.05s ease;
+  background: linear-gradient(0deg, #3ddc84, #f5c542, #e53935);
 }
-
-#pw-label {
+#trWrap {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) rotate(-90deg);
-  font-size: 8px;
-  font-weight: 900;
-  color: rgba(255, 255, 255, 0.6);
-  letter-spacing: 2px;
-  white-space: nowrap;
-  pointer-events: none;
-}
-
-/* --------------------------------------------------------------------------
-   6. BADGE FLOTANTE DE ESTADO Y TURNO
-   -------------------------------------------------------------------------- */
-.stage-badge {
-  position: absolute;
-  top: 10px;
+  z-index: 5;
+  bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
+  gap: 6px;
   align-items: center;
-  gap: 8px;
-  background: rgba(12, 14, 17, 0.85);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  padding: 5px 14px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #fff;
-  pointer-events: none;
-  z-index: 15;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-  white-space: nowrap;
-  transition: all 0.2s ease;
+  padding: 4px 10px;
+  background: #000b;
+  border-radius: 99px;
+  max-width: 72%;
 }
-
-/* --------------------------------------------------------------------------
-   7. CONTROLES HUD TÁCTILES (MÓVIL Y TABLET)
-   -------------------------------------------------------------------------- */
-.stage-hud {
+#trWrap .mb {
+  width: 20px;
+  height: 20px;
+}
+#trWrap .mb i {
+  width: 12px;
+  height: 12px;
+  font-size: 8px;
+}
+#gear {
   position: absolute;
-  inset: auto 12px 12px 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  pointer-events: none;
-  z-index: 20;
-}
-
-.hud-aim-cluster {
-  display: flex;
-  gap: 8px;
-  pointer-events: auto;
-}
-
-.hud-btn {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  background: rgba(28, 31, 35, 0.85);
-  backdrop-filter: blur(8px);
-  border: 1.5px solid rgba(255, 255, 255, 0.25);
-  color: #fff;
-  font-size: 18px;
-  font-weight: bold;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: none;
-  transition: transform 0.1s, background 0.15s;
-}
-
-.hud-btn:active {
-  transform: scale(0.92);
-  background: rgba(255, 255, 255, 0.25);
-}
-
-.hud-fire-cluster {
-  pointer-events: auto;
-}
-
-.hud-btn-shoot {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-width: 145px;
-  height: 52px;
-  padding: 4px 16px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #c0392b, #e74c3c);
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  color: #fff;
-  cursor: pointer;
-  box-shadow: 0 6px 20px rgba(192, 57, 43, 0.6), 0 0 14px rgba(231, 76, 60, 0.4);
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: none;
-  transition: transform 0.1s, box-shadow 0.2s, background 0.2s;
-}
-
-.hud-btn-shoot:active, .hud-btn-shoot.charging {
-  transform: scale(0.95);
-  box-shadow: 0 2px 10px rgba(192, 57, 43, 0.9), 0 0 24px rgba(243, 156, 18, 0.9);
-  background: linear-gradient(135deg, #e67e22, #e74c3c);
-}
-
-.shoot-icon {
-  font-size: 16px;
-  line-height: 1;
-}
-
-.shoot-text {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-
-.shoot-power {
-  font-size: 11px;
-  font-weight: 900;
-  color: #f1c40f;
-  margin-top: 1px;
-}
-
-/* --------------------------------------------------------------------------
-   8. BANDEJA DE BOLAS EMBOCADAS (TRAY)
-   -------------------------------------------------------------------------- */
-.tray {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  max-width: 920px !important;
-  width: 100% !important;
-  margin: 4px auto 0 !important;
-  padding: 4px 8px !important;
-  border-radius: 10px;
-  background: rgba(28, 31, 35, 0.6) !important;
-  backdrop-filter: blur(6px) !important;
-  min-height: 24px !important;
-}
-
-.tray div {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.mb {
-  width: 14px !important;
-  height: 14px !important;
+  z-index: 6;
+  left: 10px;
+  bottom: 10px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  box-shadow: inset -3px -3px 5px rgba(0, 0, 0, 0.4), inset 2px 2px 4px rgba(255, 255, 255, 0.5);
-  display: inline-block;
+  font-size: 18px;
+  padding: 0;
+  background: #000b;
 }
-
-/* --------------------------------------------------------------------------
-   9. ELEMENTOS AUXILIARES Y RESPONSIVE
-   -------------------------------------------------------------------------- */
-#fire, .hint, #selBg {
+#menu {
+  position: absolute;
+  z-index: 7;
+  left: 10px;
+  bottom: 58px;
+  width: min(380px, 92vw);
+  max-height: 70vh;
+  overflow: auto;
+  background: #1c1f23f2;
+  border-radius: 12px;
+  padding: 10px;
+  font-size: 13px;
+}
+#menu .row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+#menu .rules {
+  margin: 6px 0 0;
+  padding: 6px 10px;
+  background: #0003;
+}
+.rules {
+  max-width: 1100px;
+  margin: 10px auto;
+  background: var(--card);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.rules summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.rules li {
+  margin: 2px 0;
+}
+.hint {
+  font-size: 12px;
+  text-align: center;
+  opacity: .65;
+}
+select {
+  font: inherit;
+  font-size: 13px;
+  padding: 5px;
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--fg);
+  border: 1px solid #8886;
+}
+[hidden] {
   display: none !important;
 }
-
-@media (max-width: 600px) {
-  .hud-btn {
-    width: 44px;
-    height: 44px;
-    font-size: 16px;
+#toast {
+  position: absolute;
+  z-index: 8;
+  left: 50%;
+  top: 24%;
+  transform: translate(-50%, -10px) scale(.92);
+  width: max-content;
+  max-width: min(88vw, 520px);
+  padding: 12px 20px;
+  border: 1px solid #ffffff55;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #111d, #24202ff2);
+  box-shadow: 0 0 18px #000b, 0 0 24px #f5c54233;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease, transform .22s ease;
+}
+#toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+#toast strong {
+  display: block;
+  font-size: clamp(18px, 3.5vw, 30px);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #f5c542;
+  text-shadow: 0 0 14px #f5c54288;
+}
+#toast span {
+  display: block;
+  margin-top: 4px;
+  font-size: clamp(12px, 2vw, 15px);
+  font-weight: 600;
+  color: #fff;
+}
+#toast.epic {
+  border-color: #f5c542;
+  background: linear-gradient(135deg, #25143beF, #101018f5);
+  box-shadow: 0 0 22px #f5c54299, 0 0 55px #b76bff55;
+}
+#toast.epic strong {
+  color: #ffe27a;
+  text-shadow: 0 0 8px #ffb300, 0 0 22px #ff7800;
+}
+#toast.epic:after {
+  content: "✦  ✧  ✦";
+  display: block;
+  color: #ffd76a;
+  font-size: 18px;
+  margin-top: 3px;
+  letter-spacing: 8px;
+}
+@keyframes epicPulse {
+  0% { filter: brightness(.7); transform: translate(-50%, 8px) scale(.75); }
+  55% { filter: brightness(1.8); transform: translate(-50%, -3px) scale(1.08); }
+  100% { filter: brightness(1); transform: translate(-50%, 0) scale(1); }
+}
+#toast.epic.show {
+  animation: epicPulse .48s cubic-bezier(.2, .8, .2, 1);
+}
+#place {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  bottom: 58px;
+  transform: translateX(-50%);
+  background: #2e9e5b;
+  border-color: #2e9e5b;
+  color: #fff;
+  font-weight: 700;
+  padding: 10px 18px;
+  font-size: 15px;
+}
+@media (max-width: 760px) {
+  #mid { order: 3; flex-basis: 100%; }
+  #top { flex-wrap: wrap; }
+}
+@media (max-width: 760px), (max-height: 520px) {
+  #top {
+    padding: calc(env(safe-area-inset-top, 0px) + 4px) 6px 0;
+    gap: 4px;
   }
-  .hud-btn-shoot {
-    min-width: 125px;
-    height: 48px;
-    padding: 3px 12px;
+  .tc {
+    flex: 1;
+    min-width: 0;
+    padding: 4px 6px;
+    border-top-width: 3px;
+    border-radius: 8px;
   }
-  .shoot-text {
+  .th {
+    font-size: 10px;
+    margin: 0 0 3px;
+    gap: 5px;
+  }
+  .th span {
     font-size: 10px;
   }
-  .stage-badge {
-    font-size: 11px;
-    padding: 3px 10px;
+  .tc .sl {
+    gap: 2px;
+    min-height: 16px;
   }
+  .tc .mb {
+    width: 16px;
+    height: 16px;
+  }
+  .tc .mb i {
+    width: 10px;
+    height: 10px;
+    font-size: 7px;
+  }
+  .tc small {
+    font-size: 10px;
+  }
+  #seats {
+    display: none;
+  }
+  #mid {
+    flex: none;
+  }
+  #msg {
+    display: inline-block;
+    font-size: 11px;
+    margin: 2px 0 0;
+    padding: 2px 10px;
+    background: #000a;
+    border-radius: 99px;
+    max-width: 94%;
+  }
+  #msg:empty {
+    display: none;
+  }
+  #pw {
+    right: 6px;
+    top: 28%;
+    width: 22px;
+    height: 42%;
+    background: #0005;
+    opacity: .9;
+  }
+  #pw span {
+    font-size: 8px;
+  }
+  #trWrap {
+    bottom: 6px;
+    padding: 3px 8px;
+    gap: 4px;
+  }
+  #trWrap .mb {
+    width: 16px;
+    height: 16px;
+  }
+  #trWrap .mb i {
+    width: 10px;
+    height: 10px;
+    font-size: 7px;
+  }
+  #gear {
+    left: 6px;
+    bottom: 6px;
+    width: 34px;
+    height: 34px;
+    font-size: 16px;
+  }
+  #menu {
+    left: 6px;
+    bottom: 46px;
+  }
+}
+@media (min-width: 761px) and (max-height: 520px) {
+  #mid { flex: 1; }
+  .tc { flex: none; }
 }

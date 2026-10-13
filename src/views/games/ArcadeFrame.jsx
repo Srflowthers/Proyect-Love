@@ -97,13 +97,24 @@ export default function ArcadeFrame({
     }
   };
 
+  // Escuchar mensaje del iframe para salir al catálogo (ej. desde el menú del Pool)
+  React.useEffect(() => {
+    const handleMessage = (e) => {
+      if (e.data?.type === 'EXIT_TO_CATALOG' || e.data?.type === 'ARCADE_EXIT') {
+        onBackToCatalog?.();
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [onBackToCatalog]);
+
   return (
     <div 
       ref={containerRef}
       className="fixed inset-0 z-40 w-screen h-screen flex flex-col m-0 p-0 overflow-hidden select-none bg-black"
     >
-      {/* Único botón limpio para volver al catálogo */}
-      {onBackToCatalog && (
+      {/* Único botón limpio para volver al catálogo (en pool se oculta para no tapar el HUD/modales) */}
+      {onBackToCatalog && gameKey !== 'pool' && (
         <button
           onClick={onBackToCatalog}
           title="Volver al Catálogo de Juegos"

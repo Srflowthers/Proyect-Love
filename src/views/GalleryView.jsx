@@ -375,6 +375,7 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
 
   const getUniverseBgClass = () => {
     const color = userData?.universeColor || 'purple';
+    if (color === 'space') return 'bg-black';
     if (color === 'blue') return 'bg-gradient-to-br from-blue-950 via-cyan-900 to-black';
     if (color === 'red') return 'bg-gradient-to-br from-red-950 via-rose-900 to-black';
     if (color === 'gold') return 'bg-gradient-to-br from-yellow-950 via-amber-900 to-black';
@@ -384,6 +385,7 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
 
   const getAuraColor = () => {
     const color = userData?.universeColor || 'purple';
+    if (color === 'space') return 'rgba(59,130,246,0.15)'; // Azul tierra y sol
     if (color === 'blue') return 'rgba(6,182,212,0.15)'; // Cyan
     if (color === 'red') return 'rgba(239,68,68,0.12)';  // Red
     if (color === 'gold') return 'rgba(245,158,11,0.12)'; // Gold

@@ -1,0 +1,679 @@
+/* ==========================================================================
+   RECONSTRUYE NUESTRO RECUERDO - ROMPECABEZAS ARCADE (HOJA DE ESTILOS)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. VARIABLES Y PALETA DE COLORES (MODO CLARO Y OSCURO)
+   -------------------------------------------------------------------------- */
+:root {
+  --bg: #fff5f3;
+  --card: rgba(255, 255, 255, 0.8);
+  --ink: #4a2230;
+  --mute: #8d6672;
+  --rose: #c9506b;
+  --rose2: #e98aa0;
+  --line: #e9c9d0;
+  --cell: #f7e4e8;
+  --shadow: 0 8px 22px rgba(201, 80, 107, 0.15);
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: dark !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #241119;
+    --card: rgba(51, 25, 36, 0.6);
+    --ink: #fbe9ee;
+    --mute: #c79aa8;
+    --rose: #ee7f9a;
+    --rose2: #b9475f;
+    --line: #5a2c3c;
+    --cell: #3a1e2a;
+    --shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #241119;
+  --card: rgba(51, 25, 36, 0.6);
+  --ink: #fbe9ee;
+  --mute: #c79aa8;
+  --rose: #ee7f9a;
+  --rose2: #b9475f;
+  --line: #5a2c3c;
+  --cell: #3a1e2a;
+  --shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+}
+
+/* --------------------------------------------------------------------------
+   2. REINICIO Y ESTRUCTURA DE LA PÁGINA
+   -------------------------------------------------------------------------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  background: transparent !important;
+  animation: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100vh !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-tap-highlight-color: transparent;
+  color: var(--ink);
+  font-family: Nunito, system-ui, -apple-system, sans-serif;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+canvas {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   3. CONTENEDOR PRINCIPAL Y PANTALLAS
+   -------------------------------------------------------------------------- */
+.lp-root {
+  padding: 4px 10px 18px !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  min-height: 100vh !important;
+  margin: 0 auto !important;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: radial-gradient(60% 40% at 50% 0, rgba(233, 138, 160, 0.12), transparent);
+}
+
+.lp-root h1 {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 600;
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  margin: 0.2em 0 0.1em;
+  line-height: 1.1;
+}
+
+.lp-sub {
+  color: var(--mute);
+  font-style: italic;
+  margin: 0 0 1rem;
+}
+
+.lp-screen {
+  animation: lpIn 0.6s ease both;
+}
+
+@keyframes lpIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+#lpIntro {
+  max-width: 520px !important;
+  margin: 0 auto !important;
+  width: 100% !important;
+}
+
+#lpGame {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 auto !important;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+#lpGame h1, #lpGame .lp-sub:first-of-type {
+  display: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   4. SELECCIÓN DE IMAGEN Y HERRAMIENTA DE RECORTE (CROP)
+   -------------------------------------------------------------------------- */
+.lp-drop {
+  width: min(420px, 100%);
+  min-height: 90px !important;
+  padding: 6px !important;
+  margin: 0 auto 0.6rem !important;
+  border: 2px dashed var(--line);
+  border-radius: 22px;
+  background: var(--card);
+  display: grid;
+  place-items: center;
+  color: var(--mute);
+  box-shadow: var(--shadow);
+}
+
+.lp-host {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.lp-host img {
+  display: block;
+  max-width: 100%;
+  max-height: min(32vh, 180px) !important;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+.lp-crop {
+  position: absolute;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 999px rgba(40, 10, 20, 0.5);
+  cursor: move;
+  touch-action: none;
+}
+
+.lp-crop i {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  margin: -15px;
+  touch-action: none;
+}
+
+.lp-crop i::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--rose);
+}
+
+.lp-crop i[data-h="nw"] { left: 0; top: 0; cursor: nwse-resize; }
+.lp-crop i[data-h="ne"] { left: 100%; top: 0; cursor: nesw-resize; }
+.lp-crop i[data-h="sw"] { left: 0; top: 100%; cursor: nesw-resize; }
+.lp-crop i[data-h="se"] { left: 100%; top: 100%; cursor: nwse-resize; }
+
+/* --------------------------------------------------------------------------
+   5. BOTONES, DIFICULTADES Y EFECTOS INTERACTIVOS
+   -------------------------------------------------------------------------- */
+.lp-row {
+  display: flex;
+  gap: 8px !important;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 2px auto 4px !important;
+}
+
+.lp-btn {
+  position: relative;
+  overflow: hidden;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.85rem !important;
+  color: var(--rose);
+  background: var(--card);
+  border: 1.5px solid var(--rose2);
+  border-radius: 999px;
+  padding: 0.45em 1em !important;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.lp-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.lp-btn:active {
+  transform: scale(0.97);
+}
+
+.lp-btn:focus-visible {
+  outline: 3px solid var(--rose2);
+  outline-offset: 3px;
+}
+
+.lp-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.lp-primary {
+  background: linear-gradient(135deg, var(--rose), var(--rose2));
+  color: #fff;
+  border-color: transparent;
+}
+
+.lp-pick {
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.lp-pick input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 0;
+}
+
+.lp-rip {
+  position: absolute;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.28;
+  transform: scale(0);
+  animation: lpRip 0.65s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes lpRip {
+  to {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+.lp-small {
+  font-size: 0.85rem;
+  padding: 0.45em 1em;
+}
+
+.lp-levels {
+  display: inline-flex;
+  gap: 4px !important;
+  margin: 0 0 0.5rem !important;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.lp-lv.sel {
+  background: linear-gradient(135deg, var(--rose), var(--rose2));
+  color: #fff;
+  border-color: transparent;
+}
+
+.lp-lv small {
+  display: block;
+  font-weight: 400;
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
+
+.lp-tip {
+  color: var(--mute);
+  font-size: 0.88rem;
+  margin: -0.4rem 0 0.9rem;
+  font-style: italic;
+}
+
+.lp-imp {
+  border-color: #6b2a3c;
+}
+
+.lp-imp small {
+  font-weight: 600;
+}
+
+.lp-err {
+  color: #c0334f;
+  min-height: 1.4em;
+  margin: 0.5rem 0 0;
+  font-size: 0.95rem;
+}
+
+/* --------------------------------------------------------------------------
+   6. HUD DE PROGRESO Y CRONÓMETRO
+   -------------------------------------------------------------------------- */
+.lp-stats {
+  width: min(520px, 100%);
+  max-width: 600px !important;
+  margin: 2px auto 4px !important;
+}
+
+.lp-meta {
+  display: flex;
+  justify-content: space-between;
+  color: var(--mute);
+  font-size: 0.95rem;
+  margin-bottom: 6px;
+}
+
+.lp-bar {
+  height: 8px;
+  border-radius: 99px;
+  background: var(--cell);
+  overflow: hidden;
+}
+
+.lp-bar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--rose2), var(--rose));
+  border-radius: 99px;
+  transition: width 0.5s ease;
+}
+
+/* --------------------------------------------------------------------------
+   7. ESCENARIO, TABLERO Y CASILLAS
+   -------------------------------------------------------------------------- */
+.lp-stage {
+  position: relative;
+  margin: 4px auto 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 480px;
+  touch-action: pan-y;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+}
+
+.lp-board, .lp-tray {
+  position: absolute;
+  border-radius: 16px;
+}
+
+.lp-board {
+  display: grid;
+  background: var(--cell);
+  box-shadow: var(--shadow);
+  outline: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.lp-cell {
+  border: 1px dashed var(--line);
+  opacity: 0.8;
+  transition: background 0.25s ease;
+}
+
+.lp-cell.hot {
+  background: rgba(233, 138, 160, 0.28);
+}
+
+.lp-cell.flash {
+  animation: lpCellFlash 0.8s ease-out;
+}
+
+@keyframes lpCellFlash {
+  0% {
+    background: rgba(255, 209, 102, 0.65);
+    box-shadow: inset 0 0 14px #fff;
+  }
+}
+
+.lp-board::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.75) 50%, transparent 65%);
+  transform: translateX(-120%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.lp-board.win {
+  animation: lpGlow 1.6s ease 2;
+}
+
+.lp-board.win::after {
+  animation: lpShine 1.5s 0.3s ease forwards;
+}
+
+@keyframes lpGlow {
+  50% {
+    box-shadow: 0 0 60px 14px rgba(255, 143, 177, 0.65);
+  }
+}
+
+@keyframes lpShine {
+  0% {
+    opacity: 1;
+    transform: translateX(-120%);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(120%);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   8. PIEZAS DE JIGSAW Y ARRASTRE
+   -------------------------------------------------------------------------- */
+.lp-piece {
+  position: absolute;
+  z-index: 5;
+  filter: drop-shadow(0 3px 4px rgba(74, 34, 48, 0.38));
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+.lp-piece:hover {
+  transform: scale(1.05);
+}
+
+.lp-piece.anim {
+  transition: left 0.38s cubic-bezier(0.3, 0.9, 0.3, 1), top 0.38s cubic-bezier(0.3, 0.9, 0.3, 1), filter 0.2s, transform 0.2s;
+}
+
+.lp-stage.dense .lp-piece:not(.drag) {
+  filter: none;
+}
+
+.lp-piece.drag {
+  z-index: 1000;
+  cursor: grabbing;
+  transform: scale(1.1);
+  filter: drop-shadow(0 12px 14px rgba(74, 34, 48, 0.45));
+  transition: none;
+}
+
+.lp-piece.locked {
+  z-index: 3;
+  cursor: default;
+  pointer-events: none;
+  filter: none;
+  transform: none;
+  animation: lpPop 0.5s ease;
+}
+
+@keyframes lpPop {
+  0% {
+    transform: scale(1.22);
+    filter: drop-shadow(0 0 16px #ff8fb1) brightness(1.35);
+  }
+  55% {
+    transform: scale(0.97);
+    filter: drop-shadow(0 0 8px #ffd166);
+  }
+  100% {
+    transform: none;
+    filter: none;
+  }
+}
+
+.lp-piece.shake {
+  animation: lpShake 0.38s ease;
+}
+
+@keyframes lpShake {
+  25% { transform: rotate(-8deg) scale(1.08); }
+  50% { transform: rotate(7deg) scale(1.08); }
+  75% { transform: rotate(-3deg); }
+}
+
+.lp-bump {
+  animation: lpBump 0.45s ease;
+}
+
+@keyframes lpBump {
+  40% {
+    transform: scale(1.18);
+    color: var(--rose);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   9. EFECTOS ESPECIALES, PARTÍCULAS, TOAST Y CELEBRACIÓN
+   -------------------------------------------------------------------------- */
+.lp-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  pointer-events: none;
+}
+
+.lp-bg.on {
+  opacity: 1;
+}
+
+#lpFx {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3000;
+}
+
+.lp-flash {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle, #fff, rgba(255, 194, 212, 0.8));
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2500;
+}
+
+.lp-flash.on {
+  animation: lpFlashA 1s ease-out;
+}
+
+@keyframes lpFlashA {
+  0% { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+
+.lp-toast {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 14px);
+  left: 50%;
+  transform: translate(-50%, -30px);
+  opacity: 0;
+  padding: 0.55em 1.3em;
+  border-radius: 999px;
+  color: #fff;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--rose), var(--rose2));
+  box-shadow: var(--shadow);
+  z-index: 2600;
+  pointer-events: none;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  white-space: nowrap;
+}
+
+.lp-toast.on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.lp-ref, .lp-full {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  border-radius: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+.lp-ref { z-index: 500; }
+.lp-ref.on { opacity: 0.9; }
+.lp-full { z-index: 4; }
+.lp-full.on { opacity: 1; }
+
+.lp-done {
+  margin: 26px auto 0;
+  max-width: 420px;
+  padding: 22px;
+  border-radius: 22px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  animation: lpIn 0.7s ease both;
+}
+
+.lp-done h2 {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.9rem;
+  margin: 0 0 0.3rem;
+  animation: lpTitle 1s 0.2s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+
+@keyframes lpTitle {
+  from {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.lp-fly {
+  position: fixed;
+  bottom: -30px;
+  z-index: 2000;
+  pointer-events: none;
+  color: var(--rose);
+  animation: lpFly linear forwards;
+}
+
+@keyframes lpFly {
+  to {
+    transform: translateY(-110vh) rotate(25deg);
+    opacity: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   10. ACCESIBILIDAD (PREFERS-REDUCED-MOTION)
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01s !important;
+    transition-duration: 0.01s !important;
+  }
+}

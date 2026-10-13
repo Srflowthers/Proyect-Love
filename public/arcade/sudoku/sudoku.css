@@ -1,0 +1,622 @@
+/* ==========================================================================
+   SUDOKU DE A DOS 💞 — HOJA DE ESTILOS DE ULTRA ALTO RENDIMIENTO (60 FPS)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. VARIABLES DE TEMA Y PALETA
+   -------------------------------------------------------------------------- */
+:root {
+  box-sizing: border-box;
+  color-scheme: dark !important;
+  --bg: transparent;
+  --card: #180b24;
+  --card-border: rgba(255, 255, 255, 0.14);
+  --ink: #fdf2f8;
+  --soft: #c4b0bc;
+  --p1: #ff6b9d;
+  --p1-bg: rgba(255, 107, 157, 0.22);
+  --p2: #a78bfa;
+  --p2-bg: rgba(167, 139, 250, 0.22);
+  --line: rgba(255, 255, 255, 0.14);
+  --given: rgba(255, 255, 255, 0.08);
+  --bad: #ef4444;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  background: transparent !important;
+  color: var(--ink);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+/* --------------------------------------------------------------------------
+   2. CONTENEDOR MULTI-COLUMNA EN PANTALLAS AMPLIAS
+   -------------------------------------------------------------------------- */
+.app-layout {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(16px, 2.4vw, 36px);
+  width: 100%;
+  max-width: 1320px;
+  height: 96vh;
+  max-height: 96vh;
+  padding: 0 16px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Paneles laterales */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: clamp(210px, 21vw, 290px);
+  min-width: 200px;
+}
+
+/* --------------------------------------------------------------------------
+   3. TARJETAS SÓLIDAS Y RÁPIDAS (SIN BACKDROP-FILTER)
+   -------------------------------------------------------------------------- */
+.card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transform: translateZ(0);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-icon {
+  font-size: 1.2rem;
+}
+
+.card-title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--soft);
+}
+
+/* --------------------------------------------------------------------------
+   4. MARCADOR DE JUGADORES
+   -------------------------------------------------------------------------- */
+.players {
+  display: flex;
+  gap: 10px;
+}
+
+.pl {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid transparent;
+  border-radius: 14px;
+  padding: 10px 8px;
+  text-align: center;
+  opacity: 0.65;
+  transition: opacity 0.15s, transform 0.15s, border-color 0.15s;
+  transform: translateZ(0);
+}
+
+.pl.on {
+  opacity: 1;
+  transform: scale(1.03);
+}
+
+.pl.a.on {
+  border-color: var(--p1);
+  background: var(--p1-bg);
+  box-shadow: 0 0 16px rgba(255, 107, 157, 0.35);
+}
+
+.pl.b.on {
+  border-color: var(--p2);
+  background: var(--p2-bg);
+  box-shadow: 0 0 16px rgba(167, 139, 250, 0.35);
+}
+
+.pl input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: center;
+  font-weight: 700;
+  font-size: 14px;
+  outline: none;
+  font-family: inherit;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
+  padding-bottom: 2px;
+}
+
+.pl input:focus {
+  border-bottom-color: var(--p1);
+}
+
+.pl .s {
+  font-size: 26px;
+  font-weight: 900;
+  margin-top: 4px;
+}
+
+.pl.a .s { color: var(--p1); }
+.pl.b .s { color: var(--p2); }
+
+.pl.on .s::after {
+  content: ' 💗';
+  font-size: 15px;
+}
+
+.s.bump {
+  animation: bump 0.4s ease;
+}
+
+@keyframes bump {
+  40% { transform: scale(1.4); }
+}
+
+/* --------------------------------------------------------------------------
+   5. MENSAJE DE ESTADO Y TURNO
+   -------------------------------------------------------------------------- */
+.card-msg {
+  text-align: center;
+  padding: 12px 14px;
+}
+
+.msg-badge-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--soft);
+  margin-bottom: 4px;
+}
+
+.msg {
+  min-height: 22px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.35;
+}
+
+/* --------------------------------------------------------------------------
+   6. GUÍA DE AYUDA Y ATAJOS
+   -------------------------------------------------------------------------- */
+.help-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--soft);
+}
+
+.help-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.3;
+}
+
+.help-list strong {
+  color: var(--ink);
+}
+
+/* --------------------------------------------------------------------------
+   7. ESCENARIO CENTRAL: TABLERO ESPACIOSO Y DE ALTO RENDIMIENTO
+   -------------------------------------------------------------------------- */
+.center-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.board-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.board {
+  width: min(72vh, 580px);
+  height: min(72vh, 580px);
+  aspect-ratio: 1;
+  display: grid;
+  gap: 0;
+  background: #11071a;
+  border: 3px solid rgba(255, 255, 255, 0.4);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+  transform: translateZ(0);
+  contain: layout paint;
+}
+
+/* Celdas del tablero: CERO transiciones de color/fondo para respuesta instantánea */
+.c {
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(22px, 5.5vh, 42px);
+  font-weight: 800;
+  cursor: pointer;
+  user-select: none;
+  background: transparent;
+  color: var(--ink);
+  padding: 0;
+  font-family: inherit;
+  border-radius: 0;
+  /* Transición únicamente en active para feedback táctil instantáneo */
+  transition: transform 0.06s ease;
+}
+
+.c:active {
+  transform: scale(0.92);
+}
+
+/* Tamaños de fuente por modo de tablero */
+.board[data-n="6"] .c {
+  font-size: clamp(26px, 6.2vh, 48px);
+}
+
+.board[data-n="9"] .c {
+  font-size: clamp(20px, 4.8vh, 36px);
+}
+
+.board[data-n="12"] .c,
+.board.big .c {
+  font-size: clamp(14px, 3vh, 22px);
+}
+
+/* Estados de casilla: colores sólidos sin render passes pesados */
+.c.g {
+  background: var(--given);
+  color: #e2e8f0;
+}
+
+.c.sel {
+  outline: 3px solid var(--p1);
+  outline-offset: -3px;
+  background: rgba(255, 107, 157, 0.32);
+}
+
+.c.hl {
+  background: rgba(167, 139, 250, 0.28);
+}
+
+.c.peer {
+  background: rgba(255, 107, 157, 0.12);
+}
+
+.c.p1 {
+  color: var(--p1);
+}
+
+.c.p2 {
+  color: var(--p2);
+}
+
+.c.hint {
+  color: #facc15;
+  background: rgba(250, 204, 21, 0.25);
+}
+
+.c.bad {
+  animation: sh 0.35s ease;
+  background: rgba(239, 68, 68, 0.45);
+}
+
+@keyframes sh {
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.c.pop {
+  animation: pop 0.4s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+@keyframes pop {
+  0% { transform: scale(0.4); }
+  60% { transform: scale(1.3); }
+}
+
+.c.wave {
+  animation: wv 0.5s ease;
+}
+
+@keyframes wv {
+  40% {
+    background: rgba(250, 204, 21, 0.5);
+    transform: scale(1.1);
+  }
+}
+
+.board.err {
+  animation: sh 0.35s ease;
+}
+
+/* --------------------------------------------------------------------------
+   8. TECLADO NUMÉRICO TÁCTIL (ALTO RENDIMIENTO)
+   -------------------------------------------------------------------------- */
+.pad-wrapper {
+  width: min(72vh, 580px);
+}
+
+.pad {
+  width: 100%;
+  display: grid;
+  gap: 8px;
+  transform: translateZ(0);
+}
+
+.pad button {
+  height: 48px;
+  font: inherit;
+  font-weight: 800;
+  font-size: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  background: #241133;
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  transition: transform 0.08s ease, background 0.1s ease;
+  transform: translateZ(0);
+}
+
+.pad button:hover {
+  transform: translateY(-2px);
+  background: #361a4c;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.pad button:active {
+  transform: scale(0.94);
+}
+
+.pad button.done {
+  opacity: 0.22;
+  cursor: default;
+  transform: none;
+}
+
+/* --------------------------------------------------------------------------
+   9. ACCIONES, SELECTORES Y BOTÓN NUEVO
+   -------------------------------------------------------------------------- */
+.card-actions {
+  gap: 12px;
+}
+
+.btn-hint {
+  width: 100%;
+  padding: 12px;
+  font: inherit;
+  font-weight: 800;
+  font-size: 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(250, 204, 21, 0.4);
+  background: #33260c;
+  color: #fef08a;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  transition: transform 0.1s ease, filter 0.1s ease;
+}
+
+.btn-hint:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.15);
+}
+
+.btn-hint:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.btn-hint:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.control-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--soft);
+}
+
+.select-size {
+  width: 100%;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: #190924;
+  color: var(--ink);
+  cursor: pointer;
+  outline: none;
+}
+
+.select-size:focus {
+  border-color: var(--p1);
+}
+
+.btn-new {
+  width: 100%;
+  padding: 12px;
+  font: inherit;
+  font-weight: 800;
+  font-size: 14px;
+  border-radius: 12px;
+  border: 0;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(236, 72, 153, 0.4);
+  transition: transform 0.1s ease, filter 0.1s ease;
+}
+
+.btn-new:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.12);
+}
+
+.btn-new:active {
+  transform: scale(0.96);
+}
+
+.info-desc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--soft);
+  line-height: 1.4;
+}
+
+/* --------------------------------------------------------------------------
+   10. BOTÓN DE SILENCIO & EFECTOS FLOTANTES
+   -------------------------------------------------------------------------- */
+#mute {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 60;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #180b24;
+  color: var(--ink);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease;
+}
+
+#mute:hover {
+  transform: scale(1.1);
+}
+
+#mute:active {
+  transform: scale(0.92);
+}
+
+.pt {
+  position: fixed;
+  pointer-events: none;
+  z-index: 50;
+  font-size: 18px;
+}
+
+/* --------------------------------------------------------------------------
+   11. RESPONSIVE DESIGN (TABLETS Y MÓVILES)
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .app-layout {
+    gap: 16px;
+  }
+  .panel {
+    width: clamp(180px, 20vw, 220px);
+    min-width: 170px;
+  }
+  .board {
+    width: min(65vh, 480px);
+    height: min(65vh, 480px);
+  }
+  .pad-wrapper {
+    width: min(65vh, 480px);
+  }
+}
+
+@media (max-width: 768px) {
+  html, body {
+    overflow-y: auto;
+  }
+  .app-layout {
+    flex-direction: column;
+    height: auto;
+    max-height: none;
+    padding: 10px 8px;
+    gap: 10px;
+  }
+  .panel {
+    width: 100%;
+    max-width: 380px;
+    gap: 8px;
+  }
+  .side-left {
+    order: 1;
+  }
+  .center-stage {
+    order: 2;
+    gap: 8px;
+  }
+  .side-right {
+    order: 3;
+  }
+  .card-help, .card-info {
+    display: none !important;
+  }
+  .board {
+    width: min(92vw, 46vh, 360px);
+    height: min(92vw, 46vh, 360px);
+  }
+  .pad-wrapper {
+    width: min(92vw, 46vh, 360px);
+  }
+  .pad button {
+    height: 40px;
+    font-size: 17px;
+  }
+  .card {
+    padding: 10px 12px;
+  }
+  .pl .s {
+    font-size: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body, h1 { animation: none; }
+}

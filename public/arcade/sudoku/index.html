@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <title>Sudoku de a dos 💞</title>
+
+  <!-- Control de acceso e integración en iframe Arcade -->
+  <script>
+    (function () {
+      try {
+        if (window.self === window.top) {
+          window.location.replace('/?auth_required=arcade');
+          return;
+        }
+        var authKey = sessionStorage.getItem('arcade_session_auth');
+        var p = new URLSearchParams(window.location.search);
+        if (!authKey && !p.get('auth')) {
+          window.location.replace('/?auth_required=arcade');
+        }
+      } catch (e) {
+        window.location.replace('/?auth_required=arcade');
+      }
+    })();
+  </script>
+
+  <link rel="stylesheet" href="sudoku.css">
+</head>
+<body>
+
+<button id="mute" title="Silenciar sonido" type="button" aria-label="Silenciar sonido">🔊</button>
+
+<div class="app-layout">
+  <!-- Columna izquierda: Marcador de Jugadores y Estado -->
+  <aside class="panel side-left">
+    <!-- Marcador de Pareja -->
+    <div class="card card-players">
+      <div class="card-header">
+        <span class="card-icon">💞</span>
+        <span class="card-title">Marcador</span>
+      </div>
+      <div class="players">
+        <div class="pl a" id="pa">
+          <input id="na" value="Jugador 1" maxlength="14" aria-label="Nombre Jugador 1">
+          <div class="s" id="sa">0</div>
+        </div>
+        <div class="pl b" id="pb">
+          <input id="nb" value="Jugador 2" maxlength="14" aria-label="Nombre Jugador 2">
+          <div class="s" id="sb">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mensaje dinámico de turno y eventos -->
+    <div class="card card-msg">
+      <div class="msg-badge-label">Estado de la Partida</div>
+      <div class="msg" id="msg"></div>
+    </div>
+
+    <!-- Guía y reglas rápidas -->
+    <div class="card card-help">
+      <div class="card-header">
+        <span class="card-icon">⌨️</span>
+        <span class="card-title">Cómo Jugar</span>
+      </div>
+      <ul class="help-list">
+        <li><span>🎯</span><strong>+1 punto</strong> por cada acierto.</li>
+        <li><span>⚠️</span><strong>Error</strong> = pierdes el turno.</li>
+        <li><span>💡</span><strong>3 pistas</strong> compartidas.</li>
+        <li><span>⌨️</span>Atajos: Teclas <strong>1 al 9</strong>.</li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- Columna central: Tablero espacioso + Teclado numérico táctil -->
+  <main class="center-stage">
+    <div class="board-wrapper">
+      <div class="board" id="board"></div>
+    </div>
+
+    <div class="pad-wrapper">
+      <div class="pad" id="pad"></div>
+    </div>
+  </main>
+
+  <!-- Columna derecha: Acciones, Tamaño y Dificultad -->
+  <aside class="panel side-right">
+    <div class="card card-actions">
+      <div class="card-header">
+        <span class="card-icon">⚡</span>
+        <span class="card-title">Acciones</span>
+      </div>
+
+      <!-- Botón Pista -->
+      <button id="hint" class="btn-hint" type="button">💡 Pista (3 de 3)</button>
+
+      <!-- Selector de Tamaño / Dificultad -->
+      <div class="control-group">
+        <label for="size" class="control-label">Tamaño del Tablero</label>
+        <select id="size" class="select-size" aria-label="Tamaño del tablero">
+          <option value="6">Fácil (6×6)</option>
+          <option value="9" selected>Normal (9×9)</option>
+          <option value="12">Difícil (12×12)</option>
+        </select>
+        <select id="diff" style="display:none !important" aria-label="Dificultad">
+          <option value="0">Fácil</option>
+          <option value="1" selected>Medio</option>
+          <option value="2">Difícil</option>
+        </select>
+      </div>
+
+      <!-- Botón Nueva Partida -->
+      <button class="new btn-new" id="new" type="button">Nuevo ∞</button>
+    </div>
+
+    <!-- Tarjeta informativa -->
+    <div class="card card-info">
+      <div class="card-header">
+        <span class="card-icon">✨</span>
+        <span class="card-title">Modo Colaborativo</span>
+      </div>
+      <p class="info-desc">
+        ¡Turnos alternos en cada casilla! Resuelvan el acertijo juntos y celebren cada línea completa.
+      </p>
+    </div>
+  </aside>
+</div>
+
+<!-- Lógica del juego -->
+<script src="sudoku.js"></script>
+
+</body>
+</html>

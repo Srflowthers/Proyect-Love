@@ -637,16 +637,8 @@ const createWebPThumbnail = async (file) => {
       return;
     }
 
-    // Filtrar videos si es el plan Free
+    // Permitir fotos y videos en todos los planes respetando el límite de almacenamiento
     let filesToProcess = files;
-    if (planData.id === 'free') {
-      const hasVideos = files.some(f => f.type.startsWith('video/'));
-      if (hasVideos) {
-        alert('¡El plan Gratis solo permite fotos! Mejora tu plan para subir videos.');
-        filesToProcess = files.filter(f => !f.type.startsWith('video/'));
-        if (filesToProcess.length === 0) return;
-      }
-    }
 
     setUploading(true);
     setMessage('Preparando archivos para subir con calidad 100% original...');

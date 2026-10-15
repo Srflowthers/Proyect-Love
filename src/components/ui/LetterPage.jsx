@@ -6,7 +6,7 @@ const LetterPage = ({ text, title, userName, signature, index, isLastPage, theme
   const [letterSrc, setLetterSrc] = useState(null);
 
   useEffect(() => {
-    if (!text) return;
+    if (!text && !title) return;
 
     const scale = 5; // Ultra-high resolution para evitar cualquier borrosidad en 3D
     const canvas = document.createElement('canvas');

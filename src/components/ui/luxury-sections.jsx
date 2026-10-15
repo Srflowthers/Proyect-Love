@@ -23,12 +23,44 @@ export default function LuxurySections({ userData }) {
 
   const embedUrl = getEmbedUrl(userData?.spotifyUrl || CONFIG.spotifyUrl);
 
-  const pages = userData?.letterPages && userData.letterPages.length > 0 && userData.letterPages[0] !== ""
+  // Extraer las páginas base recibidas
+  const rawPages = userData?.letterPages && userData.letterPages.length > 0 && userData.letterPages[0] !== ""
     ? userData.letterPages
     : [
       CONFIG.mensajeFinal || "Página 1",
       "Esta es una segunda página de prueba para que puedas ver cómo funciona la paginación. Puedes editar todas tus páginas o borrarlas desde la sección de Configuración."
     ];
+
+  // Filtrar páginas que tengan contenido real (título O texto en el cuerpo)
+  const isPageNotEmpty = (text, idx) => {
+    const title = userData?.letterTitles?.[idx] !== undefined 
+      ? userData?.letterTitles?.[idx] 
+      : (idx === 0 ? (userData?.letterTitle || '') : '');
+    
+    // Limpiar HTML para ver si hay texto real
+    const cleanText = (text || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+    const cleanTitle = (title || '').trim();
+
+    return cleanText.length > 0 || cleanTitle.length > 0;
+  };
+
+  const pages = rawPages
+    .map((text, originalIndex) => ({
+      text,
+      originalIndex,
+      title: userData?.letterTitles?.[originalIndex] !== undefined 
+        ? userData?.letterTitles?.[originalIndex] 
+        : (originalIndex === 0 ? (userData?.letterTitle || '') : '')
+    }))
+    .filter(item => isPageNotEmpty(item.text, item.originalIndex));
+
+  // Asegurar que currentPage no sobrepase el nuevo límite si se borraron páginas
+  useEffect(() => {
+    if (currentPage >= pages.length && pages.length > 0) {
+      setCurrentPage(pages.length - 1);
+    }
+  }, [pages.length, currentPage]);
+
   const userName = userData?.user1Name || CONFIG.nombrePareja;
 
   return (
@@ -164,20 +196,22 @@ export default function LuxurySections({ userData }) {
             </div>
           )}
 
-          <LetterPage
-            key={`${currentPage}-${userData?.letterStyles?.[currentPage] || localTheme}-${userData?.letterTextColors?.[currentPage] || userData?.letterTextColor || ''}-${userData?.letterFonts?.[currentPage] || userData?.letterFont || ''}`}
-            index={currentPage}
-            text={pages[currentPage]}
-            title={userData?.letterTitles?.[currentPage] !== undefined ? userData?.letterTitles?.[currentPage] : (currentPage === 0 ? (userData?.letterTitle || '') : '')}
-            userName={userName}
-            signature={CONFIG.firmaFinal}
-            isLastPage={currentPage === pages.length - 1}
-            theme={userData?.letterStyles?.[currentPage] || localTheme}
-            textColor={userData?.letterTextColors?.[currentPage] || userData?.letterTextColor}
-            titleColor={userData?.letterTitleColors?.[currentPage] || userData?.letterTitleColor}
-            textFont={userData?.letterFonts?.[currentPage] || userData?.letterFont}
-            textAlign={userData?.letterAligns?.[currentPage] || userData?.letterAlign}
-          />
+          {pages[currentPage] && (
+            <LetterPage
+              key={userData?.letterStyles?.[pages[currentPage].originalIndex] || localTheme}
+              index={currentPage}
+              text={pages[currentPage].text}
+              title={pages[currentPage].title}
+              userName={userName}
+              signature={CONFIG.firmaFinal}
+              isLastPage={currentPage === pages.length - 1}
+              theme={userData?.letterStyles?.[pages[currentPage].originalIndex] || localTheme}
+              textColor={userData?.letterTextColors?.[pages[currentPage].originalIndex] || userData?.letterTextColor}
+              titleColor={userData?.letterTitleColors?.[pages[currentPage].originalIndex] || userData?.letterTitleColor}
+              textFont={userData?.letterFonts?.[pages[currentPage].originalIndex] || userData?.letterFont}
+              textAlign={userData?.letterAligns?.[pages[currentPage].originalIndex] || userData?.letterAlign}
+            />
+          )}
         </section>
       )}
 

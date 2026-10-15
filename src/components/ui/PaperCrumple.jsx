@@ -279,6 +279,9 @@ const PaperCrumple = ({
   const hitRef = useRef(null);
   const resetRef = useRef(null);
   const cancelRef = useRef(null);
+  const materialsRef = useRef(null);
+  const currentSrcRef = useRef(src);
+  currentSrcRef.current = src;
   const [status, setStatus] = useState('loading');
   const options = useRef({
     releaseBehavior,
@@ -409,15 +412,18 @@ const PaperCrumple = ({
     const materialOptions = {
       roughness: clamp(finite(roughness, 0.92), 0, 1),
       metalness: 0,
-      bumpMap: grain,
-      bumpScale: clamp(finite(paperTexture, 0.08), 0, 1) * 0.32,
       alphaTest: 0.04,
       alphaToCoverage: true,
       flatShading: false
     };
-    const frontMaterial = new THREE.MeshStandardMaterial({ ...materialOptions, side: THREE.FrontSide });
+    const frontMaterial = new THREE.MeshStandardMaterial({ 
+      ...materialOptions, 
+      side: THREE.FrontSide 
+    });
     const backMaterial = new THREE.MeshStandardMaterial({
       ...materialOptions,
+      bumpMap: grain,
+      bumpScale: clamp(finite(paperTexture, 0.08), 0, 1) * 0.32,
       side: THREE.BackSide,
       color: backSrc ? '#ffffff' : paperColor
     });
@@ -962,8 +968,8 @@ const PaperCrumple = ({
             }
             textures.add(texture);
             texture.colorSpace = THREE.SRGBColorSpace;
-            texture.generateMipmaps = true;
-            texture.minFilter = THREE.LinearMipmapLinearFilter;
+            texture.generateMipmaps = false;
+            texture.minFilter = THREE.LinearFilter;
             texture.magFilter = THREE.LinearFilter;
             texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
             const image = texture.image;
@@ -987,6 +993,33 @@ const PaperCrumple = ({
         );
       });
     }
+
+    // Exponer función para actualizar textura en vivo sin recargar el motor 3D
+    materialsRef.current = {
+      updateTextures: (newSrc, newBackSrc) => {
+        if (!newSrc || disposed) return;
+        Promise.all([load(newSrc), newBackSrc ? load(newBackSrc) : Promise.resolve(null)])
+          .then(([frontTexture, backTexture]) => {
+            if (disposed) return;
+            if (backTexture) {
+              backTexture.repeat.x *= -1;
+              backTexture.offset.x = 1 - backTexture.offset.x;
+            }
+            if (frontMaterial.map) frontMaterial.map.dispose();
+            if (backMaterial.map && backMaterial.map !== frontMaterial.map) backMaterial.map.dispose();
+            frontMaterial.map = frontTexture;
+            backMaterial.map = backTexture || frontTexture;
+            depthMaterial.map = frontTexture;
+            frontMaterial.needsUpdate = backMaterial.needsUpdate = depthMaterial.needsUpdate = true;
+            wake();
+          })
+          .catch(error => {
+            if (disposed) return;
+            options.current.onError?.(error);
+          });
+      }
+    };
+
     if (src) {
       Promise.all([load(src), backSrc ? load(backSrc) : Promise.resolve(null)])
         .then(([frontTexture, backTexture]) => {
@@ -1015,6 +1048,7 @@ const PaperCrumple = ({
     }
     return () => {
       disposed = true;
+      materialsRef.current = null;
       cancelAnimationFrame(frame);
       if (pointerId !== null && hit.hasPointerCapture(pointerId)) hit.releasePointerCapture(pointerId);
       resetRef.current = cancelRef.current = null;
@@ -1045,8 +1079,7 @@ const PaperCrumple = ({
       renderer.dispose();
     };
   }, [
-    src,
-    backSrc,
+    // Removidos src y backSrc para que no desmonten el canvas cuando solo cambia el texto de la página
     width,
     height,
     imageFit,
@@ -1064,6 +1097,14 @@ const PaperCrumple = ({
     seed,
     detail
   ]);
+
+  // Actualizar suavemente la textura en la misma hoja cuando cambie el src
+  useEffect(() => {
+    if (materialsRef.current && status === 'ready') {
+      materialsRef.current.updateTextures(src, backSrc);
+    }
+  }, [src, backSrc, status]);
+
   useEffect(() => {
     resetRef.current?.();
   }, [resetKey]);

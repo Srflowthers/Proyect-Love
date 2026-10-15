@@ -26,3 +26,6 @@ public/fotos/*.mp4
 # Variables de entorno
 .env
 .env.*
+
+# Documentacion y Prompts locales
+Documentacion-Pront/

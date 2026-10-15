@@ -22,6 +22,15 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
     letterPages: ['Escribe aquí todo lo que sientes por esa persona especial...\n\nPuedes borrar este texto de ejemplo y utilizar todas las páginas que necesites para expresar tu amor y crear un recuerdo inolvidable.'],
     letterTitle: 'Mi Primera Carta',
     letterStyle: 'modern',
+    letterStyles: [],
+    letterTitles: [],
+    letterFonts: [],
+    letterAligns: [],
+    letterTextColors: [],
+    letterTextColor: '',
+    letterFont: 'georgia',
+    letterAlign: 'left',
+    letterShowTitle: true,
     universeColor: 'purple',
     universePalette: 'Cósmico',
     universeVariant: 'tunnel',
@@ -47,9 +56,51 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
   const isInitialLoad = useRef(true);
   const debounceTimerRef = useRef(null);
 
-  // Autoguardado global de formData
+  // Autoguardado global de formData (excluye cartas para que el usuario guarde manualmente sin lag ni re-render al escribir)
+  const prevLetterDataRef = useRef({
+    letterPages: formData.letterPages,
+    letterTitle: formData.letterTitle,
+    letterStyle: formData.letterStyle,
+    letterStyles: formData.letterStyles,
+    letterTitles: formData.letterTitles,
+    letterFonts: formData.letterFonts,
+    letterAligns: formData.letterAligns,
+    letterTextColors: formData.letterTextColors,
+    letterTitleColors: formData.letterTitleColors,
+    letterTextColor: formData.letterTextColor,
+    letterTitleColor: formData.letterTitleColor,
+    letterFont: formData.letterFont,
+    letterAlign: formData.letterAlign,
+    letterShowTitle: formData.letterShowTitle
+  });
+
   useEffect(() => {
     if (isInitialLoad.current || !user) return;
+    
+    // Comparar si el único cambio fue en cartas
+    const currentLetters = {
+      letterPages: formData.letterPages,
+      letterTitle: formData.letterTitle,
+      letterStyle: formData.letterStyle,
+      letterStyles: formData.letterStyles,
+      letterTitles: formData.letterTitles,
+      letterFonts: formData.letterFonts,
+      letterAligns: formData.letterAligns,
+      letterTextColors: formData.letterTextColors,
+      letterTitleColors: formData.letterTitleColors,
+      letterTextColor: formData.letterTextColor,
+      letterTitleColor: formData.letterTitleColor,
+      letterFont: formData.letterFont,
+      letterAlign: formData.letterAlign,
+      letterShowTitle: formData.letterShowTitle
+    };
+    const letterChanged = JSON.stringify(currentLetters) !== JSON.stringify(prevLetterDataRef.current);
+    prevLetterDataRef.current = currentLetters;
+
+    if (letterChanged) {
+      // Si el cambio proviene de editar cartas, NO disparar el autoguardado automático
+      return;
+    }
     
     const isSilent = formData._silentSave;
 
@@ -437,6 +488,7 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
           letterPages: formData.letterPages,
           letterTitle: formData.letterTitle,
           letterStyle: formData.letterStyle,
+          letterStyles: formData.letterStyles,
           universeColor: formData.universeColor,
           universePalette: formData.universePalette,
           universeVariant: formData.universeVariant,
@@ -1177,6 +1229,8 @@ const createWebPThumbnail = async (file) => {
               formData={formData} 
               setFormData={setFormData} 
               handleChange={handleChange} 
+              user={user}
+              setGlobalUserData={setGlobalUserData}
             />
           )}
 

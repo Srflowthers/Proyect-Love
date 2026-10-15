@@ -108,53 +108,75 @@ export default function LuxurySections({ userData }) {
       {/* SECCIÓN: CARTA FINAL */}
       {pages.length > 0 && (
         <section className="w-full max-w-3xl px-4 flex flex-col items-center mt-16 pb-16">
-          {/*
-          <div className="flex flex-col items-center w-full max-w-md mb-8 space-y-4">
-            
-            <div className="flex justify-between items-center w-full">
-              <button 
-                onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
-                disabled={currentPage === 0}
-                className={`px-4 py-2 rounded-full border border-pink-500/50 text-sm transition-colors ${currentPage === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-pink-500/20 text-pink-200'}`}
-              >
-                ← Anterior
-              </button>
-              <span className="text-pink-300 font-serif">
-                Página {currentPage + 1} de {pages.length}
-              </span>
-              <button 
-                onClick={() => setCurrentPage(prev => Math.min(pages.length - 1, prev + 1))}
-                disabled={currentPage === pages.length - 1}
-                className={`px-4 py-2 rounded-full border border-pink-500/50 text-sm transition-colors ${currentPage === pages.length - 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-pink-500/20 text-pink-200'}`}
-              >
-                Siguiente →
-              </button>
-            </div>
+          {pages.length > 1 && (
+            <div className="flex flex-col items-center w-full max-w-md mb-8 space-y-4">
+              <div className="flex justify-between items-center w-full bg-black/60 border border-pink-500/20 backdrop-blur-md px-6 py-3 rounded-full shadow-[0_0_25px_rgba(236,72,153,0.15)]">
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                  disabled={currentPage === 0}
+                  className={`px-4 py-1.5 rounded-full border border-pink-500/40 text-xs md:text-sm font-semibold transition-all flex items-center gap-1 ${
+                    currentPage === 0 
+                      ? 'opacity-20 cursor-not-allowed border-gray-700 text-gray-500' 
+                      : 'hover:bg-pink-500/20 text-pink-200 active:scale-95'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Anterior
+                </button>
 
-            <button
-              onClick={() => {
-                setLocalTheme(prev => {
-                  if (prev === 'modern') return 'parchment';
-                  if (prev === 'parchment') return 'burnt';
-                  return 'modern';
-                });
-              }}
-              className="px-4 py-1 text-xs uppercase tracking-widest text-pink-400 border border-pink-500/30 rounded-full hover:bg-pink-500/10 transition-colors"
-            >
-              Estilo actual: {localTheme === 'modern' ? 'Moderno (Crema)' : localTheme === 'parchment' ? 'Antiguo (Pergamino)' : 'Antiguo Quemado'} 🔄
-            </button>
-          </div>
-          */}
+                <div className="flex flex-col items-center">
+                  <span className="text-pink-200 font-serif text-sm md:text-base font-semibold tracking-wide">
+                    Página {currentPage + 1} de {pages.length}
+                  </span>
+                  <div className="flex gap-1.5 mt-1">
+                    {pages.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setCurrentPage(i)}
+                        className={`h-1.5 rounded-full transition-all ${
+                          i === currentPage 
+                            ? 'w-5 bg-gradient-to-r from-pink-500 to-purple-500' 
+                            : 'w-1.5 bg-gray-600 hover:bg-gray-400'
+                        }`}
+                        title={`Ir a página ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.min(pages.length - 1, prev + 1))}
+                  disabled={currentPage === pages.length - 1}
+                  className={`px-4 py-1.5 rounded-full border border-pink-500/40 text-xs md:text-sm font-semibold transition-all flex items-center gap-1 ${
+                    currentPage === pages.length - 1 
+                      ? 'opacity-20 cursor-not-allowed border-gray-700 text-gray-500' 
+                      : 'hover:bg-pink-500/20 text-pink-200 active:scale-95'
+                  }`}
+                >
+                  Siguiente
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
 
           <LetterPage
-            key={`${currentPage}-${localTheme}`}
+            key={`${currentPage}-${userData?.letterStyles?.[currentPage] || localTheme}-${userData?.letterTextColors?.[currentPage] || userData?.letterTextColor || ''}-${userData?.letterFonts?.[currentPage] || userData?.letterFont || ''}`}
             index={currentPage}
             text={pages[currentPage]}
-            title={userData?.letterTitle}
+            title={userData?.letterTitles?.[currentPage] !== undefined ? userData?.letterTitles?.[currentPage] : (currentPage === 0 ? (userData?.letterTitle || '') : '')}
             userName={userName}
             signature={CONFIG.firmaFinal}
             isLastPage={currentPage === pages.length - 1}
-            theme={localTheme}
+            theme={userData?.letterStyles?.[currentPage] || localTheme}
+            textColor={userData?.letterTextColors?.[currentPage] || userData?.letterTextColor}
+            titleColor={userData?.letterTitleColors?.[currentPage] || userData?.letterTitleColor}
+            textFont={userData?.letterFonts?.[currentPage] || userData?.letterFont}
+            textAlign={userData?.letterAligns?.[currentPage] || userData?.letterAlign}
           />
         </section>
       )}

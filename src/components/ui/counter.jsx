@@ -10,40 +10,61 @@ export default function Counter({ anniversaryDate, isGuest, customMessage }) {
   });
 
   useEffect(() => {
-    // Si no es invitado y no ha configurado fecha, el contador se queda en 0.
+    // Si no es invitado y no hay fecha configurada o válida, el contador se queda en 0.
     if (!anniversaryDate && !isGuest) {
       setTimePassed({ days: 0, hours: 0, minutes: 0, seconds: 0 });
       setIsLoaded(true);
       return;
     }
 
-    // Si hay fecha del usuario la usamos, sino usamos la fecha de demo (para invitados)
-    const dateString = anniversaryDate ? `${anniversaryDate}T00:00:00` : '2021-06-14T00:00:00';
-    const startDate = new Date(dateString);
+    // Normalizar la fecha: soporta 'YYYY-MM-DD', 'YYYY-MM-DDTHH:mm:ss' o ISO completo
+    let startDate;
+    if (anniversaryDate) {
+      const cleanDate = String(anniversaryDate).trim();
+      if (cleanDate.includes('T')) {
+        startDate = new Date(cleanDate);
+      } else {
+        // En formato YYYY-MM-DD, descomponer para evitar desfaces de zona horaria
+        const parts = cleanDate.split('-');
+        if (parts.length === 3) {
+          startDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), 0, 0, 0);
+        } else {
+          startDate = new Date(cleanDate);
+        }
+      }
+    } else {
+      // Fecha de demo para visitantes no autenticados
+      startDate = new Date(2021, 5, 14, 0, 0, 0);
+    }
+
+    // Validar si la fecha resultante es válida
+    if (isNaN(startDate.getTime())) {
+      console.warn('[Counter] Fecha de aniversario no válida:', anniversaryDate);
+      setTimePassed({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+      setIsLoaded(true);
+      return;
+    }
 
     const calculateTime = () => {
       const now = new Date();
-      const diff = now - startDate;
+      // Si la fecha es en el pasado: tiempo transcurrido (días juntos)
+      // Si la fecha es en el futuro: cuenta regresiva hasta el gran día
+      const diff = now.getTime() - startDate.getTime();
+      const absDiff = Math.abs(diff);
 
-      if (diff < 0) {
-        setTimePassed({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-        if (!isLoaded) setIsLoaded(true);
-        return;
-      }
-
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-      const minutes = Math.floor((diff / 1000 / 60) % 60);
-      const seconds = Math.floor((diff / 1000) % 60);
+      const days = Math.floor(absDiff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((absDiff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((absDiff / (1000 * 60)) % 60);
+      const seconds = Math.floor((absDiff / 1000) % 60);
 
       setTimePassed({ days, hours, minutes, seconds });
-      if (!isLoaded) setIsLoaded(true);
+      setIsLoaded(true);
     };
 
     calculateTime();
     const interval = setInterval(calculateTime, 1000);
     return () => clearInterval(interval);
-  }, [isLoaded, anniversaryDate, isGuest]);
+  }, [anniversaryDate, isGuest]);
 
   // Formatear números para que siempre tengan 2 dígitos
   const pad = (num) => String(num).padStart(2, '0');
@@ -68,7 +89,19 @@ export default function Counter({ anniversaryDate, isGuest, customMessage }) {
           {(anniversaryDate || isGuest) && (
             <span className="text-sm md:text-lg opacity-70 mt-2 block font-sans">
               {anniversaryDate 
-                ? `Desde el ${new Date(anniversaryDate + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}` 
+                ? (() => {
+                    const clean = String(anniversaryDate).trim();
+                    const parts = clean.split('T')[0].split('-');
+                    let d;
+                    if (parts.length === 3) {
+                      d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                    } else {
+                      d = new Date(clean);
+                    }
+                    const isFuture = d.getTime() > Date.now();
+                    const dateText = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+                    return isFuture ? `Faltan para el ${dateText}` : `Desde el ${dateText}`;
+                  })() 
                 : "Desde el 14 de Junio, 2021"
               }
             </span>

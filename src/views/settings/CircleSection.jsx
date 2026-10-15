@@ -857,9 +857,10 @@ export default function CircleSection({ currentUser, globalUserData, setGlobalUs
 
       {/* MODAL PARA EDITAR PRIVILEGIOS */}
       {editingCollab && editingPermissions && (
-        <div className="fixed inset-0 z-[10000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-gray-900 border border-purple-500/30 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-gray-800 pb-3">
+        <div className="fixed inset-0 z-[10000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-gray-900 border border-purple-500/30 rounded-2xl max-w-md w-full shadow-2xl flex flex-col max-h-[90vh]">
+            {/* Header Fijo */}
+            <div className="flex items-center justify-between border-b border-gray-800 p-4 sm:p-5 shrink-0">
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <svg className="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -872,15 +873,16 @@ export default function CircleSection({ currentUser, globalUserData, setGlobalUs
               <button
                 type="button"
                 onClick={() => setEditingCollab(null)}
-                className="text-gray-400 hover:text-white text-sm p-1"
+                className="text-gray-400 hover:text-white text-sm p-1.5 rounded-lg hover:bg-gray-800 transition-colors"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
-              <label className="flex items-center justify-between p-3 rounded-xl bg-gray-950 border border-gray-800 cursor-pointer">
-                <div>
+            {/* Lista con Scroll Inteligente */}
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-2.5 text-xs flex-1 overscroll-contain">
+              <label className="flex items-center justify-between p-3 rounded-xl bg-gray-950 border border-gray-800 hover:border-gray-700 transition-colors cursor-pointer">
+                <div className="pr-3">
                   <span className="font-semibold text-white block">Visualizar galería de recuerdos</span>
                   <span className="text-[11px] text-gray-400">Permite ver y recorrer las fotos del universo</span>
                 </div>
@@ -897,12 +899,12 @@ export default function CircleSection({ currentUser, globalUserData, setGlobalUs
                       delete: checked ? p.delete : false,
                     }));
                   }}
-                  className="rounded text-purple-600 focus:ring-0 bg-gray-800"
+                  className="rounded text-purple-600 focus:ring-0 bg-gray-800 w-4 h-4 cursor-pointer shrink-0"
                 />
               </label>
 
-              <label className="flex items-center justify-between p-3 rounded-xl bg-gray-950 border border-gray-800 cursor-pointer">
-                <div>
+              <label className="flex items-center justify-between p-3 rounded-xl bg-gray-950 border border-gray-800 hover:border-gray-700 transition-colors cursor-pointer">
+                <div className="pr-3">
                   <span className="font-semibold text-white block">Subir fotos y videos (calidad original)</span>
                   <span className="text-[11px] text-gray-400">Aporta contenido sin la pérdida de calidad de WhatsApp</span>
                 </div>
@@ -910,12 +912,12 @@ export default function CircleSection({ currentUser, globalUserData, setGlobalUs
                   type="checkbox"
                   checked={editingPermissions.upload}
                   onChange={(e) => setEditingPermissions((p) => ({ ...p, upload: e.target.checked }))}
-                  className="rounded text-purple-600 focus:ring-0 bg-gray-800"
+                  className="rounded text-purple-600 focus:ring-0 bg-gray-800 w-4 h-4 cursor-pointer shrink-0"
                 />
               </label>
 
-              <label className="flex items-center justify-between p-3 rounded-xl bg-gray-950 border border-gray-800 cursor-pointer">
-                <div>
+              <label className="flex items-center justify-between p-3 rounded-xl bg-gray-950 border border-gray-800 hover:border-gray-700 transition-colors cursor-pointer">
+                <div className="pr-3">
                   <span className="font-semibold text-white block">Eliminar fotos de la galería</span>
                   <span className="text-[11px] text-red-400">Recomendado desmarcado por seguridad</span>
                 </div>
@@ -931,12 +933,12 @@ export default function CircleSection({ currentUser, globalUserData, setGlobalUs
                       view: checked ? true : p.view,
                     }));
                   }}
-                  className="rounded text-purple-600 focus:ring-0 bg-gray-800"
+                  className="rounded text-purple-600 focus:ring-0 bg-gray-800 w-4 h-4 cursor-pointer shrink-0"
                 />
               </label>
 
-              <label className="flex items-center justify-between p-3 rounded-xl bg-gray-950 border border-gray-800 cursor-pointer">
-                <div>
+              <label className="flex items-center justify-between p-3 rounded-xl bg-gray-950 border border-gray-800 hover:border-gray-700 transition-colors cursor-pointer">
+                <div className="pr-3">
                   <span className="font-semibold text-white block">Descargar fotos y videos</span>
                   <span className="text-[11px] text-gray-400">Permite guardar recuerdos en el equipo (activa automáticamente Ver Galería)</span>
                 </div>
@@ -952,12 +954,12 @@ export default function CircleSection({ currentUser, globalUserData, setGlobalUs
                       view: checked ? true : p.view,
                     }));
                   }}
-                  className="rounded text-purple-600 focus:ring-0 bg-gray-800"
+                  className="rounded text-purple-600 focus:ring-0 bg-gray-800 w-4 h-4 cursor-pointer shrink-0"
                 />
               </label>
 
-              <label className="flex items-center justify-between p-3 rounded-xl bg-gray-950 border border-gray-800 cursor-pointer">
-                <div>
+              <label className="flex items-center justify-between p-3 rounded-xl bg-gray-950 border border-gray-800 hover:border-gray-700 transition-colors cursor-pointer">
+                <div className="pr-3">
                   <span className="font-semibold text-white block">Ver cartas de amor</span>
                   <span className="text-[11px] text-gray-400">Permite leer las cartas íntimas</span>
                 </div>
@@ -965,12 +967,12 @@ export default function CircleSection({ currentUser, globalUserData, setGlobalUs
                   type="checkbox"
                   checked={editingPermissions.viewLetters}
                   onChange={(e) => setEditingPermissions((p) => ({ ...p, viewLetters: e.target.checked }))}
-                  className="rounded text-purple-600 focus:ring-0 bg-gray-800"
+                  className="rounded text-purple-600 focus:ring-0 bg-gray-800 w-4 h-4 cursor-pointer shrink-0"
                 />
               </label>
 
-              <label className="flex items-center justify-between p-3 rounded-xl bg-gray-950 border border-gray-800 cursor-pointer">
-                <div>
+              <label className="flex items-center justify-between p-3 rounded-xl bg-gray-950 border border-gray-800 hover:border-gray-700 transition-colors cursor-pointer">
+                <div className="pr-3">
                   <span className="font-semibold text-white block">Escuchar música</span>
                   <span className="text-[11px] text-gray-400">Permite reproducir la playlist</span>
                 </div>
@@ -978,16 +980,17 @@ export default function CircleSection({ currentUser, globalUserData, setGlobalUs
                   type="checkbox"
                   checked={editingPermissions.viewMusic}
                   onChange={(e) => setEditingPermissions((p) => ({ ...p, viewMusic: e.target.checked }))}
-                  className="rounded text-purple-600 focus:ring-0 bg-gray-800"
+                  className="rounded text-purple-600 focus:ring-0 bg-gray-800 w-4 h-4 cursor-pointer shrink-0"
                 />
               </label>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-gray-800">
+            {/* Footer Fijo con Botones Siempre Visibles */}
+            <div className="flex justify-end gap-2 p-4 sm:p-5 border-t border-gray-800 bg-gray-900/90 backdrop-blur-xs rounded-b-2xl shrink-0">
               <button
                 type="button"
                 onClick={() => setEditingCollab(null)}
-                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold rounded-xl"
+                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold rounded-xl transition-colors"
               >
                 Cancelar
               </button>
@@ -995,7 +998,7 @@ export default function CircleSection({ currentUser, globalUserData, setGlobalUs
                 type="button"
                 onClick={handleSavePermissions}
                 disabled={savingPermissions}
-                className="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl shadow-md disabled:opacity-50"
+                className="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl shadow-md disabled:opacity-50 transition-colors"
               >
                 {savingPermissions ? 'Guardando...' : 'Guardar Cambios'}
               </button>

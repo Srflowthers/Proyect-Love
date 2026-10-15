@@ -189,7 +189,7 @@ const AdminView = ({ user, initialTab = 'clients' }) => {
               ) : (
                 clients.filter(c => filterPlan === 'all' || c.plan === filterPlan).map((client) => {
                   const totalImages = client.imageCount || 0;
-                  const totalBytes = client.imageBytes || 0;
+                  const totalBytes = client.totalStorageBytes || ((client.imageBytes || 0) + (client.audioBytes || 0));
                   const hasFlight = !!client.hasFlightMode;
                   const currentPlan = plans[client.plan] || plans.gratis || DEFAULT_PLANS.gratis;
                   const usagePercent = Math.min(100, (totalBytes / currentPlan.maxBytes) * 100);
@@ -207,11 +207,11 @@ const AdminView = ({ user, initialTab = 'clients' }) => {
                     <div key={client.id} className="p-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4 hover:bg-[#151515] transition-colors">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-full bg-pink-900/40 border border-pink-500/20 flex items-center justify-center text-pink-400 font-bold uppercase shrink-0">
-                          {client.name ? client.name.charAt(0) : client.email.charAt(0)}
+                          {client.name ? client.name.charAt(0) : (client.email ? client.email.charAt(0) : '?')}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-200">{client.name || 'Sin nombre'} <span className="text-xs text-gray-500 ml-2">ID: {client.id.substring(0, 6)}</span></p>
-                          <p className="text-sm text-gray-500">{client.email}</p>
+                          <p className="font-medium text-gray-200">{client.name || 'Sin nombre'} <span className="text-xs text-gray-500 ml-2">ID: {client.id ? client.id.substring(0, 6) : ''}</span></p>
+                          <p className="text-sm text-gray-500">{client.email || 'Sin correo'}</p>
                         </div>
                       </div>
 

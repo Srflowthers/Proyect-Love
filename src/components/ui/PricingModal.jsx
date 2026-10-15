@@ -31,6 +31,7 @@ const PLANS = [
     trialDays: 7,
     features: [
       ["15 GB de espacio", true],
+      ["Vincula a tu pareja + 1 ser querido", true],
       ["Árbol de los Recuerdos interactivo", false],
       ["Fotos y videos en alta calidad", false],
       ["Privacidad y encriptación garantizada", false],
@@ -47,6 +48,7 @@ const PLANS = [
     discount: 30,
     features: [
       ["50 GB de espacio", true],
+      ["Vincula a tu pareja + hasta 3 seres queridos", true],
       ["Incluye todos los beneficios del plan Pololos", false],
       ["Seguridad de grado bancario", false],
       ["Hasta 1 GB por archivo", false],
@@ -62,6 +64,7 @@ const PLANS = [
     discount: 20,
     features: [
       ["100 GB de espacio", true],
+      ["Vincula a tu pareja + hasta 6 seres queridos", true],
       ["Incluye todos los beneficios del plan Novios", false],
       ["Videos en calidad 4K", false],
       ["Hasta 5 GB por archivo", false],
@@ -117,7 +120,11 @@ const PricingModal = ({ onLogin, onClose, initialNotice }) => {
   const handleAcceptTermsAndLogin = () => {
     setShowTermsModal(false);
     const token = turnstileToken || (import.meta.env.DEV ? "dev_token" : null);
-    if (onLogin && token) {
+    if (!token) {
+      alert("Por favor, completa la verificación de seguridad antes de continuar.");
+      return;
+    }
+    if (onLogin) {
       onLogin(token, true);
     }
   };

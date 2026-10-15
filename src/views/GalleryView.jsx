@@ -86,26 +86,38 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
     }
 
     const fetchUserData = async () => {
-      // CACHÉ GLOBAL: Si ya tenemos la información en memoria, la usamos y cortamos aquí.
-      if (globalUserData && globalImages) {
+      // Si ya tenemos globalUserData, pintarlo inmediatamente
+      if (globalUserData) {
         setUserData(globalUserData);
         if (globalUserData.planExpiresAt) {
           const expDate = new Date(globalUserData.planExpiresAt);
           setIsExpired(expDate.getTime() < Date.now());
         }
+      }
+
+      if (globalImages && globalImages.length > 0) {
         setImages(globalImages);
         setNextCursor(globalNextCursor);
-        return;
       }
 
       try {
+        console.log("[GalleryView] Iniciando carga de usuario e imágenes...");
         const token = await user.getIdToken();
-        const res = await fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '')}/api/users/me`, {
+        const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '');
+        console.log("[GalleryView] Consultando /api/users/me en:", apiUrl);
+
+        console.log("[GalleryView] Auth User UID:", user?.uid, "Email:", user?.email);
+        const res = await fetch(`${apiUrl}/api/users/me`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        const snap = await res.json();
+        console.log("[GalleryView] Respuesta /api/users/me status:", res.status);
+        const snap = await res.json().catch(err => {
+          console.error("[GalleryView] Error parseando JSON de /api/users/me:", err);
+          return null;
+        });
+        console.log("[GalleryView] Datos obtenidos de /api/users/me:", snap?.data ? { id: snap.data.id || snap.data.uid, email: snap.data.email, coupleId: snap.data.coupleId, galleryImagesCount: snap.data.galleryImages?.length || 0 } : snap);
 
-        if (snap.exists) {
+        if (snap && snap.exists) {
           const data = snap.data;
           setUserData(data);
           if (setGlobalUserData) setGlobalUserData(data);
@@ -115,34 +127,44 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
             setIsExpired(expDate.getTime() < Date.now());
           }
 
-          // Petición optimizada a la ruta paginada (evita traer 3000 imágenes de golpe)
+          // Cargar imágenes
           try {
-            const imgRes = await fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '')}/api/images?limit=70`, {
+            console.log("[GalleryView] Solicitando /api/images?limit=70...");
+            const imgRes = await fetch(`${apiUrl}/api/images?limit=70`, {
               headers: { 'Authorization': `Bearer ${token}` }
             });
+            console.log("[GalleryView] Respuesta /api/images status:", imgRes.status);
             if (imgRes.ok) {
               const imgData = await imgRes.json();
+              console.log("[GalleryView] Datos de /api/images:", imgData);
               const fetchedImages = imgData.items || [];
-              setImages(fetchedImages);
-              if (setGlobalImages) setGlobalImages(fetchedImages);
+              console.log(`[GalleryView] Total imágenes recibidas del backend: ${fetchedImages.length}`, fetchedImages);
+              if (fetchedImages.length > 0) {
+                setImages(fetchedImages);
+                if (setGlobalImages) setGlobalImages(fetchedImages);
+              } else {
+                console.warn("[GalleryView] La lista de imágenes retornada por el backend está vacía.");
+              }
               
               const fetchedCursor = imgData.nextCursor || null;
               setNextCursor(fetchedCursor);
               if (setGlobalNextCursor) setGlobalNextCursor(fetchedCursor);
             } else {
-              setImages([]);
+              const errBody = await imgRes.text();
+              console.error("[GalleryView] Error HTTP al consultar /api/images:", imgRes.status, errBody);
             }
           } catch (e) {
-            console.error("Error fetching paginated images:", e);
-            setImages([]);
+            console.error("[GalleryView] Excepción en fetch /api/images:", e);
           }
+        } else {
+          console.warn("[GalleryView] /api/users/me respondió con exists: false o cuerpo nulo:", snap);
         }
       } catch (err) {
-        console.error("Error fetching user data from Firestore:", err);
+        console.error("[GalleryView] Error general en fetchUserData:", err);
       }
     };
     fetchUserData();
-  }, [user]);
+  }, [user?.uid]);
 
   const loadMoreImages = async () => {
     if (!nextCursor || isLoadingMore || !user) return;
@@ -167,14 +189,8 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
     }
   };
 
-  // Carga progresiva en segundo plano ("lazy loading" automático)
-  useEffect(() => {
-    if (!nextCursor || isLoadingMore || !user) return;
-    const timer = setTimeout(() => {
-      loadMoreImages();
-    }, 2500); // Cada 2.5 segundos intentará traer el siguiente lote silenciosamente
-    return () => clearTimeout(timer);
-  }, [nextCursor, isLoadingMore, user]);
+  // La carga progresiva ya NO se ejecuta sola cada 2.5s mientras el usuario está quieto.
+  // Ahora solo se invoca cuando el usuario realmente se desplaza y explora el universo (onMove / onLoadMore).
 
   // Helper para extraer la URI de Spotify desde una URL (ej: https://open.spotify.com/track/...)
   const getSpotifyUri = (url) => {
@@ -207,7 +223,14 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
   }, [userData?.customAudios, userData?.customAudioUrl, userData?.spotifyUrl]);
 
   useEffect(() => {
+    // Solo inicializar el SDK de Spotify si hay al menos una pista de Spotify en la playlist
+    const hasSpotify = playlist.some(t => t.isSpotify || (t.url && t.url.includes('spotify')));
+    if (!hasSpotify) return;
+
+    if (document.getElementById('spotify-iframe-api-script')) return;
+
     const script = document.createElement("script");
+    script.id = "spotify-iframe-api-script";
     script.src = "https://open.spotify.com/embed/iframe-api/v1";
     script.async = true;
     document.body.appendChild(script);
@@ -215,8 +238,9 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
     window.onSpotifyIframeApiReady = (IFrameAPI) => {
       const element = document.getElementById('spotify-global-iframe');
       if (!element) return;
+      const firstSpotifyTrack = playlist.find(t => t.isSpotify || (t.url && t.url.includes('spotify')));
       const options = {
-        uri: getSpotifyUri(''),
+        uri: getSpotifyUri(firstSpotifyTrack?.url || ''),
         width: 300,
         height: 80,
         theme: '0'
@@ -234,11 +258,8 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
 
     return () => {
       window.onSpotifyIframeApiReady = null;
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
     };
-  }, [playlist.length]);
+  }, [playlist]);
 
   useEffect(() => {
     if (playlist.length === 0) {
@@ -255,11 +276,24 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
     if (isSpotify) {
       if (customAudioRef.current) customAudioRef.current.pause();
       if (window.spotifyController) {
-        window.spotifyController.loadUri(getSpotifyUri(currentTrack.url));
-        if (musicActive) window.spotifyController.play();
+        try {
+          window.spotifyController.loadUri(getSpotifyUri(currentTrack.url));
+          if (musicActive) {
+            Promise.resolve(window.spotifyController.play()).catch(err => {
+              // Ignorar error si el usuario no ha interactuado aún o si el iframe está cargando
+              console.warn('[Spotify Playback]', err?.message || err);
+            });
+          }
+        } catch (err) {
+          console.warn('[Spotify loadUri]', err);
+        }
       }
     } else {
-      if (window.spotifyController) window.spotifyController.pause();
+      if (window.spotifyController) {
+        try {
+          Promise.resolve(window.spotifyController.pause()).catch(() => {});
+        } catch (e) {}
+      }
       
       if (!customAudioRef.current) {
         customAudioRef.current = new Audio(currentTrack.url);
@@ -399,8 +433,13 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
       style={viewMode !== 'home' ? { height: '100svh' } : undefined}
     >
 
-      {/* Reproductor de Audio o Contenedor Global de Spotify */}
-      {(userData?.customAudios?.length > 0 || userData?.customAudioUrl) ? (
+      {/* Contenedor persistente para el Iframe de Spotify API */}
+      <div className="fixed opacity-0 pointer-events-none -z-50" aria-hidden="true">
+        <div id="spotify-global-iframe"></div>
+      </div>
+
+      {/* Reproductor de Audio Flotante */}
+      {(userData?.customAudios?.length > 0 || userData?.customAudioUrl) && (
         <div className={`fixed bottom-4 left-4 z-[100] transition-all duration-1000 ${musicActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
           <div className="bg-black/60 backdrop-blur-md border border-purple-500/30 rounded-xl p-3 shadow-[0_0_15px_rgba(168,85,247,0.3)] flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center animate-pulse shrink-0">
@@ -427,10 +466,6 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
               </svg>
             </button>
           </div>
-        </div>
-      ) : (
-        <div className="fixed opacity-0 pointer-events-none -z-50">
-          <div id="spotify-global-iframe"></div>
         </div>
       )}
 
@@ -550,7 +585,12 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
               <p className="text-gray-300 max-w-md">No tienes fotos guardadas aún. Ve a "Configurar" y luego a "Fotos" para empezar a poblar tu universo con recuerdos invaluables.</p>
             </div>
           )}
-          <CanvasGallery items={images} toggleView={toggleView} hasFlightMode={userData?.hasFlightMode} />
+          <CanvasGallery 
+            items={images} 
+            toggleView={toggleView} 
+            hasFlightMode={userData?.hasFlightMode} 
+            onLoadMore={loadMoreImages} 
+          />
         </div>
       )}
 

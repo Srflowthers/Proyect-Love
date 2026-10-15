@@ -33,22 +33,25 @@ export const ROMANTIC_FONTS = [
 
 export const PAPER_THEME_STYLES = {
   parchment: {
-    containerClass: 'bg-[#e4c494] text-[#2a1a0f] border-4 border-[#b88c52] shadow-[#1a0f05]/60',
+    containerClass: 'text-[#2a1a0f] border-4 border-[#b88c52]',
     style: {
-      boxShadow: 'inset 0 0 35px rgba(130, 80, 20, 0.25), 0 10px 30px rgba(0,0,0,0.6)',
-      backgroundImage: 'radial-gradient(ellipse at center, rgba(255,255,255,0.1) 0%, rgba(120,70,10,0.1) 100%)'
+      background: 'radial-gradient(circle at center, #f1dcb8 0%, #e4c494 70%, #c79c65 100%)',
+      boxShadow: 'inset 0 0 35px rgba(100, 60, 20, 0.4), 0 15px 35px rgba(0,0,0,0.7)',
     }
   },
   burnt: {
-    containerClass: 'bg-[#dfbe8c] text-[#241409] border-4 border-[#331505] shadow-[0_0_40px_rgba(0,0,0,0.85)] ring-2 ring-[#1a0a00]',
+    containerClass: 'text-[#241409]',
+    isBurnt: true,
     style: {
-      boxShadow: 'inset 0 0 50px rgba(50, 15, 0, 0.45), 0 10px 30px rgba(0,0,0,0.8)',
-      backgroundImage: 'radial-gradient(ellipse at center, rgba(255,255,255,0.08) 0%, rgba(60,20,0,0.15) 100%)'
+      background: 'radial-gradient(circle at center, #f1dcb8 0%, #e4c494 70%, #c79c65 100%)',
+      boxShadow: 'inset 0 0 45px rgba(80, 30, 5, 0.5), inset 0 0 15px rgba(40, 15, 0, 0.8), 0 15px 40px rgba(0,0,0,0.85)',
+      filter: 'drop-shadow(0 0 12px rgba(26, 10, 0, 0.9))'
     }
   },
   modern: {
-    containerClass: 'bg-[#f6f2ea] text-[#2d2a26] border border-[#e2dcd0] shadow-black/50',
+    containerClass: 'text-[#2d2a26] border border-[#e6dfd1]',
     style: {
+      backgroundColor: '#f4f0e8',
       boxShadow: 'inset 0 0 20px rgba(0,0,0,0.03), 0 10px 25px rgba(0,0,0,0.5)'
     }
   }

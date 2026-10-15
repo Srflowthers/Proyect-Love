@@ -9,6 +9,7 @@ import SettingsView from '@/views/SettingsView';
 import GamesView from '@/views/GamesView';
 import Dock from '@/components/Dock';
 import PricingModal from '@/components/ui/PricingModal';
+import InvitationModal from '@/components/ui/InvitationModal';
 import { logout } from '@/services/authService'; 
 
 function App() {
@@ -52,6 +53,13 @@ function App() {
       }
     }
   }, [user, targetAfterLogin]);
+
+  // Limpiar caché en memoria al cambiar de cuenta o iniciar/cerrar sesión
+  React.useEffect(() => {
+    setGlobalUserData(null);
+    setGlobalImages(null);
+    setGlobalNextCursor(undefined);
+  }, [user?.uid]);
 
   React.useEffect(() => {
     const handleResize = () => {
@@ -147,6 +155,9 @@ function App() {
             }} 
           />
         )}
+
+        {/* Modal de Invitación para usuarios que entran por link sin sesión (P4, E01-E13, E44) */}
+        <InvitationModal currentUser={user} />
       </div>
     );
   }
@@ -187,50 +198,55 @@ function App() {
       label: 'Cerrar Sesión',
       onClick: async () => { if (window.confirm("¿Estás seguro de que deseas cerrar sesión?")) { await logout(); window.location.reload(); } }
     }
-  ] : [
-    {
-      icon: <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>,
-      label: 'Galería',
-      onClick: () => { handleSetView('gallery'); }
-    },
-    {
-      icon: (
-        <svg className="w-6 h-6 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="6" width="20" height="12" rx="6" />
-          <path d="M6 12h4m-2-2v4" />
-          <line x1="15" y1="11" x2="15.01" y2="11" strokeWidth="3" />
-          <line x1="18" y1="13" x2="18.01" y2="13" strokeWidth="3" />
-        </svg>
-      ),
-      label: 'Juegos',
-      onClick: () => { handleSetView('games'); }
-    },
-    {
-      icon: <svg className="w-6 h-6 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76" /></svg>,
-      label: 'Cartas',
-      onClick: () => { setSettingsTab('pages'); handleSetView('settings'); }
-    },
-    {
-      icon: <svg className="w-6 h-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
-      label: 'Mis Fotos',
-      onClick: () => { setSettingsTab('images'); handleSetView('settings'); }
-    },
-    {
-      icon: <svg className="w-6 h-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>,
-      label: 'Música',
-      onClick: () => { setSettingsTab('music'); handleSetView('settings'); }
-    },
-    {
-      icon: <svg className="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
-      label: 'Mi Perfil',
-      onClick: () => { setSettingsTab('profile'); handleSetView('settings'); }
-    },
-    {
-      icon: <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>,
-      label: 'Salir',
-      onClick: async () => { if (window.confirm("¿Estás seguro de que deseas salir de tu Universo?")) { await logout(); window.location.reload(); } }
-    }
-  ];
+  ] : (() => {
+    const isCollaborator = !!globalUserData?.isCollaborator;
+    const collabPerms = globalUserData?.collaboratorPermissions || {};
+
+    return [
+      {
+        icon: <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>,
+        label: 'Galería',
+        onClick: () => { handleSetView('gallery'); }
+      },
+      {
+        icon: (
+          <svg className="w-6 h-6 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="6" width="20" height="12" rx="6" />
+            <path d="M6 12h4m-2-2v4" />
+            <line x1="15" y1="11" x2="15.01" y2="11" strokeWidth="3" />
+            <line x1="18" y1="13" x2="18.01" y2="13" strokeWidth="3" />
+          </svg>
+        ),
+        label: 'Juegos',
+        onClick: () => { handleSetView('games'); }
+      },
+      ...(!isCollaborator || collabPerms.viewLetters !== false ? [{
+        icon: <svg className="w-6 h-6 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76" /></svg>,
+        label: 'Cartas',
+        onClick: () => { setSettingsTab('pages'); handleSetView('settings'); }
+      }] : []),
+      {
+        icon: <svg className="w-6 h-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
+        label: isCollaborator ? 'Fotos' : 'Mis Fotos',
+        onClick: () => { setSettingsTab('images'); handleSetView('settings'); }
+      },
+      ...(!isCollaborator || collabPerms.viewMusic !== false ? [{
+        icon: <svg className="w-6 h-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>,
+        label: 'Música',
+        onClick: () => { setSettingsTab('music'); handleSetView('settings'); }
+      }] : []),
+      {
+        icon: <svg className="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
+        label: isCollaborator ? 'Mi Cuenta' : 'Mi Perfil',
+        onClick: () => { setSettingsTab('profile'); handleSetView('settings'); }
+      },
+      {
+        icon: <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>,
+        label: 'Salir',
+        onClick: async () => { if (window.confirm("¿Estás seguro de que deseas salir de tu Universo?")) { await logout(); window.location.reload(); } }
+      }
+    ];
+  })();
 
   const gamesDockItems = [
     {
@@ -256,6 +272,7 @@ function App() {
       user={user} 
       onSaveComplete={() => handleSetView('gallery')} 
       initialTab={settingsTab} 
+      onOpenPricing={() => setShowPricing(true)}
       globalUserData={globalUserData}
       setGlobalUserData={setGlobalUserData}
       globalImages={globalImages}
@@ -390,6 +407,18 @@ function App() {
           />
         ),
         document.body
+      )}
+
+      {/* Modal de Aceptación de Invitaciones (P4, E01-E13, E44) */}
+      <InvitationModal currentUser={user} />
+
+      {/* Modal de Planes y Precios */}
+      {showPricing && (
+        <PricingModal 
+          isOpen={showPricing} 
+          onClose={() => setShowPricing(false)} 
+          user={user} 
+        />
       )}
     </>
   );

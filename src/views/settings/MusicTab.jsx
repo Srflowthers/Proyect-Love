@@ -10,7 +10,9 @@ export default function MusicTab({
   playingAudioIdx,
   togglePlayPreview,
   setDeleteModal,
-  user
+  user,
+  totalBytes,
+  setTotalBytes
 }) {
   return (
     <div className="animate-fadeIn">
@@ -20,7 +22,30 @@ export default function MusicTab({
         </svg>
         Tu Música de Fondo
       </h2>
-      <p className="text-sm text-gray-400 mb-8">Personaliza la banda sonora que sonará al entrar a tu Universo.</p>
+      <p className="text-sm text-gray-400 mb-6">Personaliza la banda sonora que sonará al entrar a tu Universo.</p>
+
+      {/* Indicador de Almacenamiento Global */}
+      <div className="bg-black/50 border border-gray-800 rounded-2xl p-5 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span className="text-xs uppercase tracking-wider text-green-400 font-bold block mb-1">
+            Almacenamiento del Plan ({planData?.name || 'Tu Plan'})
+          </span>
+          <p className="text-sm text-gray-300">
+            Has usado <strong className="text-white font-bold">{((totalBytes || 0) / (1024 * 1024)).toFixed(1)} MB</strong> de {(((planData?.maxBytes || 0)) / (1024 * 1024)).toFixed(1)} MB permitidos (fotos y música).
+          </p>
+        </div>
+        <div className="text-left sm:text-right min-w-[160px]">
+          <span className="text-xs text-green-400 font-bold block">
+            {Math.max(0, (((planData?.maxBytes || 0) - (totalBytes || 0)) / (1024 * 1024))).toFixed(1)} MB disponibles
+          </span>
+          <div className="w-full sm:w-40 bg-gray-800 h-2.5 rounded-full overflow-hidden mt-1.5">
+            <div 
+              className="bg-green-500 h-full rounded-full transition-all duration-300"
+              style={{ width: `${Math.min(100, Math.max(0, (((totalBytes || 0) / (planData?.maxBytes || 1)) * 100)))}%` }}
+            />
+          </div>
+        </div>
+      </div>
 
       <form onSubmit={(e) => e.preventDefault()} className="space-y-8">
         
@@ -127,6 +152,11 @@ export default function MusicTab({
                         title="Haz clic para editar el nombre"
                         placeholder="Nombre de la canción..."
                       />
+                      {audio.bytes ? (
+                        <span className="text-xs text-gray-400 bg-white/5 px-2 py-0.5 rounded border border-gray-800 font-mono shrink-0">
+                          {(audio.bytes / (1024 * 1024)).toFixed(1)} MB
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
@@ -147,6 +177,11 @@ export default function MusicTab({
                               customAudios: prev.customAudios.filter((_, i) => i !== idx)
                             }));
                             setDeleteModal(null);
+
+                            // Restar bytes de totalBytes
+                            if (setTotalBytes && audioToDelete?.bytes) {
+                              setTotalBytes(prev => Math.max(0, prev - audioToDelete.bytes));
+                            }
 
                             // 2. Eliminar archivo físico en segundo plano
                             let pubId = audioToDelete.public_id;

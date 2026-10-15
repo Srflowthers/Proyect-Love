@@ -9,18 +9,29 @@ export const loginWithGoogle = async (turnstileToken, acceptedTerms) => {
     const details = getAdditionalUserInfo(result);
     
     // Si es un usuario nuevo, DEBE haber aceptado los términos
-    if (details.isNewUser && !acceptedTerms) {
+    if (details?.isNewUser && !acceptedTerms) {
       await deleteUser(result.user);
       return { user: null, error: 'Para registrar una cuenta nueva, debes aceptar los Términos y Condiciones.' };
     }
 
-    await saveUserToDatabase(result.user, turnstileToken);
+    const saveResult = await saveUserToDatabase(result.user, turnstileToken);
+    if (saveResult && !saveResult.success) {
+      console.warn("Aviso al sincronizar perfil en backend:", saveResult.error);
+      // Solo forzar cierre de sesión si es un usuario totalmente nuevo que falló al registrarse
+      if (details?.isNewUser) {
+        await signOut(auth);
+        return { user: null, error: saveResult.error || 'Error al crear tu perfil en la base de datos.' };
+      }
+      // Si el usuario ya existe, permitimos continuar para que no sea expulsado por errores temporales de sincronización
+    }
+
     return { user: result.user, error: null };
   } catch (error) {
-    console.error("Error en login:", error);
-    const msg = error.code === 'auth/popup-closed-by-user' 
-      ? 'Inicio de sesión cancelado.' 
-      : (error.message || 'Error al iniciar sesión con Google.');
+    console.warn("Estado en login:", error?.code || error);
+    if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
+      return { user: null, error: null }; // Simplemente se cerró o se hizo doble clic, no mostrar error al usuario
+    }
+    const msg = error.message || 'Error al iniciar sesión con Google.';
     return { user: null, error: msg };
   }
 };

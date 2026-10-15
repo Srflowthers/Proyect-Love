@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PaperCrumple from './PaperCrumple';
+import { drawPaperBackground } from '../../views/settings/letters/drawPaperBackground';
 
 const LetterPage = ({ text, title, userName, signature, index, isLastPage, theme, textColor, textFont, textAlign, titleColor }) => {
   const [letterSrc, setLetterSrc] = useState(null);
@@ -182,76 +183,8 @@ const LetterPage = ({ text, title, userName, signature, index, isLastPage, theme
       setLetterSrc(canvas.toDataURL('image/png'));
     };
 
-    if (theme === 'parchment' || theme === 'burnt') {
-      // Generar textura de pergamino nativa en canvas sin bordes/fondos indeseados
-      const grad = ctx.createRadialGradient(200, 275, 0, 200, 275, 400);
-      grad.addColorStop(0, '#f1dcb8');
-      grad.addColorStop(0.7, '#e4c494');
-      grad.addColorStop(1, '#c79c65');
-      
-      if (theme === 'burnt') {
-        // Rellenamos el lienzo de negro (mismo color que el fondo de la app) para camuflar los bordes
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(0, 0, 400, 550);
-
-        // Creamos la forma irregular de la hoja quemada
-        ctx.beginPath();
-        ctx.moveTo(10, 10);
-        // Generar bordes dentados de alta resolución (cada 2 píxeles)
-        // Top
-        for(let x=10; x<=390; x+=2) ctx.lineTo(x, Math.random() * 8 + 10);
-        // Right
-        for(let y=10; y<=540; y+=2) ctx.lineTo(400 - (Math.random() * 8 + 10), y);
-        // Bottom
-        for(let x=390; x>=10; x-=2) ctx.lineTo(x, 550 - (Math.random() * 8 + 10));
-        // Left
-        for(let y=540; y>=10; y-=2) ctx.lineTo(Math.random() * 8 + 10, y);
-        ctx.closePath();
-
-        // Recortamos (clip)
-        ctx.save();
-        ctx.clip();
-
-        // Rellenar la hoja irregular
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, 400, 550);
-
-        // Borde interior difuminado (sombra de la quemadura)
-        ctx.strokeStyle = 'rgba(80, 30, 5, 0.4)';
-        ctx.lineWidth = 15;
-        ctx.stroke();
-        
-        // Borde central quemado más oscuro y nítido
-        ctx.strokeStyle = 'rgba(40, 15, 0, 0.8)';
-        ctx.lineWidth = 6;
-        ctx.stroke();
-
-        // Línea de carbonización extrema en el mero borde (súper nítido)
-        ctx.strokeStyle = '#1a0a00';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        ctx.restore();
-      } else {
-        // Estilo 'parchment' normal (papel entero)
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, 400, 550);
-        
-        // Borde quemado/desgastado muy sutil (estilo pergamino normal)
-        ctx.strokeStyle = 'rgba(100, 60, 20, 0.4)';
-        ctx.lineWidth = 8;
-        ctx.strokeRect(4, 4, 392, 542);
-      }
-      
-      drawTextAndFinish();
-    } else {
-      ctx.fillStyle = '#f4f0e8';
-      ctx.fillRect(0, 0, 400, 550);
-      ctx.strokeStyle = '#e6dfd1';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(10, 10, 380, 530);
-      drawTextAndFinish();
-    }
+    drawPaperBackground(ctx, 400, 550, theme, 42);
+    drawTextAndFinish();
   }, [text, userName, signature, index, isLastPage, theme, textColor, textFont, textAlign, title]);
 
   if (!letterSrc) return null;
@@ -261,9 +194,9 @@ const LetterPage = ({ text, title, userName, signature, index, isLastPage, theme
       <PaperCrumple
         src={letterSrc}
         alt={`Carta de amor página ${index + 1}`}
-        width={320}
-        height={440}
-        sceneHeight={500}
+        width={400}
+        height={550}
+        sceneHeight={600}
         releaseBehavior="restore"
         crumpleAmount={0.85}
         crumpleDuration={0.55}
@@ -273,7 +206,7 @@ const LetterPage = ({ text, title, userName, signature, index, isLastPage, theme
         wrinkleDepth={0.65}
         creaseStrength={0.18}
         paperColor={(theme === 'parchment' || theme === 'burnt') ? '#e5cca5' : '#f4f0e8'}
-        paperTexture={(theme === 'parchment' || theme === 'burnt') ? 0.2 : 0.08}
+        paperTexture={(theme === 'parchment' || theme === 'burnt') ? 0.08 : 0.04}
         draggable
         returnToOrigin
       />

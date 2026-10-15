@@ -702,7 +702,7 @@ const PaperCrumple = ({
       camera.position.z = viewportHeight / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
       camera.updateProjectionMatrix();
       camera.updateMatrixWorld();
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 3));
       renderer.setSize(viewportWidth, viewportHeight, false);
       const reach = Math.max(viewportWidth, viewportHeight);
       const angle = THREE.MathUtils.degToRad(finite(lightAngle, -35));
@@ -962,7 +962,10 @@ const PaperCrumple = ({
             }
             textures.add(texture);
             texture.colorSpace = THREE.SRGBColorSpace;
-            texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+            texture.generateMipmaps = true;
+            texture.minFilter = THREE.LinearMipmapLinearFilter;
+            texture.magFilter = THREE.LinearFilter;
+            texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
             const image = texture.image;
             const imageAspect = image.width / image.height;
             const targetAspect = paperWidth / paperHeight;

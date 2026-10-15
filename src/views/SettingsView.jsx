@@ -10,7 +10,7 @@ import LettersTab from './settings/LettersTab';
 import ImagesTab from './settings/ImagesTab';
 import MusicTab from './settings/MusicTab';
 
-const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUserData, setGlobalUserData, globalImages, setGlobalImages, globalNextCursor, setGlobalNextCursor }) => {
+const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUserData, setGlobalUserData, globalImages, setGlobalImages, globalNextCursor, setGlobalNextCursor, onOpenPricing }) => {
   const [formData, setFormData] = useState({
     user1Name: '',
     user2Name: '',
@@ -72,6 +72,10 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
           body: JSON.stringify(dataToSend)
         });
         if (!res.ok) throw new Error("Fallo al autoguardar");
+
+        if (setGlobalUserData) {
+          setGlobalUserData(prev => ({ ...(prev || {}), ...dataToSend }));
+        }
         
         if (!isSilent) {
           setSaveStatus('saved');
@@ -166,16 +170,27 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
 
   const togglePlayPreview = (url, idx) => {
     if (playingAudioIdx === idx) {
-      audioPreviewRef.current.pause();
+      if (audioPreviewRef.current) {
+        audioPreviewRef.current.pause();
+      }
       setPlayingAudioIdx(null);
     } else {
-      audioPreviewRef.current.src = url;
-      audioPreviewRef.current.play().catch(e => console.error("Playback error:", e));
-      setPlayingAudioIdx(idx);
-      
-      audioPreviewRef.current.onended = () => {
-        setPlayingAudioIdx(null);
-      };
+      if (audioPreviewRef.current) {
+        audioPreviewRef.current.src = url;
+        audioPreviewRef.current.play().catch(e => {
+          console.error("Playback error:", e);
+          setPlayingAudioIdx(null);
+        });
+        setPlayingAudioIdx(idx);
+        
+        audioPreviewRef.current.onended = () => {
+          setPlayingAudioIdx(null);
+        };
+        audioPreviewRef.current.onerror = (e) => {
+          console.error("Audio playback error event:", e);
+          setPlayingAudioIdx(null);
+        };
+      }
     }
   };
   
@@ -183,6 +198,7 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
   const [selectedImages, setSelectedImages] = useState(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [deleteModal, setDeleteModal] = useState(null); // { type: 'single', item: img } o { type: 'bulk' }
+  const [deletingStatus, setDeletingStatus] = useState(null); // { current: number, total: number, targetId?: string }
   const longPressTimerRef = useRef(null);
   
   useEffect(() => {
@@ -194,6 +210,7 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [planData, setPlanData] = useState(PLANS.gratis);
   const [isExpired, setIsExpired] = useState(false);
+  const [mediaCounts, setMediaCounts] = useState({ total: 0, images: 0, videos: 0 });
 
   // Función para cargar más imágenes usando el Cursor
   const loadMoreImages = async () => {
@@ -210,6 +227,14 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
           setImages(prev => [...prev, ...imgData.items]);
         }
         setNextCursor(imgData.nextCursor || null);
+        if (imgData.total !== undefined) {
+          setTotalImages(imgData.total);
+          setMediaCounts({
+            total: imgData.total,
+            images: imgData.imageCount !== undefined ? imgData.imageCount : imgData.total,
+            videos: imgData.videoCount || 0,
+          });
+        }
       }
     } catch (e) {
       console.error("Error cargando más imágenes:", e);
@@ -237,10 +262,9 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
     };
   }, [nextCursor, isLoadingMore, user]);
 
-  // Cargar datos actuales de Firestore
   useEffect(() => {
     const loadUserData = async () => {
-      // CACHÉ GLOBAL: Si ya tenemos la info en memoria, evitamos pedirla de nuevo
+      // 1. Si tenemos datos en memoria, pintarlos inmediatamente para evitar flashes
       if (globalUserData) {
         const data = globalUserData;
         setFormData({
@@ -263,13 +287,10 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
           customAudios: data.customAudios || (data.customAudioUrl ? [{ url: data.customAudioUrl, name: 'Canción Principal' }] : [])
         });
         
-        if (globalImages) {
-          setImages(globalImages);
-          setNextCursor(globalNextCursor);
-        }
-
         setTotalImages(data.galleryImages ? data.galleryImages.length : data.imageCount || 0);
-        setTotalBytes(data.galleryImages ? data.galleryImages.reduce((sum, img) => sum + (img.bytes || 0), 0) : data.imageBytes || 0);
+        const calcGalleryBytes = data.galleryImages ? data.galleryImages.reduce((sum, img) => sum + (img.bytes || 0), 0) : (data.imageBytes || 0);
+        const calcAudioBytes = (data.customAudios || []).reduce((sum, audio) => sum + (audio.bytes || audio.size || 0), 0);
+        setTotalBytes(data.totalStorageBytes !== undefined ? data.totalStorageBytes : (calcGalleryBytes + calcAudioBytes));
 
         if (data.plan && PLANS[data.plan]) {
           setPlanData(PLANS[data.plan]);
@@ -278,13 +299,19 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
           const expDate = new Date(data.planExpiresAt);
           setIsExpired(expDate.getTime() < Date.now());
         }
-        setTimeout(() => { isInitialLoad.current = false; }, 1000);
-        return;
+
+        if (globalImages && globalImages.length > 0) {
+          setImages(globalImages);
+          setNextCursor(globalNextCursor);
+        }
       }
 
+      // 2. Siempre consultar /api/users/me para tener datos frescos del servidor
       try {
         const token = await user.getIdToken();
-        const res = await fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '')}/api/users/me`, {
+        const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '');
+
+        const res = await fetch(`${apiUrl}/api/users/me`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const snap = await res.json();
@@ -311,28 +338,20 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
             customAudioUrl: data.customAudioUrl || '',
             customAudios: data.customAudios || (data.customAudioUrl ? [{ url: data.customAudioUrl, name: 'Canción Principal' }] : [])
           });
-          
-          // Cargamos la primera página de imágenes (Límite 20)
-          try {
-            const imgRes = await fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '')}/api/images?limit=20`, {
-              headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (imgRes.ok) {
-              const imgData = await imgRes.json();
-              const fetchedImages = imgData.items || [];
-              setImages(fetchedImages);
-              if (setGlobalImages) setGlobalImages(fetchedImages);
-              
-              const fetchedCursor = imgData.nextCursor || null;
-              setNextCursor(fetchedCursor);
-              if (setGlobalNextCursor) setGlobalNextCursor(fetchedCursor);
-            }
-          } catch (e) {
-            console.error("Error fetching images:", e);
-          }
 
-          setTotalImages(data.galleryImages ? data.galleryImages.length : data.imageCount || 0);
-          setTotalBytes(data.galleryImages ? data.galleryImages.reduce((sum, img) => sum + (img.bytes || 0), 0) : data.imageBytes || 0);
+          const initialTotal = data.galleryImages ? data.galleryImages.length : data.imageCount || 0;
+          setTotalImages(initialTotal);
+          const initialVideos = data.usage?.videoCount ?? data.videoCount ?? 0;
+          const initialOnlyImages = data.usage?.onlyImageCount ?? (initialTotal - initialVideos);
+          setMediaCounts({
+            total: initialTotal,
+            images: initialOnlyImages,
+            videos: initialVideos,
+          });
+
+          const calcGalleryBytes = data.galleryImages ? data.galleryImages.reduce((sum, img) => sum + (img.bytes || 0), 0) : (data.imageBytes || 0);
+          const calcAudioBytes = (data.customAudios || []).reduce((sum, audio) => sum + (audio.bytes || audio.size || 0), 0);
+          setTotalBytes(data.totalStorageBytes !== undefined ? data.totalStorageBytes : (calcGalleryBytes + calcAudioBytes));
 
           if (data.plan && PLANS[data.plan]) {
             setPlanData(PLANS[data.plan]);
@@ -341,15 +360,58 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
             const expDate = new Date(data.planExpiresAt);
             setIsExpired(expDate.getTime() < Date.now());
           }
-          // Dar tiempo a que React aplique el estado inicial antes de activar el autoguardado
-          setTimeout(() => { isInitialLoad.current = false; }, 1000);
         }
+        
+        // 3. Cargar imágenes si no estaban en caché o refrescar metadatos de conteo
+        try {
+          console.log("[SettingsView] Solicitando /api/images para conteo y medios...");
+          const hasCachedImages = globalImages && globalImages.length > 0;
+          const fetchLimit = hasCachedImages ? 1 : 50;
+          const imgRes = await fetch(`${apiUrl}/api/images?limit=${fetchLimit}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          console.log("[SettingsView] Respuesta /api/images status:", imgRes.status);
+          if (imgRes.ok) {
+            const imgData = await imgRes.json();
+            console.log("[SettingsView] Datos recibidos de /api/images:", imgData);
+            const fetchedImages = imgData.items || [];
+            console.log(`[SettingsView] Imágenes recibidas: ${fetchedImages.length}. Cached existente:`, hasCachedImages);
+            if (!hasCachedImages && fetchedImages.length > 0) {
+              setImages(fetchedImages);
+              if (setGlobalImages) setGlobalImages(fetchedImages);
+            }
+            
+            const fetchedCursor = imgData.nextCursor || null;
+            if (!hasCachedImages) {
+              setNextCursor(fetchedCursor);
+              if (setGlobalNextCursor) setGlobalNextCursor(fetchedCursor);
+            }
+
+            if (imgData.total !== undefined) {
+              setTotalImages(imgData.total);
+              setMediaCounts({
+                total: imgData.total,
+                images: imgData.imageCount !== undefined ? imgData.imageCount : imgData.total,
+                videos: imgData.videoCount || 0,
+              });
+            }
+          } else {
+            const errBody = await imgRes.text();
+            console.error("[SettingsView] Error HTTP al consultar /api/images:", imgRes.status, errBody);
+          }
+        } catch (e) {
+          console.error("[SettingsView] Error fetching images count:", e);
+        }
+
+        setTimeout(() => { isInitialLoad.current = false; }, 800);
       } catch (error) {
         console.error("Error cargando perfil:", error);
+        setTimeout(() => { isInitialLoad.current = false; }, 800);
       }
     };
     loadUserData();
   }, [user]);
+
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -410,6 +472,9 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+      if (setGlobalUserData) {
+        setGlobalUserData(prev => ({ ...(prev || {}), ...payload }));
+      }
     } catch (e) {
       console.error("Auto-save playlist error:", e);
     }
@@ -419,8 +484,15 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
     const file = e.target.files[0];
     if (!file) return;
     
-    if (planData.id === 'free') {
+    if (planData?.id === 'free' || planData?.id === 'gratis') {
       alert("¡El plan Gratis solo permite enlaces de Spotify! Mejora tu plan para subir tu propia música en formato MP3.");
+      return;
+    }
+
+    // Validación de cuota total de almacenamiento (Imágenes + Música)
+    if (totalBytes + file.size > (planData?.maxBytes || 0)) {
+      const maxMB = ((planData?.maxBytes || 0) / (1024 * 1024)).toFixed(0);
+      alert(`¡Límite de almacenamiento excedido! Tu plan actual (${planData?.name || 'actual'}) permite un máximo de ${maxMB} MB totales. Borra archivos antiguos para hacer espacio o mejora tu plan.`);
       return;
     }
 
@@ -457,13 +529,27 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
 
       if (!r2Res.ok) throw new Error(`Error de red al subir la canción`);
 
-      // Agregar a la playlist (el useEffect de formData se encargará de guardarlo automáticamente)
-      const newAudios = [...(formData.customAudios || []), { url: sig.downloadUrl, name: file.name, public_id: sig.fileKey }];
+      // 3. Agregar a la playlist con sus bytes
+      const newAudioItem = { 
+        url: sig.downloadUrl, 
+        name: file.name, 
+        public_id: sig.fileKey,
+        bytes: file.size 
+      };
+      const newAudios = [...(formData.customAudios || []), newAudioItem];
+      
       setFormData(prev => ({ 
         ...prev, 
         customAudioUrl: sig.downloadUrl, // Mantenemos compatibilidad hacia atrás
         customAudios: newAudios
       }));
+
+      // 4. Acumular inmediatamente a totalBytes
+      setTotalBytes(prev => prev + file.size);
+
+      // Guardar playlist inmediatamente en backend
+      await autoSavePlaylist(newAudios, sig.downloadUrl);
+
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus(''), 2500);
     } catch (error) {
@@ -474,6 +560,48 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
       setTimeout(() => setMessage(''), 3000);
     }
   };
+
+// Generador ligero de miniatura WebP en el navegador (resolución máx 800px, WebP ~40-60KB)
+const createWebPThumbnail = async (file) => {
+  return new Promise((resolve) => {
+    try {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const MAX_DIM = 800;
+        let width = img.width;
+        let height = img.height;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          } else {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          resolve(blob || file);
+        }, 'image/webp', 0.80);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(null);
+      };
+      img.src = url;
+    } catch (e) {
+      resolve(null);
+    }
+  });
+};
 
   const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
@@ -496,8 +624,13 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
     }
 
     // Límite de capacidad (MB/GB) del plan (Única métrica restrictiva ahora)
+    // Se toma en cuenta el tamaño del original + la miniatura WebP (~50KB por imagen)
     const currentBytes = totalBytes;
-    const newFilesBytes = files.reduce((sum, file) => sum + file.size, 0);
+    const newFilesBytes = files.reduce((sum, file) => {
+      const thumbEstimate = file.type.startsWith('image/') ? 50000 : 0;
+      return sum + file.size + thumbEstimate;
+    }, 0);
+
     if (currentBytes + newFilesBytes > planData.maxBytes) {
       const maxMB = (planData.maxBytes / (1024 * 1024)).toFixed(0);
       alert(`¡Límite de almacenamiento excedido! Tu plan actual (${planData.name}) permite un máximo de ${maxMB} MB totales. Borra archivos antiguos para hacer espacio o mejora tu plan.`);
@@ -516,31 +649,10 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
     }
 
     setUploading(true);
+    setMessage('Preparando archivos para subir con calidad 100% original...');
 
-    if (planData.id === 'free') {
-      setMessage('Comprimiendo imágenes para tu plan Gratis (Max 1MB)...');
-      const compressedFiles = [];
-      const options = {
-        maxSizeMB: 1, // Máximo 1MB por foto
-        maxWidthOrHeight: 1920,
-        useWebWorker: true
-      };
-
-      for (let file of filesToProcess) {
-        try {
-          const compressedFile = await imageCompression(file, options);
-          compressedFiles.push(compressedFile);
-        } catch (error) {
-          console.error("Error comprimiendo, usando original", error);
-          compressedFiles.push(file); // Fallback
-        }
-      }
-      uploadQueueRef.current = [...uploadQueueRef.current, ...compressedFiles];
-    } else {
-      setMessage('Preparando archivos para subir...');
-      // Subimos los archivos directamente con la calidad original (límite backend: 200MB)
-      uploadQueueRef.current = [...uploadQueueRef.current, ...filesToProcess];
-    }
+    // Se suben los archivos con su calidad, peso y resolución original 100%
+    uploadQueueRef.current = [...uploadQueueRef.current, ...filesToProcess];
     setUploadQueue([...uploadQueueRef.current]); // Para UI
 
     if (!uploadingRef.current) {
@@ -565,21 +677,37 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
       const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '');
       let batchQueue = [];
       const MAX_BATCH_SIZE = 50;
+      let processedCount = 0;
 
       while (uploadQueueRef.current.length > 0) {
         const filesToProcess = uploadQueueRef.current.slice(0, MAX_BATCH_SIZE);
         
         try {
-          setMessage(`Preparando subida de ${filesToProcess.length} archivo(s)...`);
+          setMessage(`Optimizando y preparando subida de ${filesToProcess.length} archivo(s)...`);
+
+          // Generar miniaturas WebP para todas las fotos del lote en paralelo
+          const preparedItems = await Promise.all(filesToProcess.map(async (file) => {
+            const isImage = file.type.startsWith('image/');
+            let thumbBlob = null;
+            if (isImage) {
+              thumbBlob = await createWebPThumbnail(file);
+            }
+            return {
+              file,
+              thumbBlob,
+              hasThumbnail: !!thumbBlob
+            };
+          }));
 
           const presignedRes = await fetch(`${apiUrl}/api/r2-presigned-url-batch`, { 
             method: 'POST', 
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-              files: filesToProcess.map(f => ({
-                name: f.name,
-                format: f.type.split('/')[1] || 'bin',
-                type: f.type
+              files: preparedItems.map(item => ({
+                name: item.file.name,
+                format: item.file.type.split('/')[1] || 'bin',
+                type: item.file.type,
+                hasThumbnail: item.hasThumbnail
               }))
             })
           });
@@ -591,33 +719,61 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
           
           const { signatures } = await presignedRes.json();
 
-          for (let i = 0; i < filesToProcess.length; i++) {
-            const fileToUpload = filesToProcess[i];
-            const sig = signatures[i];
+          // SUBIDA ULTRA RÁPIDA EN PARALELO A R2 (en bloques concurrentes de 6)
+          const CHUNK_CONCURRENCY = 6;
+          for (let cIdx = 0; cIdx < preparedItems.length; cIdx += CHUNK_CONCURRENCY) {
+            const chunk = preparedItems.slice(cIdx, cIdx + CHUNK_CONCURRENCY);
+            await Promise.all(chunk.map(async (item, relIdx) => {
+              const i = cIdx + relIdx;
+              const fileToUpload = item.file;
+              const sig = signatures[i];
 
-            try {
-              setMessage(`Guardando archivo ${i + 1} de ${filesToProcess.length}...`);
-              const r2Res = await fetch(sig.uploadUrl, { 
-                method: 'PUT', 
-                body: fileToUpload,
-                headers: { 'Content-Type': fileToUpload.type }
-              });
+              try {
+                // 1. Subir original y miniatura WebP simultáneamente
+                const uploadPromises = [
+                  fetch(sig.uploadUrl, { 
+                    method: 'PUT', 
+                    body: fileToUpload,
+                    headers: { 'Content-Type': fileToUpload.type }
+                  })
+                ];
 
-              if (!r2Res.ok) throw new Error(`Error de red al subir`);
-              
-              batchQueue.push({
-                public_id: `r2|${sig.fileKey}`,
-                secure_url: sig.downloadUrl,
-                bytes: fileToUpload.size,
-                format: fileToUpload.type.split('/')[1] || 'bin',
-                width: 1080,
-                height: 1920
-              });
+                let thumbPromise = null;
+                if (sig.uploadThumbUrl && item.thumbBlob) {
+                  thumbPromise = fetch(sig.uploadThumbUrl, {
+                    method: 'PUT',
+                    body: item.thumbBlob,
+                    headers: { 'Content-Type': 'image/webp' }
+                  });
+                  uploadPromises.push(thumbPromise);
+                }
 
-            } catch (error) {
-              erroresDetectados++;
-              console.error("Error en archivo:", fileToUpload.name, error);
-            }
+                const results = await Promise.all(uploadPromises);
+                const r2Res = results[0];
+                if (!r2Res.ok) throw new Error(`Error de red al subir archivo original`);
+
+                const thumbUploaded = thumbPromise ? (await thumbPromise).ok : false;
+                const combinedBytes = fileToUpload.size + (item.thumbBlob ? item.thumbBlob.size : 0);
+
+                batchQueue.push({
+                  public_id: `r2|${sig.fileKey}`,
+                  secure_url: sig.downloadUrl,
+                  thumb_url: (thumbUploaded && sig.downloadThumbUrl) ? sig.downloadThumbUrl : sig.downloadUrl,
+                  thumb_public_id: (thumbUploaded && sig.thumbKey) ? `r2|${sig.thumbKey}` : null,
+                  bytes: combinedBytes,
+                  format: fileToUpload.type.split('/')[1] || 'bin',
+                  width: 1080,
+                  height: 1920
+                });
+
+              } catch (error) {
+                erroresDetectados++;
+                console.error("Error en archivo:", fileToUpload.name, error);
+              } finally {
+                processedCount++;
+                setUploadProgress({ current: processedCount, total: archivosTotales });
+              }
+            }));
           }
         } catch (globalBatchError) {
           erroresDetectados += filesToProcess.length;
@@ -627,10 +783,6 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
         // Avanzar cola y actualizar progreso UI
         uploadQueueRef.current = uploadQueueRef.current.slice(filesToProcess.length);
         setUploadQueue([...uploadQueueRef.current]);
-
-        if (uploadQueueRef.current.length > 0) {
-          setUploadProgress(prev => ({ ...prev, current: prev.current + filesToProcess.length }));
-        }
 
         // Si el lote llegó al límite o la cola terminó, mandamos el confirm-batch
         if (batchQueue.length >= MAX_BATCH_SIZE || uploadQueueRef.current.length === 0) {
@@ -650,13 +802,25 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
                 
                 const confirmData = await confirmRes.json();
                 if (confirmData.code === 'SUCCESS' && confirmData.imagesAdded) {
+                  const addedItems = confirmData.imagesAdded;
+                  const addedVideos = addedItems.filter(i => !!i.isVideo).length;
+                  const addedImages = addedItems.length - addedVideos;
+
                   setImages(prev => {
-                     const newImages = [...prev, ...confirmData.imagesAdded];
+                     const newImages = [...prev, ...addedItems];
                      if (setGlobalImages) setGlobalImages(newImages); // Actualiza la caché global para la Galería
+                     if (setGlobalUserData) {
+                       setGlobalUserData(old => old ? { ...old, galleryImages: newImages } : old);
+                     }
                      return newImages;
                   });
-                  setTotalImages(prev => prev + confirmData.imagesAdded.length);
-                  const bytesAdded = confirmData.imagesAdded.reduce((sum, img) => sum + (img.bytes || 0), 0);
+                  setTotalImages(prev => prev + addedItems.length);
+                  setMediaCounts(prev => ({
+                    total: (prev.total || 0) + addedItems.length,
+                    images: (prev.images || 0) + addedImages,
+                    videos: (prev.videos || 0) + addedVideos
+                  }));
+                  const bytesAdded = addedItems.reduce((sum, img) => sum + (img.bytes || 0), 0);
                   setTotalBytes(prev => prev + bytesAdded);
                 }
                 
@@ -700,45 +864,48 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
     setDeleteModal(null);
     
     setLoading(true);
-    setMessage('Eliminando imagen...');
+    setDeletingStatus({ current: 1, total: 1, targetId: imageToDelete.public_id });
     try {
       const token = await user.getIdToken();
       const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '');
 
-      // 1. Borrar de Cloudinary usando el backend
+      // 1. Borrar de Cloudflare R2 / Storage usando el backend
       const delRes = await fetch(`${apiUrl}/api/images/delete`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ public_id: imageToDelete.public_id })
+        body: JSON.stringify({ 
+          public_id: imageToDelete.public_id,
+          thumb_public_id: imageToDelete.thumb_public_id || null
+        })
       });
 
       if (!delRes.ok) throw new Error('No se pudo borrar la imagen en el servidor seguro.');
 
-      // El backend ya eliminó las fotos desde /api/images/delete.
-      
+      // 2. Quitar inmediatamente de la vista y actualizar en caché
       const updatedImages = images.filter(img => img.public_id !== imageToDelete.public_id);
-
-      const delData = await delRes.json();
-      if (delData.code === 'SUCCESS' && delData.images) {
-         setImages(delData.images);
-      } else {
-         setImages(updatedImages);
-      }
-      
-      setTotalImages(prev => prev - 1);
-      setTotalBytes(prev => prev - (imageToDelete.bytes || 0));
-
       setImages(updatedImages);
+      if (setGlobalImages) setGlobalImages(updatedImages);
+      
+      const isVideo = !!imageToDelete.isVideo;
+      setTotalImages(prev => Math.max(0, prev - 1));
+      setMediaCounts(prev => ({
+        total: Math.max(0, (prev.total || 0) - 1),
+        images: Math.max(0, (prev.images || 0) - (isVideo ? 0 : 1)),
+        videos: Math.max(0, (prev.videos || 0) - (isVideo ? 1 : 0))
+      }));
+      setTotalBytes(prev => Math.max(0, prev - (imageToDelete.bytes || 0)));
       setMessage('Imagen eliminada.');
     } catch (error) {
       console.error(error);
       setMessage(`Error: ${error.message}`);
+    } finally {
+      setDeletingStatus(null);
+      setLoading(false);
+      setTimeout(() => setMessage(''), 3000);
     }
-    setLoading(false);
-    setTimeout(() => setMessage(''), 3000);
   };
 
   // --- Funciones de Selección Múltiple ---
@@ -776,23 +943,48 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
     }
   };
 
-  const handleBulkDownload = () => {
-    setMessage(`Preparando descarga de ${selectedImages.size} archivos...`);
-    let idx = 0;
-    selectedImages.forEach(img => {
-      setTimeout(() => {
-        const link = document.createElement('a');
-        link.href = img.original_url || img.src;
-        link.target = '_blank';
-        link.download = `Recuerdo_${idx}`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }, idx * 500); // 500ms de retraso entre cada descarga para no bloquear popups
-      idx++;
-    });
+  const triggerDownload = async (url, filename) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename || 'recuerdo';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000);
+    } catch (e) {
+      // Fallback si CORS restringe fetch
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename || 'recuerdo';
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  const handleBulkDownload = async () => {
+    const items = Array.from(selectedImages);
+    setMessage(`Descargando ${items.length} archivo(s)...`);
+    
+    for (let idx = 0; idx < items.length; idx++) {
+      const img = items[idx];
+      const url = img.original_url || img.src;
+      const ext = img.format || (img.isVideo ? 'mp4' : 'jpg');
+      const filename = `Recuerdo_${idx + 1}.${ext}`;
+      await triggerDownload(url, filename);
+      if (idx < items.length - 1) {
+        await new Promise(r => setTimeout(r, 400));
+      }
+    }
+    
     setIsSelectionMode(false);
     setSelectedImages(new Set());
+    setMessage('¡Descarga completada!');
     setTimeout(() => setMessage(''), 3000);
   };
 
@@ -804,46 +996,65 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
     setDeleteModal(null);
     
     setLoading(true);
-    setMessage(`Eliminando ${selectedImages.size} archivos...`);
+    const imagesToDelete = Array.from(selectedImages);
+    const totalCount = imagesToDelete.length;
+    setDeletingStatus({ current: totalCount, total: totalCount });
+
     try {
       const token = await user.getIdToken();
       const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '');
 
-      const imagesToDelete = Array.from(selectedImages);
-      const publicIdsToDelete = imagesToDelete.map(img => img.public_id);
-      
-      let fallos = 0;
-      for (const public_id of publicIdsToDelete) {
-        try {
-          await fetch(`${apiUrl}/api/images/delete`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ public_id })
-          });
-        } catch(e) {
-          fallos++;
-        }
+      // 1 Petición atómica en bloque para borrar todos los archivos (R2 + Firestore)
+      const res = await fetch(`${apiUrl}/api/images/delete-batch`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          items: imagesToDelete.map(img => ({
+            public_id: img.public_id,
+            thumb_public_id: img.thumb_public_id || null
+          }))
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || 'Error eliminando lote de archivos');
       }
 
-      const updatedImages = images.filter(img => !publicIdsToDelete.includes(img.public_id));
-
-      // 2. Ya no enviamos PATCH a users/me para proteger los datos en caso de paginación.
-      // El backend ya eliminó las fotos desde /api/images/delete.
+      // Quitar todos los elementos seleccionados de la UI y de la caché global
+      const deletedIds = new Set(imagesToDelete.map(i => i.public_id));
+      const deletedCleanIds = new Set(imagesToDelete.map(i => (i.public_id || '').replace('r2|', '')));
       
-      const deletedBytes = imagesToDelete.reduce((acc, img) => acc + (img.bytes || 0), 0);
-      setTotalImages(prev => prev - imagesToDelete.length);
-      setTotalBytes(prev => prev - deletedBytes);
+      setImages(prev => {
+        const next = prev.filter(item => !deletedIds.has(item.public_id) && !deletedCleanIds.has((item.public_id || '').replace('r2|', '')));
+        if (setGlobalImages) setGlobalImages(next);
+        return next;
+      });
 
-      setImages(updatedImages);
+      // Actualizar contadores en memoria de golpe
+      const videosCount = imagesToDelete.filter(i => !!i.isVideo).length;
+      const imagesCount = totalCount - videosCount;
+      const bytesFreed = imagesToDelete.reduce((sum, img) => sum + (img.bytes || 0), 0);
+
+      setTotalImages(prev => Math.max(0, prev - totalCount));
+      setMediaCounts(prev => ({
+        total: Math.max(0, (prev.total || 0) - totalCount),
+        images: Math.max(0, (prev.images || 0) - imagesCount),
+        videos: Math.max(0, (prev.videos || 0) - videosCount)
+      }));
+      setTotalBytes(prev => Math.max(0, prev - bytesFreed));
+
       setIsSelectionMode(false);
       setSelectedImages(new Set());
-      setMessage(`Archivos eliminados con éxito. ${fallos > 0 ? `(${fallos} fallaron en la nube)` : ''}`);
+      setMessage(`¡${totalCount} archivo(s) eliminados con éxito en 1 segundo!`);
     } catch (error) {
       console.error(error);
       setMessage(`Error: ${error.message}`);
+    } finally {
+      setDeletingStatus(null);
+      setLoading(false);
+      setTimeout(() => setMessage(''), 4000);
     }
-    setLoading(false);
-    setTimeout(() => setMessage(''), 4000);
   };
 
   if (isExpired) {
@@ -903,7 +1114,7 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
         className={`fixed top-4 md:top-6 left-1/2 -translate-x-1/2 z-[999] px-6 py-3 rounded-full flex items-center gap-3 font-bold text-xs md:text-sm shadow-2xl transition-all duration-300 pointer-events-none ${
           saveStatus === 'saving' 
             ? 'opacity-100 translate-y-0 bg-blue-600/95 text-white backdrop-blur-md border border-blue-400/50' 
-            : saveStatus === 'saved' || message 
+            : saveStatus === 'saved' || (message && !uploading) 
               ? 'opacity-100 translate-y-0 bg-green-600/95 text-white backdrop-blur-md border border-green-400/50' 
               : saveStatus === 'error'
                 ? 'opacity-100 translate-y-0 bg-red-600/95 text-white backdrop-blur-md border border-red-400/50'
@@ -929,7 +1140,7 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
           </>
         )}
       </div>
-      <audio ref={audioPreviewRef} className="hidden" crossOrigin="anonymous" />
+      <audio ref={audioPreviewRef} className="hidden" preload="auto" />
       
 
 
@@ -948,7 +1159,7 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
             </button>
           </div>
 
-          {message && (
+          {message && !uploading && (
             <div className="mb-8 p-4 bg-pink-900/30 border border-pink-500/50 rounded-xl text-pink-200 text-center animate-pulse">
               {message}
             </div>
@@ -960,6 +1171,11 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
               formData={formData} 
               setFormData={setFormData} 
               handleChange={handleChange} 
+              currentUser={user}
+              userPlan={planData?.id || globalUserData?.plan}
+              onOpenPricing={onOpenPricing}
+              globalUserData={globalUserData}
+              setGlobalUserData={setGlobalUserData}
             />
           )}
 
@@ -978,6 +1194,8 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
               images={images}
               planData={planData}
               totalBytes={totalBytes}
+              totalImages={totalImages}
+              mediaCounts={mediaCounts}
               handleImageUpload={handleImageUpload}
               uploadQueue={uploadQueue}
               uploadProgress={uploadProgress}
@@ -989,8 +1207,11 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
               setIsSelectionMode={setIsSelectionMode}
               toggleSelection={toggleSelection}
               requestDeleteImage={requestDeleteImage}
+              triggerDownload={triggerDownload}
+              deletingStatus={deletingStatus}
               nextCursor={nextCursor}
               observerRef={observerRef}
+              globalUserData={globalUserData}
             />
           )}
 
@@ -1007,6 +1228,8 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
               togglePlayPreview={togglePlayPreview}
               setDeleteModal={setDeleteModal}
               user={user}
+              totalBytes={totalBytes}
+              setTotalBytes={setTotalBytes}
             />
           )}
 
@@ -1016,14 +1239,18 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
         {isSelectionMode && selectedImages.size > 0 && (
           <div className="fixed bottom-28 md:bottom-8 left-1/2 -translate-x-1/2 bg-gray-900 border border-gray-700 shadow-[0_10px_40px_rgba(0,0,0,0.8)] rounded-full px-6 py-4 flex items-center gap-6 z-[100] animate-slideUp">
             <span className="text-white font-bold whitespace-nowrap">{selectedImages.size} Seleccionadas</span>
-            <button onClick={handleBulkDownload} className="flex items-center gap-2 text-purple-400 hover:text-purple-300 font-bold whitespace-nowrap">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-              <span className="hidden md:inline">Descargar</span>
-            </button>
-            <button onClick={requestBulkDelete} className="flex items-center gap-2 text-red-400 hover:text-red-300 font-bold whitespace-nowrap">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-              <span className="hidden md:inline">Eliminar</span>
-            </button>
+            {(!globalUserData?.isCollaborator || globalUserData?.collaboratorPermissions?.download !== false) && (
+              <button onClick={handleBulkDownload} className="flex items-center gap-2 text-purple-400 hover:text-purple-300 font-bold whitespace-nowrap">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                <span className="hidden md:inline">Descargar</span>
+              </button>
+            )}
+            {(!globalUserData?.isCollaborator || globalUserData?.collaboratorPermissions?.delete !== false) && (
+              <button onClick={requestBulkDelete} className="flex items-center gap-2 text-red-400 hover:text-red-300 font-bold whitespace-nowrap">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                <span className="hidden md:inline">Eliminar</span>
+              </button>
+            )}
             <button onClick={() => { setIsSelectionMode(false); setSelectedImages(new Set()); }} className="ml-2 bg-gray-800 p-2 rounded-full text-gray-400 hover:text-white transition-colors">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>

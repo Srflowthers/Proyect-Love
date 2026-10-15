@@ -64,6 +64,12 @@ export default function LetterPaperSheet({
                 }
               }
             }}
+            onPaste={(e) => {
+              e.preventDefault();
+              const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+              document.execCommand('insertText', false, text);
+              onTitleChange(index, e.currentTarget.innerText);
+            }}
             onInput={(e) => {
               onTitleChange(index, e.currentTarget.innerText);
             }}
@@ -91,6 +97,13 @@ export default function LetterPaperSheet({
                 el.innerHTML = pageText || '';
               }
             }
+          }}
+          onPaste={(e) => {
+            e.preventDefault();
+            // Obtener texto plano limpio para evitar que arrastre fondos negros o estilos externos
+            const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+            document.execCommand('insertText', false, text);
+            onPageChange(index, e.currentTarget.innerHTML);
           }}
           onBlur={(e) => {
             onPageChange(index, e.currentTarget.innerHTML);

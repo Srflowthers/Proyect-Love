@@ -127,10 +127,10 @@ export default function ImagesTab({
           <input
             type="file" 
             multiple 
-            accept={planData?.id === 'free' || planData?.id === 'gratis' ? 'image/*' : 'image/*,video/mp4,video/quicktime,video/webm'} 
+            accept="image/*,video/mp4,video/quicktime,video/webm" 
             onChange={handleImageUpload}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-            title={planData?.id === 'free' || planData?.id === 'gratis' ? "Añadir fotos a la cola" : "Añadir fotos y videos a la cola"}
+            title="Añadir fotos y videos a la cola"
           />
           <div className={`w-full py-10 border-2 border-dashed ${uploadQueue.length > 0 ? 'border-pink-400 bg-pink-900/20' : deletingStatus ? 'border-red-500/70 bg-red-950/20' : 'border-gray-700 hover:border-pink-500/50 bg-black hover:bg-[#151515]'} rounded-2xl flex flex-col items-center justify-center transition-all`}>
             {uploadQueue.length > 0 ? (

@@ -24,6 +24,7 @@ const PLANS = [
     trialDays: 7,
     features: [
       ["15 GB de espacio", true],
+      ["Vincula a tu pareja + 1 ser querido", true],
       ["Fotos y videos en alta calidad", false],
       ["Hasta 250 MB por archivo", false],
       ["Conservas todo lo que subiste en Gratis", false]
@@ -39,6 +40,7 @@ const PLANS = [
     badge: "Más popular",
     features: [
       ["50 GB de espacio", true],
+      ["Vincula a tu pareja + hasta 3 seres queridos", true],
       ["Todo lo de Pololos", false],
       ["Hasta 1 GB por archivo", false],
       ["Ideal para viajes y aniversarios", false]
@@ -52,6 +54,7 @@ const PLANS = [
     anual: 24990,
     features: [
       ["100 GB de espacio", true],
+      ["Vincula a tu pareja + hasta 6 seres queridos", true],
       ["Videos 4K", false],
       ["Hasta 5 GB por archivo", false],
       ["Descarga completa en ZIP", false]

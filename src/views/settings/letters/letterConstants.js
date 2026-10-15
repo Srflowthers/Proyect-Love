@@ -40,12 +40,12 @@ export const PAPER_THEME_STYLES = {
     }
   },
   burnt: {
-    containerClass: 'text-[#241409]',
+    containerClass: 'text-[#2a1a0f]',
     isBurnt: true,
     style: {
       background: 'radial-gradient(circle at center, #f1dcb8 0%, #e4c494 70%, #c79c65 100%)',
-      boxShadow: 'inset 0 0 45px rgba(80, 30, 5, 0.5), inset 0 0 15px rgba(40, 15, 0, 0.8), 0 15px 40px rgba(0,0,0,0.85)',
-      filter: 'drop-shadow(0 0 12px rgba(26, 10, 0, 0.9))'
+      boxShadow: 'inset 0 0 25px 10px rgba(80, 30, 5, 0.45), inset 0 0 12px 4px rgba(40, 15, 0, 0.85), 0 12px 30px rgba(0,0,0,0.8)',
+      filter: 'drop-shadow(0 0 10px rgba(26, 10, 0, 0.9))'
     }
   },
   modern: {
@@ -58,11 +58,11 @@ export const PAPER_THEME_STYLES = {
 };
 
 export const getFontFamilyStyle = (fontKey) => {
-  if (fontKey === 'caveat') return '"Caveat", cursive, sans-serif';
-  if (fontKey === 'parisienne') return '"Parisienne", cursive, sans-serif';
-  if (fontKey === 'greatvibes') return '"Great Vibes", cursive, sans-serif';
-  if (fontKey === 'alexbrush') return '"Alex Brush", cursive, sans-serif';
-  if (fontKey === 'garamond') return '"Cormorant Garamond", Georgia, serif';
-  if (fontKey === 'playfair') return '"Playfair Display", Georgia, serif';
-  return '"Georgia", "Cambria", serif';
+  if (fontKey === 'caveat') return '"Caveat", cursive';
+  if (fontKey === 'parisienne') return '"Parisienne", cursive';
+  if (fontKey === 'greatvibes') return '"Great Vibes", cursive';
+  if (fontKey === 'alexbrush') return '"Alex Brush", cursive';
+  if (fontKey === 'playfair') return '"Playfair Display", serif';
+  if (fontKey === 'garamond') return '"Cormorant Garamond", serif';
+  return '"Georgia", serif';
 };

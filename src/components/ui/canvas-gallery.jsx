@@ -20,16 +20,17 @@ const FOG_END = 7000;     // Aquí la opacidad llega a 0 (igual que el original)
 const FOG_CULL = 6960;    // Ocultar en cuanto opacity <= 0.01 (mismo umbral del original, función pura)
 
 const PERSPECTIVE = 1200; // perspective del contenedor (px)
-const OFF_SHOW = 60;      // margen para MOSTRAR un item fuera de pantalla
-const OFF_HIDE = 240;     // margen para OCULTAR un item fuera de pantalla (histeresis)
+// Margen amplio para que las imágenes nunca parpadeen al estar quieto o en bordes
+const OFF_SHOW = 400;      // margen amplio para MOSTRAR un item fuera de pantalla
+const OFF_HIDE = 800;      // margen amplio para OCULTAR (histeresis muy estable)
 
 // --- Virtualización (montar/desmontar fotos según lo que se ve) ---
 // El anillo de montaje es MÁS amplio que el de visibilidad para que la imagen
 // empiece a cargarse antes de entrar en pantalla (precarga) y no parpadee.
-const MOUNT_IN_DIST = FOG_CULL + 600;  // montar si además está a <= MOUNT_IN_OFF px de la pantalla
-const MOUNT_OUT_DIST = FOG_CULL + 1100; // desmontar si supera esta distancia (invisible + margen)
-const MOUNT_IN_OFF = 700;
-const MOUNT_OUT_OFF = 1200;
+const MOUNT_IN_DIST = FOG_CULL + 1000;  // montar con anticipación para cero parpadeos
+const MOUNT_OUT_DIST = FOG_CULL + 2500; // desmontar solo si supera esta distancia amplia
+const MOUNT_IN_OFF = 1200;
+const MOUNT_OUT_OFF = 2200;
 
 // --- Escalado de densidad ---
 // El universo crece con el nº de fotos para que la DENSIDAD visual sea siempre
@@ -61,7 +62,7 @@ const cellIndexOf = (p, block, nc) => {
   return g;
 };
 
-export default function CanvasGallery({ items, toggleView, hasFlightMode = true }) {
+export default function CanvasGallery({ items, toggleView, hasFlightMode = true, onLoadMore }) {
   const containerRef = useRef(null);
   const worldRef = useRef(null);          // Contenedor 3D (recibe yaw/pitch de la cámara)
   const shipRef = useRef(null);           // Nave de papel (modo vuelo)
@@ -69,6 +70,8 @@ export default function CanvasGallery({ items, toggleView, hasFlightMode = true 
   const itemElsRef = useRef([]);          // Nodos DOM de cada foto montada
   const videoElsRef = useRef([]);         // Nodos DOM de cada video montado (o null)
   const itemsRef = useRef([]);            // scatteredItems (siempre el último)
+  const travelDistanceRef = useRef(0);    // Distancia recorrida por el usuario
+  const lastLoadMoreTimeRef = useRef(0);  // Control de ritmo para cargar más fotos
 
   // Cámara: estado fuera de React. Mover la cámara NUNCA re-renderiza React,
   // solo escribe estilos en el DOM una vez por frame (requestAnimationFrame).
@@ -103,6 +106,20 @@ export default function CanvasGallery({ items, toggleView, hasFlightMode = true 
   // Fotos montadas (virtualización): solo estas existen en el DOM
   const [mountedIdx, setMountedIdx] = useState([]);
 
+  // Notificar carga de más fotos solo cuando el usuario realmente se ha movido por el universo
+  const registerMovement = (amount) => {
+    travelDistanceRef.current += Math.abs(amount);
+    // Cada vez que el usuario recorre ~5000 unidades en el universo y pasaron al menos 4 segundos
+    const now = Date.now();
+    if (travelDistanceRef.current > 5000 && (now - lastLoadMoreTimeRef.current) > 4000) {
+      travelDistanceRef.current = 0;
+      lastLoadMoreTimeRef.current = now;
+      if (typeof onLoadMore === 'function') {
+        onLoadMore();
+      }
+    }
+  };
+
   // Densidad escalada: mismo aspecto visual sea cual sea el nº de fotos
   const blocks = useMemo(() => {
     const scale = items.length > DENSITY_N ? Math.cbrt(items.length / DENSITY_N) : 1;
@@ -118,55 +135,99 @@ export default function CanvasGallery({ items, toggleView, hasFlightMode = true 
   // Semilla aleatoria única por sesión para que el universo NUNCA sea igual al anterior
   const [universeSeed] = useState(() => Math.floor(Math.random() * 10000));
 
+  // Función hash determinista para cada foto individual
+  // De esta manera, cada foto tiene su coordenada fija inmutable y NUNCA cambia de lugar cuando llegan fotos nuevas
+  const hashString = (str) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash);
+  };
+
+  // Coordenadas inmutables guardadas en memoria para que ninguna foto salte o cambie al hacer zoom
+  const itemPositionsCacheRef = useRef(new Map());
+
+  // Detección exhaustiva de videos (por flag isVideo, formato o extensión de URL/public_id)
+  const isVideoItem = (item) => {
+    if (!item) return false;
+    if (item.isVideo) return true;
+    const format = (item.format || '').toLowerCase();
+    if (['mp4', 'mov', 'webm', 'mkv', 'avi'].includes(format)) return true;
+    const testUrl = (url) => typeof url === 'string' && /\.(mp4|mov|webm|mkv|avi)(\?|$)/i.test(url);
+    return testUrl(item.src) || testUrl(item.original_url) || testUrl(item.public_id);
+  };
+
   const scatteredItems = useMemo(() => {
-    // Usamos la semilla de la sesión en lugar de un 9999 fijo
-    const random = mulberry32(universeSeed);
     const s = blocks.scale;
-
-    // Barajar los items de forma determinista usando la misma semilla
-    // Así, el grupo de fotos que aparece justo al frente (primeros 12) será diferente cada vez.
-    const shuffledItems = [...items].sort(() => 0.5 - random());
-
-    // 1. Generamos un "Universo Maestro" con distribución 3D uniforme
     const baseItems = [];
+    const cache = itemPositionsCacheRef.current;
 
-    // Por petición del usuario, NUNCA se deben duplicar imágenes.
-    // Iteramos estrictamente sobre las imágenes originales una sola vez.
-    shuffledItems.forEach((item, index) => {
-      let x, y, z;
+    // Priorizar videos al inicio para que SIEMPRE aparezcan en el campo de visión frontal inmediato
+    const sortedList = [...(items || [])].sort((a, b) => {
+      const aVid = isVideoItem(a);
+      const bVid = isVideoItem(b);
+      if (aVid && !bVid) return -1;
+      if (!aVid && bVid) return 1;
+      return 0;
+    });
 
-      // 🚀 HERO CLUSTER: Asegurar que las primeras 9-12 fotos aparezcan justo frente a la cámara al entrar
-      // La cámara inicia en z: -2000, mirando hacia el centro (z: 0)
-      if (index < 12) {
-        // El clúster de entrada NO se escala: siempre se ve igual al abrir el universo
-        x = (random() * 4000) - 2000; // Esparcidas a lo ancho (-2000 a 2000)
-        y = (random() * 2500) - 1250; // Esparcidas a lo alto (-1250 a 1250)
-        z = -1000 + (random() * 2500); // Distancia perfecta para que se vean de diferentes tamaños (Z: -1000 a 1500)
-      } else {
-        // Resto del universo distribuido normalmente (volumen escalado por densidad)
-        x = ((random() * BASE_X) - (BASE_X / 2)) * s;
-        y = ((random() * BASE_Y) - (BASE_Y / 2)) * s;
-        z = ((random() * BASE_Z) - (BASE_Z / 2)) * s;
+    sortedList.forEach((item, index) => {
+      const isVid = isVideoItem(item);
+      const itemWithVid = { ...item, isVideo: isVid };
+      const idKey = item.public_id || item.src || item.id || `item_${index}`;
+      
+      let pos = cache.get(idKey);
+      // Si es video y antes fue posicionado lejos, forzar recolocación al frente
+      if (isVid && pos && (pos.z < -900 || pos.z > 2200 || Math.abs(pos.x) > 1800 || Math.abs(pos.y) > 1200)) {
+        pos = null;
       }
 
-      const rotation = (random() * 30) - 15;
-      const width = 250 + (random() * 250);
+      if (!pos) {
+        // Generador determinista específico para esta foto usando la semilla de sesión + su id
+        const itemSeed = universeSeed + hashString(idKey);
+        const random = mulberry32(itemSeed);
+
+        let x, y, z;
+        // Si es video, posición directa en el rango visible inicial (cámara arranca en z=0)
+        if (isVid) {
+          x = (random() * 1600) - 800; // bien centrado en el campo visual
+          y = (random() * 1200) - 600;
+          z = -200 + (random() * 1200); // directamente entre -200 y 1000 visible de inmediato
+        } else if (index < 12) {
+          x = (random() * 3200) - 1600;
+          y = (random() * 2000) - 1000;
+          z = -800 + (random() * 2000);
+        } else {
+          x = ((random() * BASE_X) - (BASE_X / 2)) * s;
+          y = ((random() * BASE_Y) - (BASE_Y / 2)) * s;
+          z = ((random() * BASE_Z) - (BASE_Z / 2)) * s;
+        }
+
+        const rotation = isVid ? (random() * 10) - 5 : (random() * 30) - 15;
+        const width = isVid ? 320 + (random() * 100) : 250 + (random() * 250);
+
+        pos = {
+          x, y, z, rotation, width,
+          hw: width / 2,
+          hh: (width * 4 / 3) / 2,
+          cosR: Math.cos(rotation * Math.PI / 180),
+          sinR: Math.sin(rotation * Math.PI / 180),
+          rotStr: `rotateZ(${rotation}deg)`,
+        };
+        cache.set(idKey, pos);
+      }
 
       baseItems.push({
-        ...item,
-        uniqueId: `${item.id || index}`, // Key única original
-        x, y, z, rotation, width,
-        // Datos precalculados para la proyección de las 4 esquinas por frame
-        hw: width / 2,
-        hh: (width * 4 / 3) / 2, // aspectRatio 3/4
-        cosR: Math.cos(rotation * Math.PI / 180),
-        sinR: Math.sin(rotation * Math.PI / 180),
-        rotStr: `rotateZ(${rotation}deg)`, // evita crear strings por frame
+        ...itemWithVid,
+        uniqueId: idKey,
+        ...pos,
       });
     });
 
     return baseItems;
-  }, [items, blocks]);
+  }, [items, blocks, universeSeed]);
 
   /* ===================================================================
    * Construcción del índice espacial (una vez por cambio de items)
@@ -404,39 +465,38 @@ export default function CanvasGallery({ items, toggleView, hasFlightMode = true 
         st.pe[i] = pe;
       }
 
-      // --- Video con audio espacial (misma lógica de volumen que el original) ---
+      // --- Optimización Extrema de Video: Solo reproducir si está MUY CERCA y al frente ---
       const video = vids[i];
       if (video) {
-        if (shown) {
-          if (video.paused) video.play().catch(() => {});
+        // Un video de 1GB o 5GB solo se reproduce cuando el usuario está lo suficientemente cerca
+        // y frente a la cámara (az > -300 para no reproducir si ya pasó de largo detrás de la cámara)
+        const isVeryClose = distance < 1200 && az > -300 && shown && opacity > 0.4;
 
-          // Distancia real en 3D con el wrap correcto
-          let vol = 0;
-          if (distance < 800) {
-            vol = 1;
-          } else if (distance > 3500) {
-            vol = 0;
-          } else {
-            vol = 1 - ((distance - 800) / 2700);
+        if (isVeryClose) {
+          if (video.paused) {
+            video.play().catch(() => {});
           }
 
-          // Aplicar volumen solo si cambia significativamente (evita saturar el motor de audio)
+          // Audio espacial suave solo de cerca
+          let vol = 1 - (distance / 1200);
+          vol = Math.max(0, Math.min(1, vol));
+
           if (Math.abs(video.volume - vol) > 0.05) {
             video.volume = vol;
           }
 
-          // Desmutear si tiene volumen (los navegadores requieren interacción previa)
-          if (vol > 0.01 && video.muted) {
+          if (vol > 0.05 && video.muted) {
             video.muted = false;
-            video.play().catch(() => {
-              // Ignorar el error de autoplay si el usuario aún no hizo clic en la página
-            });
-          } else if (vol <= 0.01 && !video.muted) {
+            video.play().catch(() => {});
+          } else if (vol <= 0.05 && !video.muted) {
             video.muted = true;
           }
-        } else if (!video.paused) {
-          // Fuera de la niebla el video es invisible: pausarlo ahorra CPU/GPU
-          video.pause();
+        } else {
+          // Si pasa de largo, se aleja o no está enfrente: PAUSAR AL INSTANTE
+          // Esto libera la memoria GPU/CPU y detiene el tráfico de red de inmediato
+          if (!video.paused) {
+            video.pause();
+          }
         }
       }
     }
@@ -592,11 +652,9 @@ export default function CanvasGallery({ items, toggleView, hasFlightMode = true 
       const cam = cameraRef.current;
       const step = e.deltaY * WHEEL_FACTOR;
       
+      // Movimiento puro y suave en el eje Z sin drift artificial que altere la trayectoria
       cam.z = wrapAxis(cam.z + step, blocksRef.current.Z);
-      // Drift diagonal micro-ajustado: casi imperceptible (5%) para no marear,
-      // pero suficiente para cambiar de carril (800 unidades) al completar una vuelta.
-      cam.x = wrapAxis(cam.x + step * 0.05, blocksRef.current.X);
-      cam.y = wrapAxis(cam.y + step * 0.02, blocksRef.current.Y);
+      registerMovement(step);
       
       requestRender();
     };
@@ -709,9 +767,11 @@ export default function CanvasGallery({ items, toggleView, hasFlightMode = true 
   }, [scatteredItems, blocks]);
 
   useLayoutEffect(() => {
-    if (mountedIdx.length >= 0) applyFrame();
+    // Cuando React monta nuevos nodos en el DOM, sincronizamos sus estilos imperativamente
+    // sin re-disparar el cálculo de virtualización si la cámara está quieta
+    applyFrame();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mountedIdx]);
+  }, [mountedIdx.length]);
 
   useEffect(() => {
     if (!import.meta.env.DEV) return;
@@ -753,9 +813,6 @@ export default function CanvasGallery({ items, toggleView, hasFlightMode = true 
       cam.z = wrapAxis(cam.z + dirZ * step, bl.Z);
     } else {
       cam.z = wrapAxis(cam.z + step, bl.Z);
-      // Drift diagonal también para pinch, casi imperceptible
-      cam.x = wrapAxis(cam.x + step * 0.05, bl.X);
-      cam.y = wrapAxis(cam.y + step * 0.02, bl.Y);
     }
     requestRender();
   };
@@ -835,6 +892,7 @@ export default function CanvasGallery({ items, toggleView, hasFlightMode = true 
     const bl = blocksRef.current;
     cam.x = wrapAxis(cam.x + dx * panSensX, bl.X);
     cam.y = wrapAxis(cam.y + dy * panSensY, bl.Y);
+    registerMovement(Math.hypot(dx, dy) * 10);
     requestRender();
   };
 
@@ -968,22 +1026,31 @@ export default function CanvasGallery({ items, toggleView, hasFlightMode = true 
               style={{
                 width: `${item.width}px`,
                 aspectRatio: '3/4',
-                // transform/opacity/visibility se escriben imperativamente en applyFrame()
-                // ANTES del primer paint (useLayoutEffect), por eso no van aquí:
-                // así React no vuelve a tocar estos nodos al re-renderizar el componente
-                // y nunca se crean capas GPU innecesarias (antes: will-change en TODOS).
+                visibility: 'hidden',
+                opacity: 0,
+                transform: 'translate3d(-9999px, -9999px, 0px)',
+                pointerEvents: 'none',
               }}
             >
               {item.isVideo ? (
-                <video
-                  ref={(el) => { videoElsRef.current[i] = el; }}
-                  src={item.src}
-                  className="w-full h-full object-cover pointer-events-none"
-                  muted // Inicia muteado para permitir autoplay
-                  loop
-                  autoPlay
-                  playsInline
-                />
+                <>
+                  <video
+                    ref={(el) => { videoElsRef.current[i] = el; }}
+                    src={item.src}
+                    className="w-full h-full object-cover pointer-events-none"
+                    preload="auto"
+                    muted
+                    loop
+                    playsInline
+                  />
+                  {/* Badge sutil de Video para identificarlo claramente en el Universo 3D */}
+                  <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md border border-purple-500/40 text-purple-300 text-[10px] font-bold flex items-center gap-1 z-10 pointer-events-none">
+                    <svg className="w-3 h-3 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M6.3 2.841A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                    </svg>
+                    <span>Video</span>
+                  </div>
+                </>
               ) : (
                 <img
                   src={item.src}

@@ -37,7 +37,8 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
     universeParticleSize: 1,
     universeParticleSpeed: 1,
     customAudioUrl: '',
-    customAudios: []
+    customAudios: [],
+    arcadeName: ''
   });
 
   const [images, setImages] = useState([]);
@@ -335,7 +336,8 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
           universePalette: data.universePalette || 'Cósmico',
           universeVariant: data.universeVariant || 'tunnel',
           customAudioUrl: data.customAudioUrl || '',
-          customAudios: data.customAudios || (data.customAudioUrl ? [{ url: data.customAudioUrl, name: 'Canción Principal' }] : [])
+          customAudios: data.customAudios || (data.customAudioUrl ? [{ url: data.customAudioUrl, name: 'Canción Principal' }] : []),
+          arcadeName: data.arcadeName || ''
         });
         
         setTotalImages(data.galleryImages ? data.galleryImages.length : data.imageCount || 0);
@@ -387,7 +389,8 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
             universePalette: data.universePalette || 'Cósmico',
             universeVariant: data.universeVariant || 'tunnel',
             customAudioUrl: data.customAudioUrl || '',
-            customAudios: data.customAudios || (data.customAudioUrl ? [{ url: data.customAudioUrl, name: 'Canción Principal' }] : [])
+            customAudios: data.customAudios || (data.customAudioUrl ? [{ url: data.customAudioUrl, name: 'Canción Principal' }] : []),
+            arcadeName: data.arcadeName || ''
           });
 
           const initialTotal = data.galleryImages ? data.galleryImages.length : data.imageCount || 0;

@@ -306,7 +306,7 @@ export default function GamesView({
       {/* 3. Header de Navegación (Solo en Modo Catálogo) */}
       {!activeGame && (
         <header className="relative z-10 w-full max-w-6xl mx-auto px-4 md:px-6 pt-3 pb-2 flex items-center justify-between gap-3 border-b border-white/10 backdrop-blur-md">
-          <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+          <div className="flex items-center gap-3">
             {onBack && (
               <button
                 onClick={onBack}
@@ -320,8 +320,38 @@ export default function GamesView({
                 Arcade del Amor
               </h1>
               <p className="text-[10px] text-gray-400">
-                {coupleNames} • 6 Minijuegos de Pareja
+                {userData?.arcadeName || coupleNames} • 6 Minijuegos de Pareja
               </p>
+            </div>
+          </div>
+
+          {/* Marcador de Monedas y LP de Pareja */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Puntos de Liga (LP) */}
+            <div 
+              title="Puntos de Liga (LP) para el Ranking Competitivo"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-950/60 border border-purple-500/30 text-purple-200 text-xs font-bold shadow-[0_0_15px_rgba(168,85,247,0.2)] backdrop-blur-md"
+            >
+              <svg className="w-3.5 h-3.5 text-purple-400" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+              <span className="font-mono">{userData?.lp ?? 0}</span>
+              <span className="text-[10px] text-purple-400 uppercase tracking-wider font-semibold hidden sm:inline">LP</span>
+            </div>
+
+            {/* Monedas del Arcade */}
+            <div 
+              title="Monedas acumuladas en partidas del Arcade"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-950/70 via-yellow-950/50 to-black/80 border border-amber-500/40 text-amber-200 text-xs font-bold shadow-[0_0_18px_rgba(245,158,11,0.25)] backdrop-blur-md animate-in fade-in"
+            >
+              {/* Icono de Moneda Dorada con brillo */}
+              <div className="w-4 h-4 rounded-full bg-gradient-to-br from-yellow-300 via-amber-400 to-yellow-600 flex items-center justify-center shadow-[0_0_8px_rgba(250,204,21,0.8)] border border-yellow-200/60">
+                <span className="text-[9px] font-black text-amber-950 leading-none">🪙</span>
+              </div>
+              <span className="font-mono tracking-tight text-amber-300 text-sm">
+                {(userData?.coins ?? 0).toLocaleString()}
+              </span>
+              <span className="text-[10px] text-amber-400/80 font-medium hidden sm:inline">monedas</span>
             </div>
           </div>
         </header>

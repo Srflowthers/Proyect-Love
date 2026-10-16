@@ -287,6 +287,36 @@ export default function ProfileTab({
               <input type="date" name="anniversaryDate" value={formData.anniversaryDate} onChange={handleChange} className="w-full bg-black border border-gray-700 rounded-xl p-4 text-white focus:border-pink-500 outline-none transition-colors" />
             </div>
 
+            <div className="p-4 bg-gradient-to-r from-purple-950/30 via-pink-950/20 to-black border border-pink-500/20 rounded-2xl space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs text-pink-300 uppercase tracking-wider font-bold flex items-center gap-1.5">
+                  <svg className="w-4 h-4 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Nombre de tu Dúo en el Arcade / Ranking
+                </label>
+                <span className="text-[10px] text-gray-400 font-mono">
+                  {(formData.arcadeName || '').length}/16
+                </span>
+              </div>
+              <input 
+                type="text" 
+                name="arcadeName" 
+                maxLength={16}
+                value={formData.arcadeName || ''} 
+                onChange={handleChange} 
+                placeholder={
+                  (formData.user1Name && formData.user2Name) 
+                    ? `${formData.user1Name} & ${formData.user2Name}` 
+                    : (formData.user1Name || formData.user2Name || 'Dúo Enamorado')
+                }
+                className="w-full bg-black/80 border border-purple-500/30 rounded-xl p-3.5 text-white text-sm focus:border-pink-500 outline-none transition-all placeholder:text-gray-500" 
+              />
+              <p className="text-[11px] text-gray-400 leading-relaxed">
+                💡 Si lo dejas vacío, el ranking mostrará automáticamente: <strong className="text-pink-200">{(formData.user1Name && formData.user2Name) ? `${formData.user1Name} & ${formData.user2Name}` : (formData.user1Name || formData.user2Name || 'Dúo Enamorado')}</strong>. Puedes personalizarlo con un apodo o nombre de equipo de hasta 16 caracteres.
+              </p>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-800">
               <div>
                 <label className="block text-xs text-gray-400 mb-2 uppercase tracking-wider font-semibold">Mascotas (Opcional)</label>

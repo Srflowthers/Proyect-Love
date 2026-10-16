@@ -1814,7 +1814,8 @@ async function startRound(first) {
     reached: false,
     used: 0,
     lossMult: 1,
-    nextMs: 1000
+    nextMs: 1000,
+    startTime: Date.now()
   };
   skills = { hammer: 1, bolt: 0, rainbow: 0 };
   skillMode = null;
@@ -2306,6 +2307,30 @@ function endRound() {
   hist.unshift({ no: round.no, score: round.score, target: round.target, d: real });
   hist = hist.slice(0, 8);
 
+  // Cálculo de monedas según propuesta arcade (RATE=2.5)
+  const roundDurationMs = round.startTime ? (Date.now() - round.startTime) : 120000;
+  const minutes = Math.min(roundDurationMs / 60000, 25);
+  const perfRatio = round.target > 0 ? (round.score / round.target) : 1;
+  const multGomi = Math.min(1.5, Math.max(0.3, perfRatio));
+  const winFactor = win ? 1.0 : 0.6;
+  const streakBonus = 1 + 0.1 * Math.min(streak, 5);
+  const earnedCoins = Math.max(1, Math.round(2.5 * minutes * multGomi * winFactor * streakBonus));
+
+  // Notificar al padre (GamesView) para sincronización con Firebase y perfil de la pareja
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'ARCADE_ROUND_COMPLETE',
+        game: 'gomi',
+        coins: earnedCoins,
+        score: round.score,
+        target: round.target,
+        win: win,
+        streak: streak
+      }, '*');
+    }
+  } catch (err) {}
+
   let title;
   if (!win && rp === 0 && before > 0) title = 'Meta no alcanzada';
   else if (L1 > L0) title = '¡Ronda superada!';
@@ -2314,9 +2339,9 @@ function endRound() {
 
   $('ovTitle').textContent = title;
   const dl = $('ovDelta');
-  dl.textContent = (real > 0 ? '+' : real < 0 ? '−' : '') + Math.abs(real) + ' RP';
+  dl.textContent = (real > 0 ? '+' : real < 0 ? '−' : '') + Math.abs(real) + ' RP  •  +' + earnedCoins + ' 🪙';
   dl.className = 'delta ' + (real >= 0 ? 'up' : 'down');
-  $('ovLine').textContent = fmt(round.score) + ' puntos de ' + fmt(round.target) + ' pedidos' + (win && streak > 1 ? ' · racha de ' + streak : '');
+  $('ovLine').textContent = fmt(round.score) + ' puntos de ' + fmt(round.target) + ' pedidos' + (win && streak > 1 ? ' · racha de ' + streak : '') + ' · +' + earnedCoins + ' monedas ganadas';
   $('ovRank').textContent = (rp === 0 && !win && before > 0 ? 'Vuelves a ' : 'Ahora eres ') + rankOf(rp).name + ' con ' + fmt(rp) + ' puntos de rango';
   if (round.used) $('ovLine').textContent += ' · última oportunidad x' + round.used;
   $('nextBtn').textContent = 'Siguiente ronda';

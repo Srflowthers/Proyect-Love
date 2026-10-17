@@ -26,9 +26,15 @@
 
   <!-- Estilos desacoplados -->
   <link rel="stylesheet" href="pool.css">
+  <style>
+    html, body, #stage, #stage canvas {
+      background-color: transparent !important;
+      background: transparent !important;
+    }
+  </style>
 </head>
-<body>
-  <div id="stage">
+<body style="background: transparent !important; background-color: transparent !important;">
+  <div id="stage" style="background: transparent !important; background-color: transparent !important;">
     <!-- Marcador y turnos superior -->
     <div id="top">
       <div class="tc R" id="tL"></div>
@@ -81,7 +87,7 @@
         <select id="selBg"></select>
         <button id="btnExit" style="background:#8b1b1b;border-color:#b92929;color:#fff;font-weight:600;">🚪 Volver al Catálogo</button>
       </div>
-      <p class="hint">Arrastra para apuntar (360°). Mantén la barra FUERZA (o Espacio) y suelta para disparar. Rueda = zoom.</p>
+      <p class="hint">Clic derecho para rotar la mira (360°). Mantén Clic izquierdo (o barra FUERZA / Espacio) para ejercer la fuerza y suelta para disparar. Rueda = zoom.</p>
       <details class="rules">
         <summary>📖 Reglas del juego (Bola 8, 2 equipos)</summary>
         <ol>
@@ -98,6 +104,9 @@
 
   <!-- Three.js r128 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- Módulo desacoplado de rescate de LP y monedas -->
+  <script src="reward-config.js"></script>
 
   <!-- Lógica desacoplada de Pool 3D 2v2 -->
   <script src="pool.js"></script>

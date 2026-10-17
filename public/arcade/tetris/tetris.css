@@ -419,8 +419,10 @@ button {
     height: 100vh !important;
     max-height: 100vh !important;
     gap: 8px !important;
-    padding: 6px 8px 60px 8px !important; /* Espacio para el pad inferior */
+    padding: 8px !important;
     box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: row !important;
     align-items: center !important;
     justify-content: center !important;
   }
@@ -429,20 +431,11 @@ button {
     display: none !important;
   }
 
-  /* El tablero central de Tetris crece para aprovechar la altura de la pantalla del smartphone */
-  .boardwrap {
-    height: min(78vh, calc(100vh - 100px)) !important;
-    max-height: min(78vh, calc(100vh - 100px)) !important;
-    max-width: calc(100vw - 120px) !important;
-    aspect-ratio: 1 / 2 !important;
-    margin: 0 !important;
-    flex-shrink: 0 !important;
-  }
-
-  /* Columna derecha compacta al lado del tablero */
+  /* 1. Columna de SCORE y DATOS a la IZQUIERDA (order: -1) */
   .side {
-    width: clamp(90px, 26vw, 130px) !important;
-    min-width: 90px !important;
+    order: -1 !important;
+    width: clamp(88px, 25vw, 120px) !important;
+    min-width: 88px !important;
     gap: 6px !important;
     justify-content: center !important;
   }
@@ -475,29 +468,20 @@ button {
     font-size: 0.7rem !important;
   }
 
-  /* Ocultar botones inferiores en móvil: ahora se controla 100% con gestos táctiles (swipes y tap) */
-  .pad-bottom {
-    display: none !important;
-  }
-
-  /* El tablero central de Tetris crece a su máximo esplendor aprovechando toda la pantalla */
+  /* 2. TABLERO DE TETRIS a la DERECHA (order: 1) para jugar cómodamente con el pulgar derecho */
   .boardwrap {
+    order: 1 !important;
     height: min(88vh, calc(100vh - 24px)) !important;
     max-height: min(88vh, calc(100vh - 24px)) !important;
-    max-width: calc(100vw - 110px) !important;
+    max-width: calc(100vw - 105px) !important;
     aspect-ratio: 1 / 2 !important;
     margin: 0 !important;
     flex-shrink: 0 !important;
   }
 
-  .row {
-    height: 100vh !important;
-    max-height: 100vh !important;
-    gap: 8px !important;
-    padding: 8px !important;
-    box-sizing: border-box !important;
-    align-items: center !important;
-    justify-content: center !important;
+  /* Ocultar botones inferiores en móvil: ahora se controla 100% con gestos táctiles (swipes y tap) */
+  .pad-bottom {
+    display: none !important;
   }
 }
 

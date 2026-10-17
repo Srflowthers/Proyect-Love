@@ -273,6 +273,7 @@ function pat() {
 }
 
 function newGame() {
+  sudokuStartTime = Date.now();
   N = +$('size').value;
   BR = N === 6 ? 2 : 3;
   BC = N === 12 ? 4 : 3;
@@ -474,14 +475,32 @@ function place(v) {
   after(who);
 }
 
+let sudokuStartTime = Date.now();
+
 function finish() {
   over = true;
   render();
   sfx.win();
   rain();
   const [a, b] = score;
-  const w = a === b ? '¡Empate perfecto, son un equipo! 💞' : `🏆 Gana ${name(a > b ? 0 : 1)}... pero el amor gana siempre 💘`;
-  say(`🎉 ¡Completado! ${w}`);
+  const tot = a + b;
+
+  // Calibración horaria equivalente a Rompecabezas (~450-550 LP / hora):
+  // 6x6 (Fácil ~2.5 min): 20 LP · 6 monedas
+  // 9x9 (Normal ~6-8 min): 55 LP · 16 monedas
+  // 12x12 (Difícil ~14-16 min): 120 LP · 36 monedas
+  const durationMs = sudokuStartTime ? (Date.now() - sudokuStartTime) : 180000;
+  const minutes = Math.min(durationMs / 60000, 30);
+  
+  // Rescate y envío desacoplado de monedas y LP (ver reward-config.js)
+  const { earnedCoins, lpAward: lpEarned } = window.enviarRecompensaSudoku ? window.enviarRecompensaSudoku({
+    score: tot,
+    gridSize: N,
+    durationMs: durationMs
+  }) : { earnedCoins: 6, lpAward: 20 };
+
+  const w = a === b ? '¡Empate perfecto, son un equipo!' : `Gana ${name(a > b ? 0 : 1)}... ¡pero el amor gana siempre!`;
+  say(`¡Completado! ${w} • +${earnedCoins} monedas ganadas`);
 }
 
 $('hint').onclick = () => {

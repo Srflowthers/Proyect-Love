@@ -1410,6 +1410,93 @@ document.querySelectorAll('.pad button').forEach(b => {
 });
 
 /* ============================================================================
+   CONTROLES TÁCTILES GESTUALES EN PANTALLA (SWIPES / TOQUES PARA MÓVILES)
+   - Deslizar izquierda/derecha: mueve la pieza celda por celda
+   - Deslizar hacia arriba o toque rápido: rota la pieza (cambia de figura)
+   - Deslizar hacia abajo con fuerza: caída de golpe (hard drop)
+   - Mantener abajo / arrastre suave abajo: caída suave acelerada
+   ============================================================================ */
+(function setupTouchGestures() {
+  let touchStartX = 0, touchStartY = 0;
+  let lastSwipeX = 0, lastSwipeY = 0;
+  let touchStartTime = 0;
+  let hasMovedHorizontally = false;
+  let hasHardDropped = false;
+
+  const targetEl = document.body;
+
+  targetEl.addEventListener('touchstart', e => {
+    // Si se toca un botón específico del HUD, no interferir
+    if (e.target.closest('button') || e.target.closest('#ov') || e.target.closest('input')) return;
+    if (!run || over) return;
+
+    const t = e.touches[0];
+    touchStartX = lastSwipeX = t.clientX;
+    touchStartY = lastSwipeY = t.clientY;
+    touchStartTime = performance.now();
+    hasMovedHorizontally = false;
+    hasHardDropped = false;
+  }, { passive: true });
+
+  targetEl.addEventListener('touchmove', e => {
+    if (!run || over || hasHardDropped) return;
+    if (e.target.closest('button') || e.target.closest('#ov')) return;
+
+    const t = e.touches[0];
+    const dx = t.clientX - lastSwipeX;
+    const dy = t.clientY - lastSwipeY;
+    const totalDx = t.clientX - touchStartX;
+    const totalDy = t.clientY - touchStartY;
+
+    // Sensibilidad horizontal: ~22px de desplazamiento por cada celda de movimiento
+    const CELL_THRESHOLD = 22;
+    if (Math.abs(dx) >= CELL_THRESHOLD) {
+      const steps = Math.trunc(dx / CELL_THRESHOLD);
+      if (steps !== 0) {
+        move(steps > 0 ? 1 : -1);
+        lastSwipeX += (steps > 0 ? 1 : -1) * CELL_THRESHOLD;
+        hasMovedHorizontally = true;
+      }
+    }
+
+    // Swipe vertical rápido hacia abajo: caída de golpe
+    if (totalDy > 55 && Math.abs(totalDy) > Math.abs(totalDx) * 1.5 && !hasHardDropped) {
+      hasHardDropped = true;
+      soft = false;
+      hard();
+      return;
+    }
+
+    // Desplazamiento hacia abajo moderado: caída suave
+    if (totalDy > 25 && Math.abs(totalDy) > Math.abs(totalDx)) {
+      soft = true;
+    }
+  }, { passive: true });
+
+  targetEl.addEventListener('touchend', e => {
+    soft = false;
+    if (!run || over || hasHardDropped) return;
+    if (e.target.closest('button') || e.target.closest('#ov')) return;
+
+    const touchDuration = performance.now() - touchStartTime;
+    const changeX = (e.changedTouches[0]?.clientX || lastSwipeX) - touchStartX;
+    const changeY = (e.changedTouches[0]?.clientY || lastSwipeY) - touchStartY;
+    const dist = Math.hypot(changeX, changeY);
+
+    // 1. Swipe hacia arriba: rotar pieza
+    if (changeY < -35 && Math.abs(changeY) > Math.abs(changeX) * 1.2) {
+      turnPiece();
+      return;
+    }
+
+    // 2. Toque rápido (tap) sin arrastre: también rota la pieza para máxima agilidad
+    if (touchDuration < 280 && dist < 16 && !hasMovedHorizontally) {
+      turnPiece();
+    }
+  }, { passive: true });
+})();
+
+/* ============================================================================
    11. INICIALIZACIÓN
    ============================================================================ */
 g = Array.from({ length: H }, () => Array(W).fill(null));

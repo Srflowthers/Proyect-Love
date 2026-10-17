@@ -717,8 +717,8 @@ html, body {
     flex-direction: column;
     height: 100vh;
     max-height: 100vh;
-    /* Margen superior para librar botones de arriba y margen inferior de 60px para librar la barra de 3 líneas del celular */
-    padding: calc(env(safe-area-inset-top, 0px) + 52px) 10px calc(env(safe-area-inset-bottom, 0px) + 60px);
+    /* Margen superior para librar botones de arriba y margen inferior de 80px para librar holgadamente la barra de 3 líneas del celular */
+    padding: calc(env(safe-area-inset-top, 0px) + 52px) 10px calc(env(safe-area-inset-bottom, 0px) + 80px);
     gap: 6px;
     justify-content: space-between;
   }
@@ -853,7 +853,7 @@ html, body {
     flex-direction: column;
     gap: 8px;
     flex-shrink: 0;
-    margin-bottom: 10px;
+    margin-bottom: 24px;
   }
 
   .pad {

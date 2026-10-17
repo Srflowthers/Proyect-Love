@@ -405,17 +405,96 @@ button {
 }
 
 /* --------------------------------------------------------------------------
-   9. MEDIA QUERIES PARA PANTALLAS MÓVILES
+   9. MEDIA QUERIES PARA PANTALLAS MÓVILES (TELÉFONOS)
    -------------------------------------------------------------------------- */
 @media (max-width: 780px) {
+  html, body {
+    padding: 0 !important;
+    margin: 0 !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+  }
+
+  .row {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    gap: 8px !important;
+    padding: 6px 8px 60px 8px !important; /* Espacio para el pad inferior */
+    box-sizing: border-box !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
   .side-left {
     display: none !important;
   }
+
+  /* El tablero central de Tetris crece para aprovechar la altura de la pantalla del smartphone */
   .boardwrap {
-    height: min(76vh, 600px) !important;
+    height: min(78vh, calc(100vh - 100px)) !important;
+    max-height: min(78vh, calc(100vh - 100px)) !important;
+    max-width: calc(100vw - 120px) !important;
+    aspect-ratio: 1 / 2 !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
   }
+
+  /* Columna derecha compacta al lado del tablero */
+  .side {
+    width: clamp(90px, 26vw, 130px) !important;
+    min-width: 90px !important;
+    gap: 6px !important;
+    justify-content: center !important;
+  }
+
+  .card {
+    padding: 6px 8px !important;
+    border-radius: 10px !important;
+  }
+
+  .card small {
+    font-size: 0.68rem !important;
+  }
+
+  .card b {
+    font-size: 1.25rem !important;
+    margin: 1px 0 !important;
+  }
+
+  #sc-lines, #sc-speed, #skt {
+    font-size: 0.65rem !important;
+  }
+
+  #skb {
+    height: 6px !important;
+    margin: 2px 0 !important;
+  }
+
+  #sku {
+    padding: 4px !important;
+    font-size: 0.7rem !important;
+  }
+
+  /* Gamepad táctil flotante inferior */
   .pad-bottom {
     display: flex !important;
+    position: fixed !important;
+    bottom: 6px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 96% !important;
+    max-width: 380px !important;
+    gap: 5px !important;
+    margin: 0 !important;
+    z-index: 50 !important;
+  }
+
+  .pad-bottom button {
+    flex: 1 !important;
+    min-width: 0 !important;
+    height: 42px !important;
+    padding: 0 !important;
+    font-size: 1.15rem !important;
   }
 }
 
@@ -424,3 +503,4 @@ button {
     display: none !important;
   }
 }
+

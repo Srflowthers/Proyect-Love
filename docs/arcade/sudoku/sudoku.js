@@ -426,12 +426,17 @@ function render() {
     b.classList.toggle('done', counts[v] === N);
   }
 
-  const hintText = hintsLeft ? `💡 Pista (${hintsLeft} de 3)` : '💡 Pistas usadas';
-  $('hint').textContent = hintText;
-  $('hint').disabled = !hintsLeft || over;
+  const hintLabel = hintsLeft ? `Pista (${hintsLeft} de 3)` : 'Pistas agotadas';
+  const hintBtn = $('hint');
+  if (hintBtn) {
+    const lbl = hintBtn.querySelector('.hint-label');
+    if (lbl) lbl.textContent = hintLabel;
+    hintBtn.disabled = !hintsLeft || over;
+  }
   const mobHint = $('mobile-hint');
   if (mobHint) {
-    mobHint.textContent = hintText;
+    const mlbl = mobHint.querySelector('.hint-label');
+    if (mlbl) mlbl.textContent = hintLabel;
     mobHint.disabled = !hintsLeft || over;
   }
   $('sa').textContent = score[0];
@@ -606,11 +611,14 @@ if (btnNextDiff) {
 /* ─────────────────────────────────────────────────────────────
    F) EVENTOS E INICIO
    ───────────────────────────────────────────────────────────── */
-$('new').onclick = () => {
-  const winModal = $('win-modal');
-  if (winModal) winModal.style.display = 'none';
-  newGame();
-};
+const newBtn = $('new');
+if (newBtn) {
+  newBtn.onclick = () => {
+    const winModal = $('win-modal');
+    if (winModal) winModal.style.display = 'none';
+    newGame();
+  };
+}
 
 $('size').onchange = () => {
   const s = $('size').value;

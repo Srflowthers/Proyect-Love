@@ -717,8 +717,8 @@ html, body {
     flex-direction: column;
     height: 100vh;
     max-height: 100vh;
-    /* Dejar margen superior para no chocar con el botón Catálogo (izq) ni LP/Monedas (der) */
-    padding: calc(env(safe-area-inset-top, 0px) + 52px) 10px calc(env(safe-area-inset-bottom, 0px) + 16px);
+    /* Margen superior para librar botones de arriba y margen inferior de 60px para librar la barra de 3 líneas del celular */
+    padding: calc(env(safe-area-inset-top, 0px) + 52px) 10px calc(env(safe-area-inset-bottom, 0px) + 60px);
     gap: 6px;
     justify-content: space-between;
   }
@@ -794,7 +794,7 @@ html, body {
     margin-top: 1px;
   }
 
-  /* Centro: Tablero maximizado verticalmente sin tapar teclado */
+  /* Centro: Tablero y teclado balanceados para no colisionar con la barra de navegación */
   .center-stage {
     flex: 1;
     display: flex;
@@ -815,10 +815,10 @@ html, body {
     min-height: 0;
   }
 
-  /* Tablero calibrado para dar suficiente espacio al teclado inferior */
+  /* Tablero compacto para que el teclado y botón de pistas suban bien alto */
   .board {
-    width: min(90vw, 45vh, 360px);
-    height: min(90vw, 45vh, 360px);
+    width: min(88vw, 39vh, 320px);
+    height: min(88vw, 39vh, 320px);
     aspect-ratio: 1 / 1;
     border-radius: 14px;
     padding: 3px;
@@ -826,18 +826,18 @@ html, body {
   }
 
   .cell {
-    font-size: clamp(16px, 4.2vw, 22px);
+    font-size: clamp(15px, 4vw, 20px);
     border-radius: 4px;
   }
 
-  /* Teclado numérico elevado notablemente para no ser tapado por la barra de gestos */
+  /* Teclado numérico y botón de pistas bien elevados por encima del botón de navegación */
   .pad-wrapper {
-    width: min(90vw, 45vh, 360px);
+    width: min(88vw, 39vh, 320px);
     display: flex;
     flex-direction: column;
     gap: 8px;
     flex-shrink: 0;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
 
   .pad {
@@ -845,8 +845,8 @@ html, body {
   }
 
   .pad button {
-    height: 42px;
-    font-size: 19px;
+    height: 40px;
+    font-size: 18px;
     font-weight: 800;
     border-radius: 9px;
   }
@@ -860,7 +860,7 @@ html, body {
   .btn-mobile-hint {
     width: 100%;
     max-width: 220px;
-    padding: 8px 14px;
+    padding: 9px 14px;
     font-size: 13px;
     font-weight: 800;
     border-radius: 10px;

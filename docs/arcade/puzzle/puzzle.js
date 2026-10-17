@@ -1073,7 +1073,14 @@
     });
     refImg.classList.remove('on');
     SFX.win();
-    toast(N >= 500 ? '¡Hiciste lo IMPOSIBLE! 🏆' : '¡Lo lograste! 💖');
+
+    // Rescate y envío desacoplado de monedas y LP (ver reward-config.js)
+    const { earnedCoins, lpAward: lpEarned } = window.enviarRecompensaPuzzle ? window.enviarRecompensaPuzzle({
+      pieces: N,
+      durationMs: Date.now() - G.t0
+    }) : { earnedCoins: 5, lpAward: 15 };
+
+    toast(N >= 500 ? '¡Hiciste lo IMPOSIBLE!' : '¡Lo lograste! +' + earnedCoins + ' monedas');
 
     const sr = el.board.getBoundingClientRect();
     burst(sr.left + sr.width / 2, sr.top + sr.height / 2, 70, { v: 8, g: 0.1, life: 70, size: 9, types: ['star', 'heart', 'dot'] });

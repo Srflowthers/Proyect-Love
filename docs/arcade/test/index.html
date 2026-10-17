@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Minijuego Test - Validar LP y Oro</title>
+  
+  <script>
+    (function () {
+      try {
+        if (window.self === window.top) {
+          window.location.replace('/?auth_required=arcade');
+          return;
+        }
+        var authKey = sessionStorage.getItem('arcade_session_auth');
+        var p = new URLSearchParams(window.location.search);
+        if (!authKey && !p.get('auth')) {
+          window.location.replace('/?auth_required=arcade');
+        }
+      } catch (e) {
+        window.location.replace('/?auth_required=arcade');
+      }
+    })();
+  </script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at center, #1e112a 0%, #0d0614 100%);
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(12px);
+      padding: 32px;
+      border-radius: 24px;
+      max-width: 440px;
+      width: 100%;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    }
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #f472b6;
+      margin-bottom: 8px;
+    }
+    p {
+      font-size: 0.95rem;
+      color: #cbd5e1;
+      margin-bottom: 24px;
+      line-height: 1.4;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .stat-box {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .stat-val {
+      font-size: 1.8rem;
+      font-weight: 800;
+      margin-top: 4px;
+    }
+    .stat-val.gold { color: #facc15; }
+    .stat-val.lp { color: #38bdf8; }
+    .stat-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #94a3b8;
+    }
+    .btn-gain {
+      background: linear-gradient(135deg, #ec4899 0%, #a855f7 100%);
+      color: #fff;
+      border: none;
+      padding: 18px 24px;
+      border-radius: 18px;
+      font-size: 1.15rem;
+      font-weight: 800;
+      cursor: pointer;
+      width: 100%;
+      box-shadow: 0 10px 25px rgba(236, 72, 153, 0.4);
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .btn-gain:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px rgba(236, 72, 153, 0.55);
+    }
+    .btn-gain:active {
+      transform: scale(0.96);
+    }
+    .log-box {
+      margin-top: 20px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: #34d399;
+      min-height: 24px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h1>🧪 Test de Recompensas</h1>
+    <p>Haz clic en el botón para ganar <strong>+1 LP</strong> y <strong>+1 Moneda</strong> al instante y verificar que se almacene en Firebase.</p>
+
+    <div class="stats">
+      <div class="stat-box">
+        <div class="stat-label">Oro Acumulado</div>
+        <div class="stat-val gold" id="coinCounter">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">LP Acumulado</div>
+        <div class="stat-val lp" id="lpCounter">0</div>
+      </div>
+    </div>
+
+    <button id="btnClick" class="btn-gain" type="button">
+      <span>✨ ¡Gana +1 LP y +1 Oro!</span>
+    </button>
+
+    <div class="log-box" id="logMsg">Listo para probar</div>
+  </div>
+
+  <!-- 1. Módulo desacoplado de rescate de monedas y LP -->
+  <script src="reward-config.js"></script>
+
+  <!-- 2. Lógica del minijuego -->
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    let totalLp = parseInt(params.get('lp') || '0', 10);
+    let totalCoins = parseInt(params.get('coins') || '0', 10);
+    let clicks = 0;
+
+    const coinEl = document.getElementById('coinCounter');
+    const lpEl = document.getElementById('lpCounter');
+    const logEl = document.getElementById('logMsg');
+    const btn = document.getElementById('btnClick');
+
+    coinEl.textContent = totalCoins;
+    lpEl.textContent = totalLp;
+
+    btn.addEventListener('click', () => {
+      clicks++;
+      totalLp += 1;
+      totalCoins += 1;
+
+      coinEl.textContent = totalCoins;
+      lpEl.textContent = totalLp;
+
+      // Invocamos la función desacoplada
+      if (window.enviarRecompensaTest) {
+        window.enviarRecompensaTest({ clicks });
+        logEl.textContent = `Pulsación #${clicks}: +1 LP y +1 Oro enviados al backend.`;
+      }
+    });
+  </script>
+</body>
+</html>

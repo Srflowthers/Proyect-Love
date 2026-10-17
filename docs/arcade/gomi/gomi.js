@@ -601,6 +601,18 @@ function load() {
       roundNo = d.roundNo | 0;
       hist = Array.isArray(d.hist) ? d.hist.slice(0, 8) : [];
     }
+
+    // Si viene la ronda o los LP desde la cuenta/Firebase mediante URL params, sincronizarlos
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramRound = parseInt(urlParams.get('round') || '0', 10);
+    const paramLp = parseInt(urlParams.get('lp') || '0', 10);
+    if (paramRound > 0 && paramRound > roundNo) {
+      roundNo = paramRound;
+    }
+    if (paramLp > 0 && (paramLp > rp || rp === 0)) {
+      rp = paramLp;
+      peak = Math.max(peak, rp);
+    }
   } catch (e) { }
 }
 
@@ -1814,7 +1826,8 @@ async function startRound(first) {
     reached: false,
     used: 0,
     lossMult: 1,
-    nextMs: 1000
+    nextMs: 1000,
+    startTime: Date.now()
   };
   skills = { hammer: 1, bolt: 0, rainbow: 0 };
   skillMode = null;
@@ -2301,10 +2314,22 @@ function endRound() {
 
   rp = Math.max(0, rp + delta);
   const real = rp - before;
-  peak = Math.max(peak, rp);
-  const L1 = levelOf(rp);
-  hist.unshift({ no: round.no, score: round.score, target: round.target, d: real });
-  hist = hist.slice(0, 8);
+
+  // Calibración horaria equivalente a Rompecabezas (~450-550 LP / hora):
+  // Rondas duran ~1.5 a 2.5 min.
+  // Rondas 1-5 (~2 min c/u): 10 - 18 LP · 3 - 5 monedas
+  // Rondas 10-20 (~2 min c/u): 25 - 45 LP · 6 - 9 monedas
+  // Rondas 30+ (~2.5 min c/u): 60 - 75 LP · 10 - 14 monedas
+  // Jugando 20 rondas en 1 hora = ~500 LP y ~110 monedas
+  // Rescate y envío desacoplado de monedas y LP (ver reward-config.js)
+  const { earnedCoins, lpAward } = window.enviarRecompensaGomi ? window.enviarRecompensaGomi({
+    score: round.score,
+    target: round.target,
+    win: win,
+    streak: streak,
+    round: roundNo,
+    durationMs: round.startTime ? (Date.now() - round.startTime) : 120000
+  }) : { earnedCoins: 1, lpAward: 0 };
 
   let title;
   if (!win && rp === 0 && before > 0) title = 'Meta no alcanzada';
@@ -2314,9 +2339,9 @@ function endRound() {
 
   $('ovTitle').textContent = title;
   const dl = $('ovDelta');
-  dl.textContent = (real > 0 ? '+' : real < 0 ? '−' : '') + Math.abs(real) + ' RP';
+  dl.textContent = (real > 0 ? '+' : real < 0 ? '−' : '') + Math.abs(real) + ' RP  •  +' + earnedCoins + ' monedas';
   dl.className = 'delta ' + (real >= 0 ? 'up' : 'down');
-  $('ovLine').textContent = fmt(round.score) + ' puntos de ' + fmt(round.target) + ' pedidos' + (win && streak > 1 ? ' · racha de ' + streak : '');
+  $('ovLine').textContent = fmt(round.score) + ' puntos de ' + fmt(round.target) + ' pedidos' + (win && streak > 1 ? ' · racha de ' + streak : '') + ' · +' + earnedCoins + ' monedas ganadas';
   $('ovRank').textContent = (rp === 0 && !win && before > 0 ? 'Vuelves a ' : 'Ahora eres ') + rankOf(rp).name + ' con ' + fmt(rp) + ' puntos de rango';
   if (round.used) $('ovLine').textContent += ' · última oportunidad x' + round.used;
   $('nextBtn').textContent = 'Siguiente ronda';

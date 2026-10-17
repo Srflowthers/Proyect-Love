@@ -304,9 +304,25 @@ function end() {
     try { localStorage.setItem('tetris_max_score', maxScore); } catch (e) {}
   }
   const isNewRec = tot >= maxScore && tot > 0;
-  $('ovt').innerHTML = 'Fin de la partida 🎮<br><span style="font-size:1.4rem;font-weight:800;color:#f43f5e;margin-top:4px;display:block;">Puntaje: ' +
-    tot.toLocaleString('es') + '</span><span style="font-size:0.95rem;color:#fbbf24;margin-top:3px;display:block;">🏆 Récord: ' +
-    maxScore.toLocaleString('es') + (isNewRec ? ' (¡NUEVO!)' : '') + '</span>';
+
+  // Calibración horaria equivalente a Rompecabezas (~450-550 LP / hora y ~100-130 monedas / hora):
+  // 1.500 - 3.500 pts (~2-3 min): 20 - 30 LP · 6 - 9 monedas
+  // 3.500 - 7.000 pts (~5-7 min): 45 - 65 LP · 14 - 18 monedas
+  // 7.000 - 12.000 pts (~8-12 min, como 9k): 85 - 120 LP · 22 - 32 monedas
+  // 12.000+ pts (15+ min): 140 - 200 LP · 38 - 50 monedas
+  const durationMs = tetrisSessionStartTime ? (Date.now() - tetrisSessionStartTime) : Math.max(60000, Math.round(tot * 15));
+  const minutes = Math.min(durationMs / 60000, 30); // Cap de 30 min anti-AFK
+
+  // Rescate y envío desacoplado de monedas y LP (ver reward-config.js)
+  const { earnedCoins, lpAward: lpEarned } = window.enviarRecompensaTetris ? window.enviarRecompensaTetris({
+    score: tot,
+    durationMs: durationMs
+  }) : { earnedCoins: 2, lpAward: 5 };
+
+  $('ovt').innerHTML = 'Fin de la partida<br><span style="font-size:1.4rem;font-weight:800;color:#f43f5e;margin-top:4px;display:block;">Puntaje: ' +
+    tot.toLocaleString('es') + '</span><span style="font-size:0.95rem;color:#fbbf24;margin-top:3px;display:block;">Récord: ' +
+    maxScore.toLocaleString('es') + (isNewRec ? ' (¡Nuevo récord!)' : '') + '</span>' +
+    '<div style="margin-top:8px;font-size:1rem;color:#facc15;font-weight:700;">+' + earnedCoins + ' monedas ganadas</div>';
   $('start').textContent = 'Jugar de nuevo';
   $('ov').style.display = 'flex';
   const recEl = $('sc-record');
@@ -1321,11 +1337,14 @@ function loop(t) {
 /* ============================================================================
    10. CONTROLADORES DE EVENTOS Y ENTRADA DE USUARIO
    ============================================================================ */
+let tetrisSessionStartTime = 0;
+
 function start() {
   try {
     if (!AC) { AC = new (window.AudioContext || window.webkitAudioContext)(); }
     if (AC && AC.state === 'suspended') { AC.resume(); }
   } catch (e) {}
+  tetrisSessionStartTime = Date.now();
   reset();
   run = true;
   const ovEl = $('ov');

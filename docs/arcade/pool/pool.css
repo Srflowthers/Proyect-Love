@@ -2,22 +2,24 @@
   box-sizing: border-box;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  --bg: #0c0e11;
+  --bg: transparent;
   --fg: #eee;
   --card: #1c1f23;
   --red: #c0392b;
   --blue: #2471a3;
   padding: 0;
+  background: transparent !important;
 }
 html {
   scroll-padding-top: env(safe-area-inset-top, 0px);
   height: 100%;
   overflow: hidden;
+  background: transparent !important;
 }
 body {
   margin: 0;
   padding: 0;
-  background: #000;
+  background: transparent !important;
   color: var(--fg);
   font-family: system-ui, sans-serif;
   height: 100%;
@@ -73,13 +75,16 @@ button.sel {
   border-radius: 0;
   margin: 0;
   overflow: hidden;
-  background: #000;
+  background: transparent !important;
+  background-color: transparent !important;
   touch-action: none;
 }
 #stage canvas {
   width: 100%;
   height: 100%;
   display: block;
+  background: transparent !important;
+  background-color: transparent !important;
 }
 #top {
   position: absolute;

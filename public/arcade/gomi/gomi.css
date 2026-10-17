@@ -105,9 +105,14 @@ img {
   width: 100%;
   max-width: 100% !important;
   margin: 0 auto !important;
-  padding: 0 !important;
-  display: grid;
-  gap: 4px !important;
+  padding: 4px 6px !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px !important;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 header {
@@ -127,16 +132,27 @@ header p {
 }
 
 .game {
-  display: block !important;
-  max-width: 440px;
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-width: min(580px, 100vw);
   margin: 0 auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .stage {
   grid-area: stage;
-  display: grid;
-  gap: 4px !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  gap: 6px !important;
   min-width: 0;
+  flex: 1;
 }
 
 .panel {
@@ -161,24 +177,27 @@ header p {
 .stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px !important;
+  gap: 6px !important;
+  width: 100%;
 }
 
 .stat {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 14px;
-  padding: 4px 8px !important;
+  padding: 5px 10px !important;
+  text-align: center;
 }
 
 .stat b {
   display: block;
-  font: 800 16px/1.1 var(--body) !important;
+  font: 800 17px/1.1 var(--body) !important;
   font-variant-numeric: tabular-nums;
 }
 
 .goal {
   height: 6px !important;
+  width: 100%;
   border-radius: 99px;
   background: var(--track);
   overflow: hidden;
@@ -200,8 +219,9 @@ header p {
 .goalrow {
   display: flex;
   justify-content: space-between;
+  width: 100%;
   gap: 10px;
-  font-size: 10px !important;
+  font-size: 11px !important;
   color: var(--muted);
   margin-top: -2px !important;
 }
@@ -213,7 +233,9 @@ header p {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
   margin: 0 auto;
 }
 
@@ -223,6 +245,7 @@ header p {
   gap: 8px;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .skills-sidebar .skill {
@@ -230,9 +253,9 @@ header p {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 52px;
-  padding: 4px 2px;
+  width: 44px;
+  height: 48px;
+  padding: 3px 2px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.08);
   border: 1.5px solid rgba(255, 255, 255, 0.2);
@@ -297,9 +320,12 @@ header p {
 .boardwrap {
   position: relative;
   width: 100%;
-  max-width: 580px;
+  max-width: min(calc(100vw - 64px), 64vh);
   margin-inline: auto;
   aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 canvas {

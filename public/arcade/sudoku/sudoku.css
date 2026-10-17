@@ -421,22 +421,34 @@ html, body {
 
 .btn-hint {
   width: 100%;
-  padding: 12px;
+  padding: 10px 14px;
   font: inherit;
   font-weight: 800;
   font-size: 14px;
   border-radius: 12px;
-  border: 1px solid rgba(250, 204, 21, 0.4);
-  background: #33260c;
+  border: 1px solid rgba(250, 204, 21, 0.45);
+  background: linear-gradient(135deg, #332308, #221703);
   color: #fef08a;
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-  transition: transform 0.1s ease, filter 0.1s ease;
+  box-shadow: 0 4px 14px rgba(250, 204, 21, 0.15);
+  transition: transform 0.1s ease, filter 0.1s ease, box-shadow 0.1s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.hint-svg-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  stroke: #fde047;
 }
 
 .btn-hint:hover:not(:disabled) {
   transform: translateY(-2px);
   filter: brightness(1.15);
+  box-shadow: 0 6px 18px rgba(250, 204, 21, 0.25);
 }
 
 .btn-hint:active:not(:disabled) {
@@ -805,8 +817,8 @@ html, body {
 
   /* Tablero calibrado para dar suficiente espacio al teclado inferior */
   .board {
-    width: min(92vw, 49vh, 390px);
-    height: min(92vw, 49vh, 390px);
+    width: min(90vw, 45vh, 360px);
+    height: min(90vw, 45vh, 360px);
     aspect-ratio: 1 / 1;
     border-radius: 14px;
     padding: 3px;
@@ -814,18 +826,18 @@ html, body {
   }
 
   .cell {
-    font-size: clamp(16px, 4.2vw, 23px);
+    font-size: clamp(16px, 4.2vw, 22px);
     border-radius: 4px;
   }
 
-  /* Teclado numérico elevado con buen margen inferior para no ser tapado */
+  /* Teclado numérico elevado notablemente para no ser tapado por la barra de gestos */
   .pad-wrapper {
-    width: min(92vw, 49vh, 390px);
+    width: min(90vw, 45vh, 360px);
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     flex-shrink: 0;
-    margin-bottom: 2px;
+    margin-bottom: 12px;
   }
 
   .pad {
@@ -833,24 +845,30 @@ html, body {
   }
 
   .pad button {
-    height: 40px;
-    font-size: 18px;
+    height: 42px;
+    font-size: 19px;
     font-weight: 800;
     border-radius: 9px;
   }
 
   .mobile-actions-bar {
     display: flex;
-    gap: 8px;
     width: 100%;
+    justify-content: center;
   }
 
-  .btn-mobile-hint, .btn-mobile-new {
-    flex: 1;
-    padding: 7px 10px;
-    font-size: 11.5px;
-    font-weight: 700;
-    border-radius: 8px;
+  .btn-mobile-hint {
+    width: 100%;
+    max-width: 220px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 800;
+    border-radius: 10px;
+  }
+
+  .btn-mobile-hint .hint-svg-icon {
+    width: 16px;
+    height: 16px;
   }
 
   #mute {

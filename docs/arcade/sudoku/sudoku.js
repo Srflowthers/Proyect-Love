@@ -333,6 +333,7 @@ function build() {
   b.classList.toggle('big', N === 12);
   b.setAttribute('data-n', N);
   b.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
+  b.style.gridTemplateRows = `repeat(${N}, 1fr)`;
 
   // Precalcular mapa de casillas relacionadas (peerMask)
   peerMask = new Array(total);

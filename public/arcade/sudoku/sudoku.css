@@ -549,8 +549,134 @@ html, body {
   font-size: 18px;
 }
 
+.mobile-actions-bar {
+  display: none;
+}
+
 /* --------------------------------------------------------------------------
-   11. RESPONSIVE DESIGN (TABLETS Y MÓVILES)
+   11. MODAL DE VICTORIA / ELECCIÓN (JUGAR OTRA O SUBIR DIFICULTAD)
+   -------------------------------------------------------------------------- */
+.win-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 4, 18, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 20px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.win-card {
+  background: linear-gradient(145deg, #231138, #150921);
+  border: 2px solid rgba(255, 107, 157, 0.4);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 107, 157, 0.25);
+  border-radius: 24px;
+  padding: 30px 24px;
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.win-icon {
+  font-size: 54px;
+  animation: bounce 1s infinite alternate ease-in-out;
+}
+
+@keyframes bounce {
+  from { transform: translateY(0); }
+  to { transform: translateY(-8px); }
+}
+
+.win-card h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #fff, #ff6b9d);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.win-card p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--soft);
+  line-height: 1.4;
+}
+
+.win-reward {
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  color: #fbbf24;
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  margin: 4px 0 10px;
+}
+
+.win-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.btn-win {
+  width: 100%;
+  border: none;
+  border-radius: 14px;
+  padding: 13px 16px;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-replay {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.btn-replay:hover {
+  background: rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px);
+}
+
+.btn-next-diff {
+  background: linear-gradient(135deg, #a855f7, #ec4899);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(236, 72, 153, 0.4);
+}
+
+.btn-next-diff:hover {
+  filter: brightness(1.12);
+  transform: translateY(-2px);
+}
+
+.btn-win:active {
+  transform: scale(0.97);
+}
+
+/* --------------------------------------------------------------------------
+   12. RESPONSIVE DESIGN (OPTIMIZACIÓN MÓVIL PANTALLA COMPLETA)
    -------------------------------------------------------------------------- */
 @media (max-width: 900px) {
   .app-layout {
@@ -571,52 +697,167 @@ html, body {
 
 @media (max-width: 768px) {
   html, body {
-    overflow-y: auto;
+    overflow: hidden !important;
+    height: 100vh;
+    width: 100vw;
   }
   .app-layout {
     flex-direction: column;
-    height: auto;
-    max-height: none;
-    padding: 10px 8px;
-    gap: 10px;
+    height: 100vh;
+    max-height: 100vh;
+    padding: 6px 8px 8px;
+    gap: 6px;
+    justify-content: space-between;
   }
-  .panel {
-    width: 100%;
-    max-width: 380px;
-    gap: 8px;
-  }
-  .side-left {
-    order: 1;
-  }
-  .center-stage {
-    order: 2;
-    gap: 8px;
-  }
+  
+  /* Ocultar sidebar derecho en móviles para liberar todo el espacio */
   .side-right {
-    order: 3;
+    display: none !important;
   }
+
+  /* Ocultar tarjetas no esenciales */
   .card-help, .card-info {
     display: none !important;
   }
-  .board {
-    width: min(92vw, 46vh, 360px);
-    height: min(92vw, 46vh, 360px);
+
+  .panel.side-left {
+    width: 100%;
+    max-width: 100%;
+    min-width: auto;
+    flex-direction: row;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
   }
-  .pad-wrapper {
-    width: min(92vw, 46vh, 360px);
+
+  .card-players {
+    flex: 1.4;
+    padding: 6px 10px;
+    gap: 4px;
+    border-radius: 12px;
   }
-  .pad button {
-    height: 40px;
-    font-size: 17px;
+
+  .card-players .card-header {
+    display: none;
   }
-  .card {
-    padding: 10px 12px;
+
+  .card-msg {
+    flex: 1;
+    padding: 6px 8px;
+    gap: 2px;
+    border-radius: 12px;
+    justify-content: center;
   }
+
+  .msg-badge-label {
+    display: none;
+  }
+
+  .msg {
+    font-size: 11px;
+    min-height: auto;
+    line-height: 1.2;
+  }
+
+  .players {
+    gap: 6px;
+  }
+
+  .pl {
+    padding: 4px 6px;
+    border-radius: 8px;
+  }
+
+  .pl input {
+    font-size: 11px;
+    font-weight: 700;
+  }
+
   .pl .s {
-    font-size: 20px;
+    font-size: 16px;
+    margin-top: 2px;
+  }
+
+  /* Centro: Tablero maximizado verticalmente */
+  .center-stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    min-height: 0;
+  }
+
+  .board-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 0;
+  }
+
+  /* El tablero aprovecha casi todo el ancho y alto disponible en teléfono */
+  .board {
+    width: min(94vw, 55vh, 420px);
+    height: min(94vw, 55vh, 420px);
+    aspect-ratio: 1 / 1;
+    border-radius: 14px;
+    padding: 3px;
+    gap: 2px;
+  }
+
+  .cell {
+    font-size: clamp(16px, 4.5vw, 24px);
+    border-radius: 4px;
+  }
+
+  /* Teclado numérico y botones de acción rápida en móvil */
+  .pad-wrapper {
+    width: min(94vw, 55vh, 420px);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .pad {
+    gap: 5px;
+  }
+
+  .pad button {
+    height: 38px;
+    font-size: 17px;
+    font-weight: 800;
+    border-radius: 8px;
+  }
+
+  .mobile-actions-bar {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .btn-mobile-hint, .btn-mobile-new {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 8px;
+  }
+
+  #mute {
+    top: 8px;
+    right: 8px;
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   body, h1 { animation: none; }
 }
+

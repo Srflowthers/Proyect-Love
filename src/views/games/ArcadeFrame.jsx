@@ -51,7 +51,15 @@ const ARCADE_META = {
     iconKey: 'pool',
     tag: '3D Realista',
     accent: 'from-emerald-500 to-teal-500',
-    help: 'PC: Clic derecho para rotar vista/apuntar y Clic izquierdo (mantén y suelta) para disparar. Móvil: Desliza para apuntar y mantén el botón DISPARAR.'
+    help: 'PC: Clic derecho para mover la mira (360°), mantén Clic izquierdo (o barra FUERZA / Espacio) para ejercer la fuerza y suelta para disparar. Móvil: Desliza para apuntar y mantén FUERZA.'
+  },
+  test: {
+    title: 'Test LP & Oro',
+    subtitle: 'Prueba interactiva +1 LP y +1 Oro por clic',
+    iconKey: 'test',
+    tag: 'Modo Prueba',
+    accent: 'from-pink-500 to-yellow-500',
+    help: 'Haz clic en el botón para sumar 1 LP y 1 moneda y comprobar su guardado inmediato en Firebase.'
   }
 };
 
@@ -128,31 +136,34 @@ export default function ArcadeFrame({
       )}
 
       {/* Contenedor del Juego 100% Pantalla con su fondo real de iconos-arcade */}
-      <div className={`relative w-full h-full flex-1 overflow-hidden transition-all duration-300 ${
-        gameKey === 'pool' ? 'bg-transparent border-none' : (GAME_SCENE_CLASS[gameKey] || 's-gominola')
-      }`}>
+      <div 
+        className={`relative w-full h-full flex-1 overflow-hidden transition-all duration-300 ${
+          gameKey === 'pool' ? `${universeBgClass} border-none` : (GAME_SCENE_CLASS[gameKey] || 's-gominola')
+        }`}
+        style={gameKey === 'pool' ? {
+          background: undefined
+        } : undefined}
+      >
         
-        {/* Fondo de Partículas 3D del Universo (solo si no es pool, ya que pool flota directo en el fondo) */}
-        {gameKey !== 'pool' && (
-          <div className="absolute inset-0 z-0 pointer-events-none opacity-40">
+        {/* Fondo de Partículas 3D del Universo idéntico a Perfil / Nuestro Universo */}
+        {userData?.universeVariant !== 'none' && (
+          <div className="absolute inset-0 z-0 pointer-events-none opacity-60">
             <GlitterWarp
               variant={userData?.universeVariant || 'tunnel'}
               colors={PALETTES[userData?.universePalette || 'Cósmico']}
-              sizeMult={(userData?.universeParticleSize || 1) * 0.85}
-              speedMult={(userData?.universeParticleSpeed || 1) * 0.75}
-              count={25}
+              sizeMult={(userData?.universeParticleSize || 1)}
+              speedMult={(userData?.universeParticleSpeed || 1) * 0.9}
+              count={35}
               background="transparent"
             />
           </div>
         )}
 
         {/* Resplandor de Aura Cósmico */}
-        {gameKey !== 'pool' && (
-          <div 
-            className="absolute inset-0 z-0 pointer-events-none"
-            style={{ background: `radial-gradient(circle at 50% 50%, ${auraColor} 0%, transparent 75%)` }}
-          />
-        )}
+        <div 
+          className="absolute inset-0 z-0 pointer-events-none"
+          style={{ background: `radial-gradient(circle at 50% 50%, ${auraColor} 0%, transparent 75%)` }}
+        />
 
         {isLoading && (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80 text-pink-300 gap-3 backdrop-blur-sm">
@@ -168,21 +179,28 @@ export default function ArcadeFrame({
         {/* Iframe del juego a pantalla completa 100% */}
         {(() => {
           const authParam = `auth=${encodeURIComponent(user?.uid || 'authenticated')}`;
-          const modularGames = ['gomi', 'pool', 'puzzle', 'tetris', 'sudoku'];
+          const currentLp = Number(userData?.lp) || 0;
+          const currentRound = Number(userData?.round) || 1;
+          const currentCoins = Number(userData?.coins) || 0;
+          const universeParams = `&uColor=${encodeURIComponent(userData?.universeColor || 'purple')}&uVariant=${encodeURIComponent(userData?.universeVariant || 'tunnel')}&uPalette=${encodeURIComponent(userData?.universePalette || 'Cósmico')}`;
+          const userParams = `&lp=${currentLp}&round=${currentRound}&coins=${currentCoins}${universeParams}`;
+          const modularGames = ['gomi', 'pool', 'puzzle', 'tetris', 'sudoku', 'test'];
           const gamePath = modularGames.includes(gameKey) ? `/arcade/${gameKey}/index.html` : `/arcade/${gameKey}.html`;
-          const fullSrc = `${gamePath}?${authParam}${gameParams ? `&${gameParams}` : ''}`;
+          const fullSrc = `${gamePath}?${authParam}${userParams}${gameParams ? `&${gameParams}` : ''}`;
           return (
             <iframe
               key={`${gameKey}-${iframeKey}-${gameParams}`}
               src={fullSrc}
               title={meta.title}
               onLoad={() => setIsLoading(false)}
+              allowTransparency="true"
               className={`relative z-10 w-full h-full border-0 block transition-opacity duration-300 ${
                 isLoading ? 'opacity-0' : 'opacity-100'
               }`}
               style={{
                 height: '100%',
                 width: '100%',
+                backgroundColor: 'transparent',
                 background: 'transparent'
               }}
               loading="eager"

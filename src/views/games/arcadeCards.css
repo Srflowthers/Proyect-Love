@@ -425,3 +425,145 @@
     transition: none !important;
   }
 }
+
+/* ===== INSIGNIAS DE LIGA ARCADE RANK (SVG + CSS, sin emojis) ===== */
+.rk {
+  position: relative;
+  display: inline-block;
+  width: var(--s, 64px);
+  height: var(--s, 64px);
+  vertical-align: middle;
+  flex: none;
+}
+.rk::before {
+  content: "";
+  position: absolute;
+  inset: 4%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--c) 0%, transparent 68%);
+  opacity: .34;
+  filter: blur(7px);
+}
+.rk svg {
+  position: absolute;
+  left: -14%;
+  top: -14%;
+  display: block;
+  width: 128%;
+  height: 128%;
+  overflow: visible;
+  filter: drop-shadow(0 2px 4px #0007);
+}
+.rk.hi svg {
+  animation: rkFloat 3.8s ease-in-out infinite;
+}
+.rk.hi::before {
+  animation: rkPulse 2.8s ease-in-out infinite;
+}
+.rk.lk svg {
+  filter: grayscale(1) brightness(.66) contrast(.95) drop-shadow(0 2px 3px #0007);
+  opacity: .85;
+}
+.rk.lk::before {
+  opacity: 0;
+}
+.rays {
+  transform-origin: 80px 80px;
+  animation: rkSpin 22s linear infinite;
+}
+.shn {
+  animation: rkShn 4.6s ease-in-out infinite;
+}
+.pt {
+  animation: rkPt 3.2s ease-in-out infinite;
+}
+.rk.lk .rays, .rk.lk .shn, .rk.lk .pt, .rkm .rays, .rkm .shn, .rkm .pt {
+  animation: none;
+}
+@keyframes rkShn {
+  0% { transform: translateX(0) skewX(-20deg); }
+  55%, 100% { transform: translateX(250px) skewX(-20deg); }
+}
+@keyframes rkPt {
+  0%, 100% { opacity: 0; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-8px); }
+}
+.spk {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: rkTw 2.6s ease-in-out infinite;
+}
+.spk:nth-of-type(2n) { animation-delay: .9s; }
+.spk:nth-of-type(3n) { animation-delay: 1.7s; }
+@keyframes rkFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3.5%); }
+}
+@keyframes rkPulse {
+  0%, 100% { opacity: .28; transform: scale(.96); }
+  50% { opacity: .55; transform: scale(1.06); }
+}
+@keyframes rkSpin {
+  to { transform: rotate(360deg); }
+}
+@keyframes rkTw {
+  0%, 100% { transform: scale(.55); opacity: .5; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
+.pips-hearts {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.pips-hearts i {
+  width: 14px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  clip-path: path('M7 12 C-2 6 1 -1 7 3.4 C13 -1 16 6 7 12Z');
+  display: inline-block;
+  transition: all 0.3s ease;
+}
+.pips-hearts i.on {
+  background: linear-gradient(135deg, #ff9bbd, #ee2a45);
+  filter: drop-shadow(0 0 4px rgba(238, 42, 69, 0.6));
+  transform: scale(1.1);
+}
+
+/* Animación de Monedas Voladoras hacia el marcador */
+@keyframes flyCoin {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.5);
+    opacity: 0;
+  }
+  15% {
+    transform: translate3d(var(--dx1, 0px), var(--dy1, -20px), 0) scale(1.2);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--target-x), var(--target-y), 0) scale(0.4) rotate(360deg);
+    opacity: 0.2;
+  }
+}
+
+.fly-coin-particle {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  animation: flyCoin 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes coinPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.25); filter: drop-shadow(0 0 16px rgba(250, 204, 21, 1)); }
+  100% { transform: scale(1); }
+}
+
+.coin-counter-pulse {
+  animation: coinPulse 0.45s ease-out;
+}
+
+

@@ -475,26 +475,29 @@ button {
     font-size: 0.7rem !important;
   }
 
-  /* Gamepad táctil flotante inferior */
+  /* Ocultar botones inferiores en móvil: ahora se controla 100% con gestos táctiles (swipes y tap) */
   .pad-bottom {
-    display: flex !important;
-    position: fixed !important;
-    bottom: 6px !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    width: 96% !important;
-    max-width: 380px !important;
-    gap: 5px !important;
-    margin: 0 !important;
-    z-index: 50 !important;
+    display: none !important;
   }
 
-  .pad-bottom button {
-    flex: 1 !important;
-    min-width: 0 !important;
-    height: 42px !important;
-    padding: 0 !important;
-    font-size: 1.15rem !important;
+  /* El tablero central de Tetris crece a su máximo esplendor aprovechando toda la pantalla */
+  .boardwrap {
+    height: min(88vh, calc(100vh - 24px)) !important;
+    max-height: min(88vh, calc(100vh - 24px)) !important;
+    max-width: calc(100vw - 110px) !important;
+    aspect-ratio: 1 / 2 !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+  }
+
+  .row {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    gap: 8px !important;
+    padding: 8px !important;
+    box-sizing: border-box !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 }
 

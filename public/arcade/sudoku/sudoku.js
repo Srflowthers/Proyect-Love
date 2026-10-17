@@ -426,8 +426,14 @@ function render() {
     b.classList.toggle('done', counts[v] === N);
   }
 
-  $('hint').textContent = hintsLeft ? `💡 Pista (${hintsLeft} de 3)` : '💡 Pistas usadas';
+  const hintText = hintsLeft ? `💡 Pista (${hintsLeft} de 3)` : '💡 Pistas usadas';
+  $('hint').textContent = hintText;
   $('hint').disabled = !hintsLeft || over;
+  const mobHint = $('mobile-hint');
+  if (mobHint) {
+    mobHint.textContent = hintText;
+    mobHint.disabled = !hintsLeft || over;
+  }
   $('sa').textContent = score[0];
   $('sb').textContent = score[1];
   $('pa').classList.toggle('on', turn === 0);
@@ -486,11 +492,7 @@ function finish() {
   const tot = a + b;
 
   // Calibración horaria equivalente a Rompecabezas (~450-550 LP / hora):
-  // 6x6 (Fácil ~2.5 min): 20 LP · 6 monedas
-  // 9x9 (Normal ~6-8 min): 55 LP · 16 monedas
-  // 12x12 (Difícil ~14-16 min): 120 LP · 36 monedas
   const durationMs = sudokuStartTime ? (Date.now() - sudokuStartTime) : 180000;
-  const minutes = Math.min(durationMs / 60000, 30);
   
   // Rescate y envío desacoplado de monedas y LP (ver reward-config.js)
   const { earnedCoins, lpAward: lpEarned } = window.enviarRecompensaSudoku ? window.enviarRecompensaSudoku({
@@ -501,9 +503,40 @@ function finish() {
 
   const w = a === b ? '¡Empate perfecto, son un equipo!' : `Gana ${name(a > b ? 0 : 1)}... ¡pero el amor gana siempre!`;
   say(`¡Completado! ${w} • +${earnedCoins} monedas ganadas`);
+
+  // Mostrar modal de victoria con opciones de jugar otra o subir dificultad
+  const winModal = $('win-modal');
+  if (winModal) {
+    const winTitle = $('win-title');
+    const winDesc = $('win-desc');
+    const winReward = $('win-reward');
+    const btnNextDiff = $('btn-next-diff');
+
+    if (winTitle) {
+      winTitle.textContent = a === b ? '¡Sudoku Completado en Pareja!' : `¡Victoria de ${name(a > b ? 0 : 1)}!`;
+    }
+    if (winDesc) {
+      winDesc.textContent = `${name(0)}: ${a} pts • ${name(1)}: ${b} pts. ¡Gran trabajo en equipo!`;
+    }
+    if (winReward) {
+      winReward.textContent = `+${earnedCoins} monedas ganadas ✨`;
+    }
+
+    if (btnNextDiff) {
+      if (N === 6) {
+        btnNextDiff.textContent = '⚡ Subir a 9×9 (Medio)';
+      } else if (N === 9) {
+        btnNextDiff.textContent = '🔥 Subir a 12×12 (Experto)';
+      } else {
+        btnNextDiff.textContent = '🌟 Reiniciar Máxima Dificultad';
+      }
+    }
+
+    winModal.style.display = 'flex';
+  }
 }
 
-$('hint').onclick = () => {
+function handleHint() {
   if (over || !hintsLeft) return;
   let c = -1;
   if (sel >= 0 && !grid[sel] && !hu.includes(sel)) {
@@ -532,12 +565,53 @@ $('hint').onclick = () => {
   const [x, y] = cc(c);
   burst(x, y, ['💡', '✨'], 6);
   say(`💡 Pista: en la casilla marcada va el ${sol[c]}. ¡Ponlo, ${name(turn)}!`);
-};
+}
+
+$('hint').onclick = handleHint;
+const mobHintBtn = $('mobile-hint');
+if (mobHintBtn) mobHintBtn.onclick = handleHint;
+
+const mobNewBtn = $('mobile-new');
+if (mobNewBtn) mobNewBtn.onclick = newGame;
+
+/* Modal Actions: Jugar Otra y Subir Dificultad */
+const btnReplay = $('btn-replay');
+if (btnReplay) {
+  btnReplay.onclick = () => {
+    const winModal = $('win-modal');
+    if (winModal) winModal.style.display = 'none';
+    newGame();
+  };
+}
+
+const btnNextDiff = $('btn-next-diff');
+if (btnNextDiff) {
+  btnNextDiff.onclick = () => {
+    const winModal = $('win-modal');
+    if (winModal) winModal.style.display = 'none';
+    if (N === 6) {
+      $('size').value = '9';
+      $('diff').value = '1';
+    } else if (N === 9) {
+      $('size').value = '12';
+      $('diff').value = '2';
+    } else {
+      $('size').value = '6';
+      $('diff').value = '0';
+    }
+    newGame();
+  };
+}
 
 /* ─────────────────────────────────────────────────────────────
    F) EVENTOS E INICIO
    ───────────────────────────────────────────────────────────── */
-$('new').onclick = newGame;
+$('new').onclick = () => {
+  const winModal = $('win-modal');
+  if (winModal) winModal.style.display = 'none';
+  newGame();
+};
+
 $('size').onchange = () => {
   const s = $('size').value;
   $('diff').value = s === '6' ? '0' : s === '9' ? '1' : '2';

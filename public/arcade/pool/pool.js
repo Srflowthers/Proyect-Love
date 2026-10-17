@@ -31,8 +31,12 @@ const $ = id => document.getElementById(id);
 /* ======== ESCENA: renderer, cámara, luces ======== */
 const st = $('stage'), rd = new THREE.WebGLRenderer({ 
   antialias: true, 
+  alpha: true,
   powerPreference: 'high-performance' 
 });
+rd.setClearColor(0x000000, 0);
+rd.domElement.style.background = 'transparent';
+rd.domElement.style.backgroundColor = 'transparent';
 rd.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
 rd.shadowMap.enabled = true;
 rd.shadowMap.type = THREE.PCFShadowMap;
@@ -43,7 +47,7 @@ rd.toneMapping = THREE.ACESFilmicToneMapping;
 st.appendChild(rd.domElement);
 
 const sc = new THREE.Scene();
-sc.background = new THREE.Color('#000');
+sc.background = null;
 const cam = new THREE.PerspectiveCamera(38, 1.6, 25, 12000);
 let th = 0, ph = .85, dist = 1050;
 const tgt = new THREE.Vector3(500, 0, CZ);
@@ -178,15 +182,116 @@ function buildSunset(root) {
   return { tick() {} };
 }
 
+/** Paletas de colores del Universo de Recuerdos */
+const UNIVERSE_THEMES = {
+  purple: { top: '#1c0529', mid: '#3b0736', bot: '#07050c', aura: '#ec4899', clear: 0x14041d },
+  blue:   { top: '#051833', mid: '#083344', bot: '#030712', aura: '#06b6d4', clear: 0x05152b },
+  red:    { top: '#2b090c', mid: '#400813', bot: '#090204', aura: '#ef4444', clear: 0x220508 },
+  gold:   { top: '#2b1c05', mid: '#3b2507', bot: '#0a0702', aura: '#f59e0b', clear: 0x221504 },
+  black:  { top: '#111317', mid: '#0b0c0e', bot: '#020304', aura: '#9ca3af', clear: 0x0a0c0e },
+  space:  { top: '#020205', mid: '#050711', bot: '#000000', aura: '#3b82f6', clear: 0x030308 }
+};
+
+const UNIVERSE_PALETTES = {
+  Champagne: [0xfff6e5, 0xf1d9a7, 0xffffff],
+  Perla:     [0xffffff, 0xdfe9ff, 0xf3dfff],
+  'Cósmico': [0xffffff, 0x9ec5ff, 0xd6a8ff, 0xffd1a6, 0x8ff0ff],
+  Nebulosa:  [0xff7ad9, 0x7a5cff, 0x4de3ff, 0xffffff],
+  'Ámbar':   [0xfff2d6, 0xffc46b, 0xff8a4c, 0xffffff],
+  Esmeralda: [0xd9ffe8, 0x5cffb0, 0x2fd4ff, 0xffffff]
+};
+
+function buildUniverse(root) {
+  const p = new URLSearchParams(window.location.search);
+  const uColor = p.get('uColor') || 'purple';
+  const uPalette = p.get('uPalette') || 'Cósmico';
+  const theme = UNIVERSE_THEMES[uColor] || UNIVERSE_THEMES.purple;
+  const pal = UNIVERSE_PALETTES[uPalette] || UNIVERSE_PALETTES['Cósmico'];
+
+  // 1. Esfera de fondo con el degradado idéntico al Universo de Recuerdos
+  const [c, g] = cvs(64, 512);
+  const gr = g.createLinearGradient(0, 0, 0, 512);
+  gr.addColorStop(0, theme.top);
+  gr.addColorStop(0.45, theme.mid);
+  gr.addColorStop(0.85, theme.bot);
+  gr.addColorStop(1, '#000000');
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 64, 512);
+
+  // Aura central cósmica suave
+  const rad = g.createRadialGradient(32, 256, 10, 32, 256, 120);
+  rad.addColorStop(0, theme.aura + '55');
+  rad.addColorStop(1, 'transparent');
+  g.fillStyle = rad;
+  g.fillRect(0, 0, 64, 512);
+
+  const t = new THREE.CanvasTexture(c);
+  t.encoding = THREE.sRGBEncoding;
+  const skyMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(8500, 32, 24),
+    new THREE.MeshBasicMaterial({ map: t, side: THREE.BackSide, fog: false, depthWrite: false })
+  );
+  root.add(skyMesh);
+
+  // 2. Partículas cósmicas 3D flotantes del Universo (Glitter warp en 3D)
+  const starCount = 1800;
+  const starPos = new Float32Array(starCount * 3);
+  const starCol = new Float32Array(starCount * 3);
+  const starSpeed = new Float32Array(starCount);
+
+  for (let i = 0; i < starCount; i++) {
+    const u = Math.random() * 2 - 1;
+    const a = Math.random() * 6.28318;
+    const r = Math.sqrt(1 - u * u);
+    const D = 2500 + Math.random() * 4500;
+
+    starPos[i * 3]     = r * Math.cos(a) * D;
+    starPos[i * 3 + 1] = u * D;
+    starPos[i * 3 + 2] = r * Math.sin(a) * D;
+
+    const hex = pal[Math.floor(Math.random() * pal.length)];
+    const colorObj = new THREE.Color(hex);
+    starCol[i * 3]     = colorObj.r;
+    starCol[i * 3 + 1] = colorObj.g;
+    starCol[i * 3 + 2] = colorObj.b;
+
+    starSpeed[i] = 0.4 + Math.random() * 0.8;
+  }
+
+  const starGeo = new THREE.BufferGeometry();
+  starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+  starGeo.setAttribute('color', new THREE.BufferAttribute(starCol, 3));
+  const starMat = new THREE.PointsMaterial({
+    size: 2.4,
+    sizeAttenuation: false,
+    vertexColors: true,
+    fog: false,
+    transparent: true,
+    opacity: 0.88,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  const stars = new THREE.Points(starGeo, starMat);
+  root.add(stars);
+
+  return {
+    tick() {
+      skyMesh.rotation.y += 0.00015;
+      stars.rotation.y += 0.00025;
+      stars.rotation.x += 0.00008;
+    }
+  };
+}
+
 const BACKGROUNDS = {
+  universo: { name: 'Nuestro Universo (Perfil)', color: '#07050c', build: buildUniverse },
   espacio: { name: 'Espacio (Tierra y Sol)', color: '#000000', build: buildSpace },
   atardecer: { name: 'Atardecer', color: '#0b1030', build: buildSunset }
 };
 let bgGroup = null, bgTick = () => {};
 
 function applyBackground(id) {
-  const b = BACKGROUNDS[id];
-  if (!b) return;
+  const b = BACKGROUNDS[id] || BACKGROUNDS.universo;
   if (bgGroup) {
     sc.remove(bgGroup);
     bgGroup.traverse(o => {
@@ -199,7 +304,20 @@ function applyBackground(id) {
   }
   bgGroup = new THREE.Group();
   sc.add(bgGroup);
-  sc.background = new THREE.Color(b.color);
+  
+  if (id === 'universo') {
+    const p = new URLSearchParams(window.location.search);
+    const uColor = p.get('uColor') || 'purple';
+    const theme = UNIVERSE_THEMES[uColor] || UNIVERSE_THEMES.purple;
+    sc.background = new THREE.Color(theme.clear);
+    rd.setClearColor(theme.clear, 1);
+  } else if (b.color) {
+    sc.background = new THREE.Color(b.color);
+    rd.setClearColor(new THREE.Color(b.color), 1);
+  } else {
+    sc.background = null;
+    rd.setClearColor(0x000000, 0);
+  }
   bgTick = b.build(bgGroup).tick;
 }
 
@@ -547,8 +665,19 @@ function step(B, pot) {
       b.x += b.vx / 8;
       b.y += b.vy / 8;
       let cap = false;
-      PK.forEach((p, k) => {
-        if (!cap && Math.hypot(b.x - p[0], b.y - p[1]) < (k < 4 ? 33 : 31)) {
+      PK.forEach((p, pIdx) => {
+        if (cap) return;
+        const dx = b.x - p[0], dy = b.y - p[1];
+        const distToPocket = Math.hypot(dx, dy);
+        const rimRadius = pIdx < 4 ? 26 : 24;
+        const centerRadius = pIdx < 4 ? 17 : 15;
+        const spd = Math.hypot(b.vx, b.vy);
+
+        // 1. Embocadura limpia: la bola llega cerca del centro de la tronera
+        //    o con velocidad moderada (las bolas lentas caen bien, las muy rápidas necesitan estar muy centradas)
+        const maxCleanSpeed = distToPocket < centerRadius ? 25 : 14;
+
+        if (distToPocket < centerRadius || (distToPocket < rimRadius && spd <= maxCleanSpeed)) {
           cap = true;
           b.in = 1;
           b.t = 0;
@@ -558,6 +687,20 @@ function step(B, pot) {
           pot.push(b.i);
           sPocket(b.i, pot.length);
           pocketBurst(p[0], p[1], b.i, pot.length);
+        } else if (distToPocket < rimRadius + 6 && spd > 14) {
+          // 2. Rebote en la boca de la tronera (rebota por ir demasiado fuerte o rozar el borde)
+          if (distToPocket > 0.001) {
+            const nx = dx / distToPocket, ny = dy / distToPocket;
+            const dot = b.vx * nx + b.vy * ny;
+            if (dot < 0) { // Si va entrando hacia la tronera
+              // Rebota hacia afuera con pérdida de energía (choque contra el labio/esquina)
+              b.vx = (b.vx - 1.7 * dot * nx) * 0.72;
+              b.vy = (b.vy - 1.7 * dot * ny) * 0.72;
+              b.x = p[0] + nx * (rimRadius + 7);
+              b.y = p[1] + ny * (rimRadius + 7);
+              sCush(Math.min(spd / 15, 1));
+            }
+          }
         }
       });
       if (cap) continue;
@@ -933,6 +1076,16 @@ function finish() {
     over = ok ? t : o;
     M.textContent = ok ? `¡Gana el equipo ${team}! Embocó la 8 legalmente.` : `${team} pierde: ${grp[t] && !leftBefore ? why : 'embocó la 8 antes de tiempo'}. ¡Gana el equipo ${oth}!`;
     ui();
+
+    // Rescate y envío desacoplado de monedas y LP (ver reward-config.js)
+    if (window.enviarRecompensaPool) {
+      window.enviarRecompensaPool({
+        win: ok,
+        score: tray.length,
+        durationMs: 300000
+      });
+    }
+
     notify(ok ? '¡VICTORIA ÉPICA!' : '¡PARTIDA PERDIDA!', ok ? `El equipo ${team} embocó la bola 8 y se lleva la victoria.` : `Gana el equipo ${oth}. ${why ? 'Falta: ' + why + '.' : 'La bola 8 cayó antes de tiempo.'}`, true, 4000);
     return;
   }
@@ -996,26 +1149,70 @@ let orb = null, aimMode = true, aimYaw = 0, phA = 1.2, adist = 330, charge = 0, 
 const ctr = new THREE.Vector3(250, R, CZ);
 
 st.oncontextmenu = e => e.preventDefault();
-st.onpointerdown = e => {
+
+let isLeftMouseDown = false;
+let isRightMouseDown = false;
+
+// Manejo unificado de MOUSE y POINTER para garantizar soporte simultáneo de ambos botones
+st.addEventListener('mousedown', e => {
   initAudio();
-  st.setPointerCapture(e.pointerId);
-  if ((aimMode && !hand) || e.button == 2 || e.shiftKey) {
+  if (e.button === 2) {
+    // Clic DERECHO: Iniciar control de mira
+    isRightMouseDown = true;
     orb = { x: e.clientX, y: e.clientY, aim: aimMode && !hand };
     return;
   }
-  const p = tp(e);
-  if (!p) return;
-  mouse.copy(p);
-  if (over == null && !moving && hand) {
-    const c = B[0];
-    if (Math.hypot(p.x - c.x, p.z - c.y) < 48) grab = { dx: c.x - p.x, dz: c.y - p.z };
-    return;
+  if (e.button === 0) {
+    // Clic IZQUIERDO: Bola en mano o Cargar fuerza
+    isLeftMouseDown = true;
+    const p = tp(e);
+    if (p) mouse.copy(p);
+    if (over == null && !moving && hand) {
+      if (p) {
+        const c = B[0];
+        if (Math.hypot(p.x - c.x, p.z - c.y) < 48) {
+          grab = { dx: c.x - p.x, dz: c.y - p.z };
+          return;
+        }
+      }
+    }
+    if (aimMode && !hand && idle()) {
+      charging = true;
+      return;
+    }
+    if (p && idle()) drag = { sx: p.x, sz: p.z };
   }
-  if (idle()) drag = { sx: p.x, sz: p.z };
-};
+});
 
-st.onpointermove = e => {
-  if (orb) {
+// Para dispositivos táctiles
+st.addEventListener('touchstart', e => {
+  initAudio();
+  if (e.touches.length === 1) {
+    const t = e.touches[0];
+    const p = tp(t);
+    if (p) mouse.copy(p);
+    if (over == null && !moving && hand && p) {
+      const c = B[0];
+      if (Math.hypot(p.x - c.x, p.z - c.y) < 48) {
+        grab = { dx: c.x - p.x, dz: c.y - p.z };
+        return;
+      }
+    }
+    if (aimMode && !hand && idle()) {
+      charging = true;
+      return;
+    }
+    if (p && idle()) drag = { sx: p.x, sz: p.z };
+  } else if (e.touches.length >= 2) {
+    // Segundo dedo: mover la mira mientras el primero carga
+    const t = e.touches[1];
+    orb = { x: t.clientX, y: t.clientY, aim: aimMode && !hand };
+  }
+}, { passive: true });
+
+window.addEventListener('mousemove', e => {
+  // 1. Mover mira con clic derecho presionado (o shift)
+  if (isRightMouseDown && orb) {
     const dx = e.clientX - orb.x, dy = e.clientY - orb.y;
     if (orb.aim && aimMode && !hand && over == null) {
       aimYaw += dx * .0045;
@@ -1025,8 +1222,9 @@ st.onpointermove = e => {
       ph = Math.max(.05, Math.min(1.25, ph - dy * .005));
     }
     orb.x = e.clientX; orb.y = e.clientY;
-    return;
   }
+
+  // 2. Si se tiene la bola en mano
   const p = tp(e);
   if (p) {
     mouse.copy(p);
@@ -1037,21 +1235,80 @@ st.onpointermove = e => {
       else if (validPos(c.x, y)) c.y = y;
     }
   }
-};
+});
 
-st.onpointerup = () => {
-  if (grab) {
-    grab = null;
-    if (hand) { hand = false; setMode(true); $('msg').textContent = 'Turno de ' + NAMES[turn]; }
+window.addEventListener('touchmove', e => {
+  if (e.touches.length >= 2 && orb) {
+    const t = e.touches[1];
+    const dx = t.clientX - orb.x, dy = t.clientY - orb.y;
+    if (orb.aim && aimMode && !hand && over == null) {
+      aimYaw += dx * .0045;
+      phA = Math.max(.6, Math.min(1.3, phA - dy * .004));
+    } else {
+      th -= dx * .006;
+      ph = Math.max(.05, Math.min(1.25, ph - dy * .005));
+    }
+    orb.x = t.clientX; orb.y = t.clientY;
+  }
+  const p = tp(e.touches[0]);
+  if (p) {
+    mouse.copy(p);
+    if (grab && hand) {
+      const c = B[0], x = Math.max(L + R, Math.min(RX - R, p.x + grab.dx)), y = Math.max(T + R, Math.min(BY - R, p.z + grab.dz));
+      if (validPos(x, y)) { c.x = x; c.y = y; }
+      else if (validPos(x, c.y)) c.x = x;
+      else if (validPos(c.x, y)) c.y = y;
+    }
+  }
+}, { passive: true });
+
+window.addEventListener('mouseup', e => {
+  if (e.button === 2) {
+    // Soltó clic derecho: detiene el movimiento de mira pero sigue cargando si izquierdo está apretado
+    isRightMouseDown = false;
+    orb = null;
     return;
   }
-  if (orb) { orb = null; return; }
-  if (!drag) return;
-  const dx = drag.sx - mouse.x, dz = drag.sz - mouse.z, l = Math.hypot(dx, dz);
-  drag = null; $('pf').style.height = '0';
-  if (l < 8 || !idle()) return;
-  shoot(Math.atan2(dz, dx), Math.min(l / 180, 1));
-};
+
+  if (e.button === 0) {
+    isLeftMouseDown = false;
+    if (grab) {
+      grab = null;
+      if (hand) { hand = false; setMode(true); $('msg').textContent = 'Turno de ' + NAMES[turn]; }
+      return;
+    }
+
+    if (charging) {
+      rel();
+      return;
+    }
+
+    if (drag) {
+      const dx = drag.sx - mouse.x, dz = drag.sz - mouse.z, l = Math.hypot(dx, dz);
+      drag = null; $('pf').style.height = '0';
+      if (l < 8 || !idle()) return;
+      shoot(Math.atan2(dz, dx), Math.min(l / 180, 1));
+      return;
+    }
+  }
+});
+
+window.addEventListener('touchend', e => {
+  if (e.touches.length === 0) {
+    orb = null;
+    if (grab) {
+      grab = null;
+      if (hand) { hand = false; setMode(true); $('msg').textContent = 'Turno de ' + NAMES[turn]; }
+      return;
+    }
+    if (charging) {
+      rel();
+      return;
+    }
+  } else if (e.touches.length === 1) {
+    orb = null;
+  }
+});
 
 function shoot(a, p) {
   B[0].vx = Math.cos(a) * p * 28.5;
@@ -1086,8 +1343,7 @@ const rel = () => {
 };
 
 $('pw').onpointerdown = e => { e.preventDefault(); e.stopPropagation(); go(); };
-addEventListener('pointerup', rel);
-addEventListener('pointercancel', rel);
+$('pw').onpointerup = e => { e.preventDefault(); e.stopPropagation(); rel(); };
 
 ['gear', 'menu', 'trWrap'].forEach(id => {
   const el = $(id);
@@ -1340,7 +1596,7 @@ $('selCue').onchange = e => applyCue(e.target.value);
 $('selBg').onchange = e => applyBackground(e.target.value);
 
 applyCue('clasico');
-applyBackground('espacio');
+applyBackground('universo');
 resize();
 newGame();
 frame();

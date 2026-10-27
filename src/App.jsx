@@ -341,7 +341,11 @@ function App() {
       {activeView}
 
       {/* GLOBAL DOCK: En vista de juegos se colapsa con el efecto bacán de magnificación física */}
-      {user && !hideDock && createPortal(
+      {user && !hideDock && !(
+        (globalUserData?.isPartner || globalUserData?.isCollaborator || globalUserData?.isCouple || globalUserData?.isCircleMember) &&
+        globalUserData?.planExpiresAt &&
+        new Date(globalUserData.planExpiresAt).getTime() < Date.now()
+      ) && createPortal(
         view === 'games' ? (
           <div className={`fixed z-[99999] pointer-events-auto ${
             isMobile ? 'bottom-4 left-1/2 -translate-x-1/2' : 'left-2 top-1/2 -translate-y-1/2'

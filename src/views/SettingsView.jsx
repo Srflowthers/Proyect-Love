@@ -1140,6 +1140,37 @@ const createWebPThumbnail = async (file) => {
   };
 
 
+  const isLinkedUser = !!(globalUserData?.isPartner || globalUserData?.isCollaborator || globalUserData?.isCouple || globalUserData?.isCircleMember);
+
+  if (isLinkedUser && isExpired) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center text-white relative overflow-hidden">
+        <div className="relative z-10 max-w-md bg-[#111] border border-pink-500/40 rounded-3xl p-8 shadow-[0_0_60px_rgba(236,72,153,0.25)] flex flex-col items-center">
+          <div className="w-20 h-20 bg-pink-950/40 rounded-full flex items-center justify-center mb-6 border border-pink-500/50 shadow-[0_0_25px_rgba(236,72,153,0.3)]">
+            <svg className="w-10 h-10 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl md:text-3xl font-serif italic text-pink-300 mb-3">
+            El plan del universo ha expirado
+          </h2>
+          <p className="text-gray-300 text-sm md:text-base mb-6 leading-relaxed">
+            El plan del titular de este universo ha vencido. Comunícate con el dueño del universo para renovar el acceso.
+          </p>
+          <button
+            onClick={async () => {
+              await logout();
+              window.location.reload();
+            }}
+            className="w-full py-3.5 px-6 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 rounded-xl font-bold transition-all text-white text-sm shadow-lg shadow-pink-500/25"
+          >
+            Cerrar Sesión
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black text-white flex flex-col md:flex-row pb-32 md:pb-0 md:pl-24 relative overflow-hidden">
       {/* Background Live Preview */}

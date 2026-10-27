@@ -48,41 +48,8 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
       }
     }
     if (!user) {
-      // Si es un visitante sin loguear, intentamos obtener las fotos de demostración del backend
-      const fetchDemoImages = async () => {
-        try {
-          const cached = localStorage.getItem('demo-images-v1');
-          if (cached) {
-            const { t, images } = JSON.parse(cached);
-            if (Date.now() - t < 3600000 && images && images.length > 0) {
-              setImages(images.map(img => typeof img === 'string' ? { src: img, public_id: img } : img));
-              return;
-            }
-          }
-        } catch (e) { }
-
-        try {
-          const res = await fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '')}/api/demo-images`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.images && data.images.length > 0) {
-              try {
-                localStorage.setItem('demo-images-v1', JSON.stringify({ t: Date.now(), images: data.images }));
-              } catch (e) { }
-              const mappedImages = data.images.map(img =>
-                typeof img === 'string' ? { src: img, public_id: img } : img
-              );
-              setImages(mappedImages);
-              return;
-            }
-          }
-        } catch (err) {
-          console.error("Error fetching demo images del backend:", err);
-        }
-        // Fallback local
-        setImages(DEMO_IMAGES);
-      };
-      fetchDemoImages();
+      // Si el usuario no está logueado, no se traen fotos ni se muestra ninguna imagen de fondo
+      setImages([]);
       return;
     }
 
@@ -123,9 +90,18 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
           setUserData(data);
           if (setGlobalUserData) setGlobalUserData(data);
 
+          let isExp = false;
           if (data.planExpiresAt) {
             const expDate = new Date(data.planExpiresAt);
-            setIsExpired(expDate.getTime() < Date.now());
+            isExp = expDate.getTime() < Date.now();
+            setIsExpired(isExp);
+          }
+
+          // Si el usuario es pareja vinculada o miembro del círculo familiar y el plan del titular ha vencido, NO se cargan imágenes ni se da acceso
+          const isLinkedUser = !!(data.isPartner || data.isCollaborator || data.isCouple || data.isCircleMember);
+          if (isLinkedUser && isExp) {
+            setImages([]);
+            return;
           }
 
           // Cargar imágenes
@@ -143,8 +119,12 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
               if (fetchedImages.length > 0) {
                 setImages(fetchedImages);
                 if (setGlobalImages) setGlobalImages(fetchedImages);
+              } else if (data.galleryImages && data.galleryImages.length > 0) {
+                const mappedGallery = data.galleryImages.map(img => typeof img === 'string' ? { src: img, public_id: img } : img);
+                setImages(mappedGallery);
+                if (setGlobalImages) setGlobalImages(mappedGallery);
               } else {
-                console.warn("[GalleryView] La lista de imágenes retornada por el backend está vacía.");
+                setImages([]);
               }
               
               const fetchedCursor = imgData.nextCursor || null;
@@ -414,6 +394,38 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
     return 'rgba(131,24,67,0.15)'; // Pink/Purple (Default)
   };
 
+  const isLinkedUser = !!(userData?.isPartner || userData?.isCollaborator || userData?.isCouple || userData?.isCircleMember);
+
+  if (isLinkedUser && isExpired) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-radial-gradient from-pink-950/20 via-black to-black pointer-events-none" />
+        <div className="relative z-10 max-w-md bg-[#111] border border-pink-500/40 rounded-3xl p-8 shadow-[0_0_60px_rgba(236,72,153,0.25)] flex flex-col items-center">
+          <div className="w-20 h-20 bg-pink-950/40 rounded-full flex items-center justify-center mb-6 border border-pink-500/50 shadow-[0_0_25px_rgba(236,72,153,0.3)]">
+            <svg className="w-10 h-10 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl md:text-3xl font-serif italic text-pink-300 mb-3">
+            El plan del universo ha expirado
+          </h2>
+          <p className="text-gray-300 text-sm md:text-base mb-6 leading-relaxed">
+            El plan del titular de este universo ha vencido. Comunícate con el dueño del universo ({userData?.ownerName || userData?.user1Name || 'el titular'}) para que renueve su membresía y puedas seguir disfrutando de este espacio compartido.
+          </p>
+          <button
+            onClick={async () => {
+              await logout();
+              window.location.reload();
+            }}
+            className="w-full py-3.5 px-6 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 rounded-xl font-bold transition-all text-white text-sm shadow-lg shadow-pink-500/25"
+          >
+            Cerrar Sesión
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`w-screen relative text-white ${viewMode === 'home' ? 'min-h-screen overflow-y-auto overflow-x-hidden bg-black' : `h-screen overflow-hidden overscroll-none ${getUniverseBgClass()}`}`}
@@ -543,20 +555,24 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
             >
               <div className="absolute inset-0 flex flex-col gap-2 overflow-hidden opacity-30 group-hover:opacity-70 transition-opacity duration-1000 pointer-events-none py-2 px-1">
                 {(() => {
-                  if (!images || images.length === 0) return null;
-                  
-                  // Repartir las imágenes entre las 3 filas cíclicamente
-                  const row1Imgs = images.filter((_, idx) => idx % 3 === 0);
-                  const row2Imgs = images.filter((_, idx) => idx % 3 === 1);
-                  const row3Imgs = images.filter((_, idx) => idx % 3 === 2);
+                  const validUserImages = (images || []).filter(img => {
+                    const s = typeof img === 'string' ? img : (img?.thumb_url || img?.src || img?.original_url);
+                    return !!s && typeof s === 'string' && s.trim().length > 0;
+                  });
 
-                  // Función auxiliar para asegurar que cada fila tenga suficientes imágenes para llenar la pantalla
+                  // Si no hay usuario logueado o no tiene fotos suficientes (mínimo 3), no mostramos ninguna imagen de fondo
+                  if (!user || validUserImages.length < 3) return null;
+
+                  // Repartir las imágenes entre las 3 filas cíclicamente
+                  const row1Imgs = validUserImages.filter((_, idx) => idx % 3 === 0);
+                  const row2Imgs = validUserImages.filter((_, idx) => idx % 3 === 1);
+                  const row3Imgs = validUserImages.filter((_, idx) => idx % 3 === 2);
+
+                  // Función auxiliar para repetir solo si hay fotos
                   const buildInfiniteRow = (rowItems) => {
-                    const source = rowItems.length > 0 ? rowItems : images;
                     let list = [];
-                    // Asegurar al menos 12 imágenes por mitad para que cubra cualquier ancho de pantalla
                     while (list.length < 12) {
-                      list = list.concat(source);
+                      list = list.concat(rowItems);
                     }
                     return list;
                   };
@@ -565,19 +581,25 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
                   const r2 = buildInfiniteRow(row2Imgs);
                   const r3 = buildInfiniteRow(row3Imgs);
 
+                  const getImgSrc = (img) => {
+                    if (!img) return '';
+                    if (typeof img === 'string') return img;
+                    return img.thumb_url || img.src || img.original_url || '';
+                  };
+
                   return (
                     <>
                       <div className="flex shrink-0 gap-2 h-1/3 animate-scroll-left">
-                        {r1.map((img, i) => <img key={`r1a-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
-                        {r1.map((img, i) => <img key={`r1b-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
+                        {r1.map((img, i) => <img key={`r1a-${i}`} src={getImgSrc(img)} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
+                        {r1.map((img, i) => <img key={`r1b-${i}`} src={getImgSrc(img)} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
                       </div>
                       <div className="flex shrink-0 gap-2 h-1/3 animate-scroll-left" style={{ animationDuration: '50s', animationDirection: 'reverse' }}>
-                        {r2.map((img, i) => <img key={`r2a-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
-                        {r2.map((img, i) => <img key={`r2b-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
+                        {r2.map((img, i) => <img key={`r2a-${i}`} src={getImgSrc(img)} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
+                        {r2.map((img, i) => <img key={`r2b-${i}`} src={getImgSrc(img)} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
                       </div>
                       <div className="flex shrink-0 gap-2 h-1/3 animate-scroll-left" style={{ animationDuration: '70s' }}>
-                        {r3.map((img, i) => <img key={`r3a-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
-                        {r3.map((img, i) => <img key={`r3b-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
+                        {r3.map((img, i) => <img key={`r3a-${i}`} src={getImgSrc(img)} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
+                        {r3.map((img, i) => <img key={`r3b-${i}`} src={getImgSrc(img)} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
                       </div>
                     </>
                   );

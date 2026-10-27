@@ -29,17 +29,10 @@
 </head>
 <body>
 
-<button id="mute" title="Silenciar sonido" type="button" aria-label="Silenciar sonido">🔊</button>
-
 <div class="app-layout">
-  <!-- Columna izquierda: Marcador de Jugadores y Estado -->
-  <aside class="panel side-left">
-    <!-- Marcador de Pareja -->
+  <!-- Marcador de Jugadores y Estado de Turno Superior -->
+  <header class="top-bar">
     <div class="card card-players">
-      <div class="card-header">
-        <span class="card-icon">💞</span>
-        <span class="card-title">Marcador</span>
-      </div>
       <div class="players">
         <div class="pl a" id="pa">
           <input id="na" value="Jugador 1" maxlength="14" aria-label="Nombre Jugador 1">
@@ -54,26 +47,11 @@
 
     <!-- Mensaje dinámico de turno y eventos -->
     <div class="card card-msg">
-      <div class="msg-badge-label">Estado de la Partida</div>
       <div class="msg" id="msg"></div>
     </div>
+  </header>
 
-    <!-- Guía y reglas rápidas -->
-    <div class="card card-help">
-      <div class="card-header">
-        <span class="card-icon">⌨️</span>
-        <span class="card-title">Cómo Jugar</span>
-      </div>
-      <ul class="help-list">
-        <li><span>🎯</span><strong>+1 punto</strong> por cada acierto.</li>
-        <li><span>⚠️</span><strong>Error</strong> = pierdes el turno.</li>
-        <li><span>💡</span><strong>3 pistas</strong> compartidas.</li>
-        <li><span>⌨️</span>Atajos: Teclas <strong>1 al 9</strong>.</li>
-      </ul>
-    </div>
-  </aside>
-
-  <!-- Columna central: Tablero espacioso + Teclado numérico táctil -->
+  <!-- Escenario central: Tablero amplio + Teclado numérico y botón de Pistas -->
   <main class="center-stage">
     <div class="board-wrapper">
       <div class="board" id="board"></div>
@@ -81,8 +59,8 @@
 
     <div class="pad-wrapper">
       <div class="pad" id="pad"></div>
-      <div class="mobile-actions-bar">
-        <button id="mobile-hint" class="btn-hint btn-mobile-hint" type="button">
+      <div class="actions-bar">
+        <button id="hint" class="btn-hint" type="button">
           <svg class="hint-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 18h6" />
             <path d="M10 22h4" />
@@ -94,39 +72,19 @@
     </div>
   </main>
 
-  <!-- Columna derecha: Acciones rápidas en desktop -->
-  <aside class="panel side-right">
-    <div class="card card-actions">
-      <div class="card-header">
-        <span class="card-icon">⚡</span>
-        <span class="card-title">Acciones</span>
-      </div>
-
-      <!-- Botón Pista -->
-      <button id="hint" class="btn-hint" type="button">
-        <svg class="hint-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 18h6" />
-          <path d="M10 22h4" />
-          <path d="M12 2a7 7 0 0 0-7 7c0 2.6 1.4 4.8 3.5 6h7c2.1-1.2 3.5-3.4 3.5-6a7 7 0 0 0-7-7z" />
-        </svg>
-        <span class="hint-label">Pista (3 de 3)</span>
-      </button>
-
-      <!-- Selectores ocultos (la dificultad se define antes de entrar o al terminar) -->
-      <div style="display:none !important">
-        <select id="size" aria-label="Tamaño del tablero">
-          <option value="6">6×6</option>
-          <option value="9" selected>9×9</option>
-          <option value="12">12×12</option>
-        </select>
-        <select id="diff" aria-label="Dificultad">
-          <option value="0">Fácil</option>
-          <option value="1" selected>Medio</option>
-          <option value="2">Difícil</option>
-        </select>
-      </div>
-    </div>
-  </aside>
+  <!-- Selectores ocultos (la dificultad se define antes de entrar o al terminar) -->
+  <div style="display:none !important">
+    <select id="size" aria-label="Tamaño del tablero">
+      <option value="6">6×6</option>
+      <option value="9" selected>9×9</option>
+      <option value="12">12×12</option>
+    </select>
+    <select id="diff" aria-label="Dificultad">
+      <option value="0">Fácil</option>
+      <option value="1" selected>Medio</option>
+      <option value="2">Difícil</option>
+    </select>
+  </div>
 </div>
 
 <!-- Modal Épico de Fin de Partida (Jugar otra o Subir Dificultad) -->

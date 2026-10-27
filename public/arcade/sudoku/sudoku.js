@@ -180,10 +180,13 @@ function after(who) {
   }
 }
 
-$('mute').onclick = () => {
-  snd = !snd;
-  $('mute').textContent = snd ? '🔊' : '🔇';
-};
+const muteBtn = $('mute');
+if (muteBtn) {
+  muteBtn.onclick = () => {
+    snd = !snd;
+    muteBtn.textContent = snd ? '🔊' : '🔇';
+  };
+}
 
 /* ─────────────────────────────────────────────────────────────
    C) GENERACIÓN DE TABLEROS
@@ -434,12 +437,6 @@ function render() {
     if (lbl) lbl.textContent = hintLabel;
     hintBtn.disabled = !hintsLeft || over;
   }
-  const mobHint = $('mobile-hint');
-  if (mobHint) {
-    const mlbl = mobHint.querySelector('.hint-label');
-    if (mlbl) mlbl.textContent = hintLabel;
-    mobHint.disabled = !hintsLeft || over;
-  }
   $('sa').textContent = score[0];
   $('sb').textContent = score[1];
   $('pa').classList.toggle('on', turn === 0);
@@ -574,11 +571,6 @@ function handleHint() {
 }
 
 $('hint').onclick = handleHint;
-const mobHintBtn = $('mobile-hint');
-if (mobHintBtn) mobHintBtn.onclick = handleHint;
-
-const mobNewBtn = $('mobile-new');
-if (mobNewBtn) mobNewBtn.onclick = newGame;
 
 /* Modal Actions: Jugar Otra y Subir Dificultad */
 const btnReplay = $('btn-replay');

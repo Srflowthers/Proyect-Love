@@ -90,6 +90,7 @@ export default function GamesView({
   const [activeParams, setActiveParams] = useState('');
   const [sudokuModalOpen, setSudokuModalOpen] = useState(false);
   const [puzzleModalOpen, setPuzzleModalOpen] = useState(false);
+  const [tetrisModalOpen, setTetrisModalOpen] = useState(false);
   const [coinBurst, setCoinBurst] = useState(null);
   const [coinPulseActive, setCoinPulseActive] = useState(false);
   const [displayedCoins, setDisplayedCoins] = useState(userData?.coins ?? 0);
@@ -309,7 +310,7 @@ export default function GamesView({
       try {
         const token = await user.getIdToken();
         const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '');
-        const res = await fetch(`${apiUrl}/api/images?limit=70`, {
+        const res = await fetch(`${apiUrl}/api/images?limit=24`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -387,6 +388,10 @@ export default function GamesView({
 
   // Manejador centralizado para iniciar cualquier juego
   const handlePlayGame = (gameId) => {
+    if (gameId === 'tetris') {
+      setTetrisModalOpen(true);
+      return;
+    }
     if (gameId === 'sudoku') {
       setSudokuModalOpen(true);
       return;
@@ -1038,6 +1043,77 @@ export default function GamesView({
                   <span className="px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/30 text-[11px] font-mono text-purple-300 font-bold">+350 LP</span>
                   <span className="text-xs text-purple-400/80 group-hover:text-purple-200">→</span>
                 </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal interactivo de selección de modo para Tetris */}
+      {tetrisModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={() => setTetrisModalOpen(false)}
+        >
+          <div 
+            className="relative w-full max-w-sm rounded-3xl p-6 bg-gradient-to-b from-[#1c1427] to-[#0c0915] border border-pink-500/30 shadow-[0_0_50px_rgba(236,72,153,0.3)] flex flex-col items-center text-center animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Botón cerrar */}
+            <button
+              onClick={() => setTetrisModalOpen(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 text-gray-400 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+            >
+              ✕
+            </button>
+
+            {/* Icono decorativo */}
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500/20 to-sky-500/20 border border-pink-400/30 flex items-center justify-center text-2xl shadow-inner mb-3">
+              ⚔️
+            </div>
+
+            <h3 className="text-xl font-serif italic font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-300 via-sky-200 to-indigo-200">
+              Tetris Pareja
+            </h3>
+            <p className="text-xs text-gray-400 mt-1 mb-6">
+              Elige el modo para comenzar a jugar:
+            </p>
+
+            <div className="w-full flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  setTetrisModalOpen(false);
+                  setActiveParams('mode=solo');
+                  setActiveGame('tetris');
+                }}
+                className="w-full py-3.5 px-5 rounded-2xl font-bold text-sm tracking-wide flex items-center justify-between border border-pink-500/40 bg-pink-500/10 hover:bg-pink-500/25 text-pink-200 hover:text-white shadow-[0_0_15px_rgba(236,72,153,0.15)] transition-all active:scale-95 cursor-pointer group"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="w-2.5 h-2.5 rounded-full bg-pink-400 group-hover:scale-125 transition-transform shadow-[0_0_8px_#f472b6]" />
+                  <div className="text-left">
+                    <span className="text-base font-semibold block">1 Jugador (Clásico)</span>
+                    <span className="text-[10px] text-gray-400 font-normal">Individual / Cooperativo</span>
+                  </div>
+                </div>
+                <span className="text-xs text-pink-400/80 group-hover:text-pink-200">Jugar →</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setTetrisModalOpen(false);
+                  setActiveParams('mode=1v1');
+                  setActiveGame('tetris');
+                }}
+                className="w-full py-3.5 px-5 rounded-2xl font-bold text-sm tracking-wide flex items-center justify-between border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/25 text-sky-200 hover:text-white shadow-[0_0_15px_rgba(14,165,233,0.2)] transition-all active:scale-95 cursor-pointer group"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="w-2.5 h-2.5 rounded-full bg-sky-400 group-hover:scale-125 transition-transform shadow-[0_0_8px_#38bdf8]" />
+                  <div className="text-left">
+                    <span className="text-base font-semibold block">1v1 Local (2 Tableros)</span>
+                    <span className="text-[10px] text-gray-400 font-normal">P1: WASD vs P2: Flechas</span>
+                  </div>
+                </div>
+                <span className="text-xs text-sky-400/80 group-hover:text-sky-200">Duelo →</span>
               </button>
             </div>
           </div>

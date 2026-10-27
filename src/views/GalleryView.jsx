@@ -18,6 +18,7 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
   const [viewMode, setViewMode] = useState('home');
   const [isWarping, setIsWarping] = useState(false);
   const [musicActive, setMusicActive] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [clickCount, setClickCount] = useState(0);
   const [isExpired, setIsExpired] = useState(false);
 
@@ -129,8 +130,8 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
 
           // Cargar imágenes
           try {
-            console.log("[GalleryView] Solicitando /api/images?limit=70...");
-            const imgRes = await fetch(`${apiUrl}/api/images?limit=70`, {
+            console.log("[GalleryView] Solicitando /api/images?limit=24...");
+            const imgRes = await fetch(`${apiUrl}/api/images?limit=24`, {
               headers: { 'Authorization': `Bearer ${token}` }
             });
             console.log("[GalleryView] Respuesta /api/images status:", imgRes.status);
@@ -177,9 +178,24 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
       });
       if (imgRes.ok) {
         const imgData = await imgRes.json();
-        if (imgData.items && imgData.items.length > 0) {
-          setImages(prev => [...prev, ...imgData.items]);
+        const incoming = imgData.items || [];
+        if (incoming.length > 0) {
+          setImages(prev => {
+            const seen = new Set();
+            prev.forEach(p => {
+              const key = p.public_id || p.id || p.src;
+              if (key) seen.add(key);
+            });
+            const fresh = incoming.filter(item => {
+              const key = item.public_id || item.id || item.src;
+              if (!key || seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            });
+            return fresh.length > 0 ? [...prev, ...fresh] : prev;
+          });
         }
+        // Si el backend no devuelve un nuevo cursor o ya no hay items nuevos, finalizamos la paginación
         setNextCursor(imgData.nextCursor || null);
       }
     } catch (e) {
@@ -301,17 +317,26 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
         customAudioRef.current.src = currentTrack.url;
       }
       
-      if (musicActive) {
-        customAudioRef.current.play().catch(e => console.error("Play error", e));
-      }
-
+      const onPlay = () => setIsAudioPlaying(true);
+      const onPause = () => setIsAudioPlaying(false);
       const handleEnded = () => {
         setCurrentAudioIndex(prev => (prev + 1) % playlist.length);
       };
 
+      customAudioRef.current.addEventListener('play', onPlay);
+      customAudioRef.current.addEventListener('pause', onPause);
       customAudioRef.current.addEventListener('ended', handleEnded);
+
+      if (musicActive) {
+        customAudioRef.current.play()
+          .then(() => setIsAudioPlaying(true))
+          .catch(e => console.error("Play error", e));
+      }
+
       return () => {
         if (customAudioRef.current) {
+          customAudioRef.current.removeEventListener('play', onPlay);
+          customAudioRef.current.removeEventListener('pause', onPause);
           customAudioRef.current.removeEventListener('ended', handleEnded);
         }
       };
@@ -438,34 +463,64 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
         <div id="spotify-global-iframe"></div>
       </div>
 
-      {/* Reproductor de Audio Flotante */}
+      {/* Reproductor de Audio Flotante (Burbuja Compacta) */}
       {(userData?.customAudios?.length > 0 || userData?.customAudioUrl) && (
-        <div className={`fixed bottom-4 left-4 z-[100] transition-all duration-1000 ${musicActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-          <div className="bg-black/60 backdrop-blur-md border border-purple-500/30 rounded-xl p-3 shadow-[0_0_15px_rgba(168,85,247,0.3)] flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center animate-pulse shrink-0">
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
-            </div>
-            <div className="max-w-[120px] md:max-w-[200px]">
-              <p className="text-white text-xs font-bold uppercase tracking-wider truncate">
-                {userData?.customAudios?.[currentAudioIndex]?.name || 'Tu Canción Especial'}
-              </p>
-              <p className="text-purple-300 text-[10px] italic">Reproduciéndose en el Universo</p>
-            </div>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                if (customAudioRef.current) {
-                  if (customAudioRef.current.paused) customAudioRef.current.play();
-                  else customAudioRef.current.pause();
+        <div className={`fixed bottom-4 left-4 z-[100] transition-all duration-700 ${musicActive ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'}`}>
+          <button 
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (customAudioRef.current) {
+                if (customAudioRef.current.paused) {
+                  customAudioRef.current.play().then(() => setIsAudioPlaying(true)).catch(console.warn);
+                } else {
+                  customAudioRef.current.pause();
+                  setIsAudioPlaying(false);
                 }
-              }}
-              className="ml-2 w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition-colors pointer-events-auto"
-            >
-              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+              } else if (window.spotifyController) {
+                try {
+                  window.spotifyController.togglePlay();
+                  setIsAudioPlaying(prev => !prev);
+                } catch (err) {}
+              }
+            }}
+            title={isAudioPlaying ? `Pausar: ${userData?.customAudios?.[currentAudioIndex]?.name || 'Música'}` : `Reproducir: ${userData?.customAudios?.[currentAudioIndex]?.name || 'Música'}`}
+            className={`group relative w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md cursor-pointer border ${
+              isAudioPlaying 
+                ? 'bg-gradient-to-tr from-purple-700/80 via-pink-600/80 to-rose-500/80 border-pink-400/60 shadow-[0_0_20px_rgba(236,72,153,0.5)] hover:scale-105' 
+                : 'bg-black/60 border-purple-500/30 text-white/50 hover:text-white hover:border-pink-500/50 hover:bg-black/80'
+            }`}
+          >
+            {/* Anillo de pulso sutil cuando está reproduciendo */}
+            {isAudioPlaying && (
+              <span className="absolute inset-0 rounded-full border border-pink-400/40 animate-ping pointer-events-none" style={{ animationDuration: '2.5s' }}></span>
+            )}
+
+            {/* Icono de Nota Musical / Pausa */}
+            {isAudioPlaying ? (
+              <div className="relative flex items-center justify-center">
+                {/* Barras de ecualizador en vivo / pausa al hover */}
+                <div className="flex items-center gap-[2.5px] group-hover:hidden">
+                  <span className="w-[3px] h-3.5 bg-white rounded-full animate-[pulse_0.8s_ease-in-out_infinite]"></span>
+                  <span className="w-[3px] h-4.5 bg-white rounded-full animate-[pulse_0.6s_ease-in-out_infinite_0.2s]"></span>
+                  <span className="w-[3px] h-2.5 bg-white rounded-full animate-[pulse_0.9s_ease-in-out_infinite_0.4s]"></span>
+                </div>
+                {/* Icono pausa cuando pasas el mouse por encima */}
+                <svg className="w-4 h-4 text-white hidden group-hover:block" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                </svg>
+              </div>
+            ) : (
+              <svg className="w-5 h-5 text-pink-300 group-hover:text-white transition-colors ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
               </svg>
-            </button>
-          </div>
+            )}
+
+            {/* Tooltip flotante sutil a la derecha al hacer hover */}
+            <span className="absolute left-full ml-3 px-2.5 py-1 rounded-lg bg-black/80 border border-white/10 text-white text-[11px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg">
+              {userData?.customAudios?.[currentAudioIndex]?.name || 'Música de Fondo'}
+            </span>
+          </button>
         </div>
       )}
 
@@ -525,18 +580,46 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
               }}
             >
               <div className="absolute inset-0 flex flex-col gap-2 overflow-hidden opacity-30 group-hover:opacity-70 transition-opacity duration-1000 pointer-events-none py-2 px-1">
-                <div className="flex shrink-0 gap-2 h-1/3 animate-scroll-left">
-                  {images.slice(0, 8).map((img, i) => <img key={`r1a-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
-                  {images.slice(0, 8).map((img, i) => <img key={`r1b-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
-                </div>
-                <div className="flex shrink-0 gap-2 h-1/3 animate-scroll-left" style={{ animationDuration: '50s', animationDirection: 'reverse' }}>
-                  {images.slice(8, 16).map((img, i) => <img key={`r2a-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
-                  {images.slice(8, 16).map((img, i) => <img key={`r2b-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
-                </div>
-                <div className="flex shrink-0 gap-2 h-1/3 animate-scroll-left" style={{ animationDuration: '70s' }}>
-                  {images.slice(16, 24).map((img, i) => <img key={`r3a-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
-                  {images.slice(16, 24).map((img, i) => <img key={`r3b-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
-                </div>
+                {(() => {
+                  if (!images || images.length === 0) return null;
+                  
+                  // Repartir las imágenes entre las 3 filas cíclicamente
+                  const row1Imgs = images.filter((_, idx) => idx % 3 === 0);
+                  const row2Imgs = images.filter((_, idx) => idx % 3 === 1);
+                  const row3Imgs = images.filter((_, idx) => idx % 3 === 2);
+
+                  // Función auxiliar para asegurar que cada fila tenga suficientes imágenes para llenar la pantalla
+                  const buildInfiniteRow = (rowItems) => {
+                    const source = rowItems.length > 0 ? rowItems : images;
+                    let list = [];
+                    // Asegurar al menos 12 imágenes por mitad para que cubra cualquier ancho de pantalla
+                    while (list.length < 12) {
+                      list = list.concat(source);
+                    }
+                    return list;
+                  };
+
+                  const r1 = buildInfiniteRow(row1Imgs);
+                  const r2 = buildInfiniteRow(row2Imgs);
+                  const r3 = buildInfiniteRow(row3Imgs);
+
+                  return (
+                    <>
+                      <div className="flex shrink-0 gap-2 h-1/3 animate-scroll-left">
+                        {r1.map((img, i) => <img key={`r1a-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
+                        {r1.map((img, i) => <img key={`r1b-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
+                      </div>
+                      <div className="flex shrink-0 gap-2 h-1/3 animate-scroll-left" style={{ animationDuration: '50s', animationDirection: 'reverse' }}>
+                        {r2.map((img, i) => <img key={`r2a-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
+                        {r2.map((img, i) => <img key={`r2b-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
+                      </div>
+                      <div className="flex shrink-0 gap-2 h-1/3 animate-scroll-left" style={{ animationDuration: '70s' }}>
+                        {r3.map((img, i) => <img key={`r3a-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
+                        {r3.map((img, i) => <img key={`r3b-${i}`} src={img.src} loading="lazy" className="h-full w-auto aspect-[4/3] object-cover rounded-md" alt="" />)}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/20 to-black/90 pointer-events-none" />

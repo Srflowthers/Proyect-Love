@@ -164,8 +164,18 @@ export default function CanvasGallery({ items, toggleView, hasFlightMode = true,
     const baseItems = [];
     const cache = itemPositionsCacheRef.current;
 
+    // Deduplicar estrictamente los items entrantes para evitar que fotos repetidas se apilen en el mismo punto 3D
+    const uniqueMap = new Map();
+    (items || []).forEach((it, idx) => {
+      const key = it.public_id || it.id || (typeof it.src === 'string' ? it.src : (typeof it === 'string' ? it : `item_${idx}`));
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, typeof it === 'string' ? { src: it, id: key } : it);
+      }
+    });
+    const deduplicatedList = Array.from(uniqueMap.values());
+
     // Priorizar videos al inicio para que SIEMPRE aparezcan en el campo de visión frontal inmediato
-    const sortedList = [...(items || [])].sort((a, b) => {
+    const sortedList = deduplicatedList.sort((a, b) => {
       const aVid = isVideoItem(a);
       const bVid = isVideoItem(b);
       if (aVid && !bVid) return -1;
@@ -176,7 +186,7 @@ export default function CanvasGallery({ items, toggleView, hasFlightMode = true,
     sortedList.forEach((item, index) => {
       const isVid = isVideoItem(item);
       const itemWithVid = { ...item, isVideo: isVid };
-      const idKey = item.public_id || item.src || item.id || `item_${index}`;
+      const idKey = item.public_id || item.id || item.src || `item_${index}`;
       
       let pos = cache.get(idKey);
       // Si es video y antes fue posicionado lejos, forzar recolocación al frente
@@ -221,7 +231,7 @@ export default function CanvasGallery({ items, toggleView, hasFlightMode = true,
 
       baseItems.push({
         ...itemWithVid,
-        uniqueId: idKey,
+        uniqueId: `${idKey}_${index}`,
         ...pos,
       });
     });

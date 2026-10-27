@@ -10,12 +10,15 @@
   <script>
     (function () {
       try {
+        var p = new URLSearchParams(window.location.search);
+        if (p.get('dev') === '1' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          return;
+        }
         if (window.self === window.top) {
           window.location.replace('/?auth_required=arcade');
           return;
         }
         var authKey = sessionStorage.getItem('arcade_session_auth');
-        var p = new URLSearchParams(window.location.search);
         if (!authKey && !p.get('auth')) {
           window.location.replace('/?auth_required=arcade');
         }
@@ -30,17 +33,70 @@
 </head>
 <body>
 
+
 <div id="banner" style="display:none !important"></div>
 
 <div class="row">
-  <!-- Columna izquierda: Guía y Controles de Teclado / Táctil -->
+  <!-- Columna izquierda: Guía y Controles / P1 en 1v1 -->
   <aside class="side side-left">
-    <div class="card card-controls">
+    <!-- Marcador P1 (Modo 1v1) -->
+    <div class="card card-score" id="p1-score-card" style="display:none; border-color: rgba(236,72,153,0.5);">
+      <small style="text-transform:uppercase;letter-spacing:0.5px;font-weight:800;color:#f472b6;">💗 P1 (Ella)</small>
+      <b id="p1-score-val" style="color:#f472b6 !important;">0</b>
+      <small id="p1-lines-val" style="display:block;margin-top:2px;">0 líneas</small>
+      <div id="p1-skb" style="height:6px;border-radius:4px;background:rgba(255,255,255,0.12);overflow:hidden;margin:8px 0 2px;"><i id="p1-skf" style="display:block;height:100%;width:0;background:linear-gradient(90deg,#f59e0b,#fde047);transition:width 0.25s ease;"></i></div>
+      <small id="p1-skt" style="font-size:0.72rem;color:#fde047;display:block;">🛟 Salvación (E)</small>
+    </div>
+
+    <!-- Guía P1 (Modo 1v1) -->
+    <div class="card card-controls" id="p1-ctrl-card" style="display:none;">
+      <div class="ctrl-header">
+        <span style="font-size:1.15rem;">⌨️</span>
+        <small style="text-transform:uppercase;letter-spacing:0.8px;font-weight:800;color:#f472b6;">Controles P1</small>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-item">
+          <div class="ctrl-keys">
+            <kbd class="kbd-key">A</kbd>
+            <kbd class="kbd-key">D</kbd>
+          </div>
+          <span class="ctrl-text">Mover pieza</span>
+        </div>
+        <div class="ctrl-item">
+          <div class="ctrl-keys">
+            <kbd class="kbd-key">S</kbd>
+          </div>
+          <span class="ctrl-text">Bajar suave</span>
+        </div>
+        <div class="ctrl-item">
+          <div class="ctrl-keys">
+            <kbd class="kbd-key">W</kbd>
+          </div>
+          <span class="ctrl-text ctrl-rot">Rotar figura</span>
+        </div>
+        <div class="ctrl-item">
+          <div class="ctrl-keys">
+            <kbd class="kbd-key kbd-space">Espacio</kbd>
+          </div>
+          <span class="ctrl-text ctrl-drop">Caída de golpe</span>
+        </div>
+        <div class="ctrl-item">
+          <div class="ctrl-keys">
+            <kbd class="kbd-key kbd-e">E</kbd>
+          </div>
+          <span class="ctrl-text">Salvación</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controles Clásicos (Modo Solo) -->
+    <div class="card card-controls" id="classic-controls-card">
       <div class="ctrl-header">
         <span style="font-size:1.15rem;">⌨️</span>
         <small style="text-transform:uppercase;letter-spacing:0.8px;font-weight:800;color:#f472b6;">Controles</small>
       </div>
-      <div class="ctrl-group">
+
+      <div class="ctrl-group" id="ctrl-default-guide">
         <div class="ctrl-item">
           <div class="ctrl-keys">
             <kbd class="kbd-key">◀</kbd>
@@ -77,7 +133,7 @@
     </div>
 
     <!-- Botones táctiles de acción rápida integrados en la barra lateral -->
-    <div class="card card-pad" style="padding: 10px 14px !important;">
+    <div class="card card-pad" id="classic-pad-card" style="padding: 10px 14px !important;">
       <small style="text-transform:uppercase;letter-spacing:0.5px;font-weight:700;color:rgba(255,255,255,0.7);display:block;margin-bottom:6px;">Acciones Rápidas</small>
       <div class="pad pad-side">
         <button data-a="L" type="button" title="Mover Izquierda">◀</button>
@@ -90,31 +146,100 @@
     </div>
   </aside>
 
-  <!-- Tablero central de juego Canvas y superposición de inicio/fin -->
-  <main class="boardwrap">
+  <!-- Tablero 1: Tablero central / Jugador 1 -->
+  <main class="boardwrap" id="boardwrap-1">
+    <div id="p1-badge" style="display:none; position:absolute; top:8px; left:12px; font-size:0.8rem; font-weight:800; color:#f472b6; text-transform:uppercase;">
+      💗 Jugador 1 (Ella)
+    </div>
     <canvas id="c" width="300" height="600" role="img" aria-label="Tablero de Tetris cooperativo"></canvas>
     <div id="fps">-- FPS</div>
     <div id="ov">
       <div id="ovt" style="font-size:1.35rem;font-weight:800;letter-spacing:0.5px">TETRIS ARCADE</div>
       <input id="nm" type="hidden" value="Jugador">
       <button id="start" type="button">Empezar a Jugar</button>
+
+      <!-- Selector de Modos que aparece al presionar Jugar -->
+      <div id="mode-options" style="display:none; flex-direction:column; gap:10px; width:100%; max-width:240px; margin-top:8px;">
+        <span style="font-size:0.8rem; color:#f472b6; font-weight:800; text-transform:uppercase; letter-spacing:0.6px;">Selecciona el modo</span>
+        <button id="btn-play-solo" class="btn-mode" type="button">💗 1 Jugador (Clásico)</button>
+        <button id="btn-play-1v1" class="btn-mode btn-mode-versus" type="button">⚔️ 1v1 Local (2 Tableros)</button>
+      </div>
     </div>
   </main>
 
-  <!-- Columna derecha: Marcador, Récord, Nivel y Salvación -->
-  <aside class="side">
-    <div class="card card-score">
+  <!-- Tablero 2: Segundo Tablero para Modo 1v1 Local -->
+  <main class="boardwrap boardwrap-p2" id="boardwrap-2" style="display:none;">
+    <div style="position:absolute; top:8px; left:12px; font-size:0.8rem; font-weight:800; color:#60a5fa; text-transform:uppercase;">
+      💙 Jugador 2 (Él)
+    </div>
+    <canvas id="c2" width="300" height="600" role="img" aria-label="Tablero Jugador 2"></canvas>
+  </main>
+
+  <!-- Columna derecha: Marcador / P2 en 1v1 -->
+  <aside class="side" id="side-right">
+    <!-- Marcador P2 (Modo 1v1) -->
+    <div class="card card-score" id="p2-score-card" style="display:none; border-color: rgba(59,130,246,0.5);">
+      <small style="text-transform:uppercase;letter-spacing:0.5px;font-weight:800;color:#60a5fa;">💙 P2 (Él)</small>
+      <b id="p2-score-val" style="color:#60a5fa !important;">0</b>
+      <small id="p2-lines-val" style="display:block;margin-top:2px;">0 líneas</small>
+      <div id="p2-skb" style="height:6px;border-radius:4px;background:rgba(255,255,255,0.12);overflow:hidden;margin:8px 0 2px;"><i id="p2-skf" style="display:block;height:100%;width:0;background:linear-gradient(90deg,#f59e0b,#fde047);transition:width 0.25s ease;"></i></div>
+      <small id="p2-skt" style="font-size:0.72rem;color:#fde047;display:block;">🛟 Salvación (Shift / L)</small>
+    </div>
+
+    <!-- Guía P2 (Modo 1v1) -->
+    <div class="card card-controls" id="p2-ctrl-card" style="display:none;">
+      <div class="ctrl-header">
+        <span style="font-size:1.15rem;">⌨️</span>
+        <small style="text-transform:uppercase;letter-spacing:0.8px;font-weight:800;color:#60a5fa;">Controles P2</small>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-item">
+          <div class="ctrl-keys">
+            <kbd class="kbd-key">◀</kbd>
+            <kbd class="kbd-key">▶</kbd>
+          </div>
+          <span class="ctrl-text">Mover pieza</span>
+        </div>
+        <div class="ctrl-item">
+          <div class="ctrl-keys">
+            <kbd class="kbd-key">▼</kbd>
+          </div>
+          <span class="ctrl-text">Bajar suave</span>
+        </div>
+        <div class="ctrl-item">
+          <div class="ctrl-keys">
+            <kbd class="kbd-key">▲</kbd>
+          </div>
+          <span class="ctrl-text ctrl-rot">Rotar figura</span>
+        </div>
+        <div class="ctrl-item">
+          <div class="ctrl-keys">
+            <kbd class="kbd-key kbd-enter">Enter ↵</kbd>
+          </div>
+          <span class="ctrl-text ctrl-drop">Caída de golpe</span>
+        </div>
+        <div class="ctrl-item">
+          <div class="ctrl-keys">
+            <kbd class="kbd-key" style="min-width:44px;background:rgba(59,130,246,0.2);border-color:rgba(59,130,246,0.5);border-bottom-color:#3b82f6;color:#dbeafe;">Shift / L</kbd>
+          </div>
+          <span class="ctrl-text">Salvación</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tarjetas Clásicas (Modo Solo) -->
+    <div class="card card-score" id="classic-score-card">
       <small style="text-transform:uppercase;letter-spacing:0.5px;font-weight:700;">Puntaje</small>
       <b id="sc-total">0</b>
       <small id="sc-lines" style="display:block;margin-top:2px;">0 líneas</small>
     </div>
 
-    <div class="card card-record">
+    <div class="card card-record" id="classic-record-card">
       <small style="text-transform:uppercase;letter-spacing:0.5px;font-weight:700;">🏆 Récord</small>
       <b id="sc-record">0</b>
     </div>
 
-    <div class="card">
+    <div class="card" id="card-level">
       <small id="sc-level" style="font-weight:700;font-size:0.88rem;">Nivel 1</small>
       <small id="sc-speed" style="display:block;margin-top:3px;color:rgba(255,255,255,0.75);">⚡ Vel 1</small>
     </div>
@@ -147,6 +272,8 @@
 
 <!-- Módulo desacoplado de rescate de LP y monedas -->
 <script src="reward-config.js"></script>
+<!-- Módulo de modo 1v1 local (carpeta modes/) -->
+<script src="modes/versus-1v1.js"></script>
 <!-- Lógica desacoplada del juego -->
 <script src="tetris.js"></script>
 

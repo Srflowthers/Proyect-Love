@@ -491,3 +491,47 @@ button {
   }
 }
 
+/* --------------------------------------------------------------------------
+   ESTILOS PARA SELECTOR DE MODO Y MODO 1v1 LOCAL (2 TABLEROS)
+   -------------------------------------------------------------------------- */
+.btn-mode {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.28), rgba(236, 72, 153, 0.12)) !important;
+  border: 1px solid rgba(236, 72, 153, 0.5) !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+  font-size: 0.9rem !important;
+  padding: 11px 16px !important;
+  border-radius: 12px !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+  width: 100% !important;
+  box-shadow: 0 4px 15px rgba(236, 72, 153, 0.2) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+}
+
+.btn-mode:hover {
+  transform: translateY(-2px) !important;
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.5), rgba(236, 72, 153, 0.25)) !important;
+  box-shadow: 0 6px 20px rgba(236, 72, 153, 0.4) !important;
+}
+
+.btn-mode-versus {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.35), rgba(59, 130, 246, 0.35)) !important;
+  border: 1px solid rgba(96, 165, 250, 0.6) !important;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25) !important;
+}
+
+.btn-mode-versus:hover {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.55), rgba(59, 130, 246, 0.55)) !important;
+  box-shadow: 0 6px 24px rgba(59, 130, 246, 0.45) !important;
+}
+
+.boardwrap-p2 {
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.75), 0 0 40px rgba(59, 130, 246, 0.28) !important;
+}
+}
+
+

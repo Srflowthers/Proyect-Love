@@ -324,6 +324,8 @@ function end() {
     maxScore.toLocaleString('es') + (isNewRec ? ' (¡Nuevo récord!)' : '') + '</span>' +
     '<div style="margin-top:8px;font-size:1rem;color:#facc15;font-weight:700;">+' + earnedCoins + ' monedas ganadas</div>';
   $('start').textContent = 'Jugar de nuevo';
+  $('start').style.display = 'block';
+  if ($('mode-options')) $('mode-options').style.display = 'none';
   $('ov').style.display = 'flex';
   const recEl = $('sc-record');
   if (recEl) recEl.textContent = maxScore.toLocaleString('es');
@@ -1318,12 +1320,17 @@ function draw() {
 }
 
 function loop(t) {
+  if (window.TetrisVersus1v1 && window.TetrisVersus1v1.active) {
+    requestAnimationFrame(loop);
+    return;
+  }
   now = t;
   const dt = Math.min(50, t - last);
   last = t;
   fN++;
   if (t - fT >= 1000) {
-    $('fps').textContent = Math.round(fN * 1000 / (t - fT)) + ' FPS';
+    const fpsEl = $('fps');
+    if (fpsEl) fpsEl.textContent = Math.round(fN * 1000 / (t - fT)) + ' FPS';
     fN = 0;
     fT = t;
   }
@@ -1338,6 +1345,15 @@ function loop(t) {
    10. CONTROLADORES DE EVENTOS Y ENTRADA DE USUARIO
    ============================================================================ */
 let tetrisSessionStartTime = 0;
+
+function showModeSelector() {
+  const startB = $('start');
+  if (startB) startB.style.display = 'none';
+  const modeOpt = $('mode-options');
+  if (modeOpt) modeOpt.style.display = 'flex';
+  const ovt = $('ovt');
+  if (ovt) ovt.textContent = 'ELIGE EL MODO';
+}
 
 function start() {
   try {
@@ -1354,11 +1370,51 @@ function start() {
 
 const startBtn = $('start');
 if (startBtn) {
-  startBtn.onclick = start;
+  startBtn.onclick = (e) => {
+    e.stopPropagation();
+    showModeSelector();
+  };
   startBtn.addEventListener('pointerdown', (e) => {
     e.stopPropagation();
-    start();
+    showModeSelector();
   });
+}
+
+// Botón 1 Jugador (Clásico)
+const btnSolo = $('btn-play-solo');
+if (btnSolo) {
+  btnSolo.onclick = (e) => {
+    e.stopPropagation();
+    ['boardwrap-2', 'p1-badge', 'p1-score-card', 'p1-ctrl-card', 'p2-score-card', 'p2-ctrl-card'].forEach(id => {
+      const el = $(id);
+      if (el) el.style.display = 'none';
+    });
+    ['classic-controls-card', 'classic-score-card', 'classic-record-card', 'card-level', 'sk', 'classic-pad-card'].forEach(id => {
+      const el = $(id);
+      if (el) el.style.display = 'block';
+    });
+    if (window.TetrisVersus1v1) window.TetrisVersus1v1.stop();
+    start();
+  };
+}
+
+// Botón 1v1 Local (2 Tableros)
+const btn1v1 = $('btn-play-1v1');
+if (btn1v1) {
+  btn1v1.onclick = (e) => {
+    e.stopPropagation();
+    run = false;
+    ['classic-controls-card', 'classic-score-card', 'classic-record-card', 'card-level', 'sk', 'classic-pad-card'].forEach(id => {
+      const el = $(id);
+      if (el) el.style.display = 'none';
+    });
+    ['boardwrap-2', 'p1-badge', 'p1-score-card', 'p1-ctrl-card', 'p2-score-card', 'p2-ctrl-card'].forEach(id => {
+      const el = $(id);
+      if (el) el.style.display = 'block';
+    });
+    if ($('ov')) $('ov').style.display = 'none';
+    if (window.TetrisVersus1v1) window.TetrisVersus1v1.start();
+  };
 }
 
 $('sku').onclick = () => {
@@ -1369,11 +1425,12 @@ $('sku').onclick = () => {
 const kd = k => orient ? ({ ArrowUp: 'ArrowDown', ArrowDown: 'ArrowUp' }[k] || k) : k;
 
 window.addEventListener('keydown', e => {
+  if (window.TetrisVersus1v1 && window.TetrisVersus1v1.active) return;
   if (e.target && e.target.id === 'nm') return;
   const k = kd(e.key);
   if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Enter'].includes(k)) e.preventDefault();
   if (!run && (k === 'Enter' || k === ' ') && $('ov') && $('ov').style.display !== 'none') {
-    start();
+    showModeSelector();
     return;
   }
   if (k === 'ArrowLeft') move(-1);
@@ -1506,3 +1563,40 @@ turn = 0;
 gi = Array.from({ length: H }, () => Array(W).fill(null));
 ui();
 requestAnimationFrame(loop);
+
+// Detección automática del modo seleccionado afuera en el catálogo Arcade
+(function checkInitialMode() {
+  const p = new URLSearchParams(window.location.search);
+  const mode = p.get('mode');
+  if (mode === '1v1') {
+    // Si eligió 1v1 Local afuera en el catálogo, activar directamente los 2 tableros
+    setTimeout(() => {
+      run = false;
+      if ($('start')) $('start').style.display = 'none';
+      if ($('mode-options')) $('mode-options').style.display = 'none';
+      ['classic-controls-card', 'classic-score-card', 'classic-record-card', 'card-level', 'sk', 'classic-pad-card'].forEach(id => {
+        const el = $(id);
+        if (el) el.style.display = 'none';
+      });
+      ['boardwrap-2', 'p1-badge', 'p1-score-card', 'p1-ctrl-card', 'p2-score-card', 'p2-ctrl-card'].forEach(id => {
+        const el = $(id);
+        if (el) el.style.display = 'block';
+      });
+      if ($('ov')) $('ov').style.display = 'none';
+      if (window.TetrisVersus1v1) window.TetrisVersus1v1.start();
+    }, 150);
+  } else if (mode === 'solo') {
+    // Si eligió 1 Jugador afuera en el catálogo, arrancar directamente
+    setTimeout(() => {
+      ['boardwrap-2', 'p1-badge', 'p1-score-card', 'p1-ctrl-card', 'p2-score-card', 'p2-ctrl-card'].forEach(id => {
+        const el = $(id);
+        if (el) el.style.display = 'none';
+      });
+      ['classic-controls-card', 'classic-score-card', 'classic-record-card', 'card-level', 'sk', 'classic-pad-card'].forEach(id => {
+        const el = $(id);
+        if (el) el.style.display = 'block';
+      });
+      start();
+    }, 150);
+  }
+})();

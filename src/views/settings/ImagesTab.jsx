@@ -22,6 +22,8 @@ export default function ImagesTab({
   nextCursor,
   observerRef,
   globalUserData,
+  isExpired,
+  onExpiredAction,
 }) {
   const isCollaborator = !!globalUserData?.isCollaborator;
   const collabPerms = globalUserData?.collaboratorPermissions || {};
@@ -128,6 +130,12 @@ export default function ImagesTab({
             type="file" 
             multiple 
             accept="image/*,video/mp4,video/quicktime,video/webm" 
+            onClick={(e) => {
+              if (isExpired) {
+                e.preventDefault();
+                if (onExpiredAction) onExpiredAction('subir fotos o videos');
+              }
+            }}
             onChange={handleImageUpload}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             title="Añadir fotos y videos a la cola"
@@ -314,6 +322,10 @@ export default function ImagesTab({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
+                          if (isExpired) {
+                            if (onExpiredAction) onExpiredAction('descargar fotos o recuerdos');
+                            return;
+                          }
                           const url = img.original_url || img.src;
                           const ext = img.format || (img.isVideo ? 'mp4' : 'jpg');
                           const filename = `Recuerdo_${idx + 1}.${ext}`;

@@ -393,44 +393,6 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
     return "¡Iniciando viaje!";
   };
 
-  if (isExpired) {
-    return (
-      <div className="min-h-screen bg-black text-white p-8 flex flex-col items-center justify-center relative overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-pink-600/20 rounded-full blur-[100px]"></div>
-
-        <div className="w-full max-w-md bg-[#111] border border-pink-500/30 rounded-2xl p-8 shadow-[0_0_50px_rgba(236,72,153,0.1)] text-center relative z-10">
-          <div className="w-20 h-20 mx-auto bg-pink-900/30 rounded-full flex items-center justify-center mb-6 border border-pink-500/50">
-            <svg className="w-10 h-10 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
-          <h1 className="text-3xl font-serif italic text-pink-400 mb-4">Tu universo está en pausa</h1>
-          <p className="text-gray-400 mb-8 leading-relaxed">
-            Tu plan ha expirado. Renueva tu membresía para seguir disfrutando de tus recuerdos invaluables y mantener viva tu galería.
-          </p>
-          <a
-            href="https://wa.me/56956710377?text=Hola,%20mi%20plan%20ha%20expirado%20y%20deseo%20renovarlo."
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full py-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 rounded-lg font-bold shadow-lg shadow-green-500/30 transition-all mb-4 text-white"
-          >
-            Contactar por WhatsApp para Renovar
-          </a>
-          <button
-            onClick={async () => {
-              if (window.confirm("¿Estás seguro de que deseas cerrar sesión?")) {
-                await logout();
-                window.location.reload();
-              }
-            }}
-            className="w-full py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors text-sm font-semibold"
-          >
-            Cerrar Sesión
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   const getUniverseBgClass = () => {
     const color = userData?.universeColor || 'purple';

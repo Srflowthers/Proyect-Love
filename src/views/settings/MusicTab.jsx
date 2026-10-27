@@ -12,7 +12,9 @@ export default function MusicTab({
   setDeleteModal,
   user,
   totalBytes,
-  setTotalBytes
+  setTotalBytes,
+  isExpired,
+  onExpiredAction
 }) {
   return (
     <div className="animate-fadeIn">
@@ -73,6 +75,12 @@ export default function MusicTab({
                 <input
                   type="file"
                   accept="audio/*"
+                  onClick={(e) => {
+                    if (isExpired) {
+                      e.preventDefault();
+                      if (onExpiredAction) onExpiredAction('subir canciones en MP3 o WAV');
+                    }
+                  }}
                   onChange={handleAudioUpload}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                   title="Subir archivo MP3 o WAV"
@@ -164,6 +172,10 @@ export default function MusicTab({
                       type="button" 
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (isExpired) {
+                          if (onExpiredAction) onExpiredAction('eliminar canciones de tu playlist');
+                          return;
+                        }
                         setDeleteModal({
                           type: 'single_audio',
                           title: '¿Eliminar Pista?',
@@ -238,6 +250,10 @@ export default function MusicTab({
             <button 
               type="button"
               onClick={() => {
+                if (isExpired) {
+                  if (onExpiredAction) onExpiredAction('añadir música a tu playlist');
+                  return;
+                }
                 const val = document.getElementById('spotifyInput').value;
                 if (val && val.includes('spotify')) {
                   const newAudios = [...(formData.customAudios || []), { url: val, name: 'Canción de Spotify', isSpotify: true }];

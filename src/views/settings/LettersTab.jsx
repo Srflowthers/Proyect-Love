@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import LetterCardItem from './letters/LetterCardItem';
 
-export default function LettersTab({ formData, setFormData, user, setGlobalUserData }) {
+export default function LettersTab({ formData, setFormData, user, setGlobalUserData, isExpired, onExpiredAction }) {
   // Estado inicial original recibido del backend/formData
   const originalPages = formData.letterPages || [''];
   const originalStyles = formData.letterStyles || [];
@@ -89,6 +89,10 @@ export default function LettersTab({ formData, setFormData, user, setGlobalUserD
 
   // Guardar en backend
   const executeSave = async (targetId) => {
+    if (isExpired) {
+      if (onExpiredAction) onExpiredAction('editar o guardar cartas');
+      return;
+    }
     if (!user) return;
     setSavingTarget(targetId);
     try {
@@ -186,6 +190,10 @@ export default function LettersTab({ formData, setFormData, user, setGlobalUserD
   };
 
   const handleAddPage = () => {
+    if (isExpired) {
+      if (onExpiredAction) onExpiredAction('crear o agregar nuevas páginas de cartas');
+      return;
+    }
     setLocalPages([...localPages, '']);
     setLocalStyles([...localStyles, localStyles[localStyles.length - 1] || 'modern']);
     setLocalTitles([...localTitles, '']);
@@ -196,6 +204,10 @@ export default function LettersTab({ formData, setFormData, user, setGlobalUserD
   };
 
   const handleDeletePage = (index) => {
+    if (isExpired) {
+      if (onExpiredAction) onExpiredAction('eliminar páginas de cartas');
+      return;
+    }
     if (localPages.length <= 1) return;
     setLocalPages(localPages.filter((_, i) => i !== index));
     setLocalStyles(localStyles.filter((_, i) => i !== index));

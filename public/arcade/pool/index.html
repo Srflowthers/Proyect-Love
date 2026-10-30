@@ -66,6 +66,11 @@
     <!-- Botón de ajustes -->
     <button id="gear" title="Menú">⚙</button>
 
+    <!-- Botón flotante para volver al Catálogo de Juegos directamente desde la pantalla de juego -->
+    <button id="btnFloatingExit" class="btn-floating-catalog" title="Volver al Catálogo">
+      ← Catálogo
+    </button>
+
     <!-- Menú flotante de configuración y reglas -->
     <div id="menu" hidden>
       <div class="row">
@@ -79,6 +84,7 @@
         <button data-t="0" class="sel">Verde</button>
         <button data-t="1">Azul</button>
         <button data-t="2">Burdeos</button>
+        <button id="btnOpenModes" style="background:#5b2a86;border-color:#a855f7;color:#fff;font-weight:700;">🎮 Cambiar Modo</button>
         <button id="new">🔄 Nueva partida</button>
         <button id="epicBtn" class="sel">🎬 Cámara épica: ON</button>
       </div>
@@ -102,11 +108,89 @@
     </div>
   </div>
 
+  <!-- Modal de Selección de Modos de Juego (FUERA de #stage para interacción 100% limpia) -->
+  <div id="modeModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 class="modal-title">🎱 Pool 3D · Selección de Modo</h2>
+        <button id="btnExitToCatalogModal" class="btn-header-back" title="Volver al Catálogo de Juegos">
+          ✕ Salir
+        </button>
+      </div>
+      <p class="modal-sub">Elige cómo quieres jugar esta partida</p>
+
+      <div class="mode-grid">
+        <button id="btnMode1v1Cpu" class="mode-btn cpu-mode">
+          <span class="m-icon">🤖</span>
+          <div class="m-info">
+            <strong>1v1 vs CPU</strong>
+            <small>Práctica individual contra IA</small>
+          </div>
+        </button>
+
+        <button id="btnMode2v2Cpu" class="mode-btn cpu-mode">
+          <span class="m-icon">👥🤖</span>
+          <div class="m-info">
+            <strong>2v2 en Pareja vs CPU</strong>
+            <small>Tú y tu pareja contra 2 IAs</small>
+          </div>
+        </button>
+
+        <button id="btnMode1v1Online" class="mode-btn online-mode">
+          <span class="m-icon">⚡</span>
+          <div class="m-info">
+            <strong>1v1 Online</strong>
+            <small>Buscar rival o jugar con amigo</small>
+          </div>
+        </button>
+
+        <button id="btnMode2v2Online" class="mode-btn online-mode">
+          <span class="m-icon">🔥</span>
+          <div class="m-info">
+            <strong>2v2 Online</strong>
+            <small>Pareja vs Pareja en tiempo real</small>
+          </div>
+        </button>
+      </div>
+
+      <!-- Panel de Matchmaking / Código de Sala (oculto por defecto) -->
+      <div id="onlinePanel" hidden>
+        <div class="online-divider"></div>
+        <h3 id="onlinePanelTitle">🌐 Partida Online</h3>
+        <p id="onlineStatusMsg">Conectando...</p>
+        
+        <div id="matchmakingSpinner" class="spinner-box">
+          <div class="spin-ring"></div>
+          <span>Buscando rivales en el cosmos...</span>
+        </div>
+
+        <div class="room-code-box" id="roomCodeBox">
+          <label>Código de Sala:</label>
+          <div class="code-row">
+            <input type="text" id="inputRoomCode" placeholder="Ej: LOVE-POOL" maxlength="12" />
+            <button id="btnJoinRoom">Unirse</button>
+          </div>
+          <button id="btnQuickMatch" class="btn-quick">⚡ Buscar Partida Automática</button>
+        </div>
+        
+        <button id="btnCancelOnline" class="btn-cancel">← Volver a Modos</button>
+      </div>
+
+      <div class="modal-actions-row">
+        <button id="btnCloseModes" class="btn-close-modal">Jugar Partida Local (2v2)</button>
+        <button id="btnBackCatalogBottom" class="btn-catalog-bottom">🚪 Volver al Catálogo</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Three.js r128 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
   <!-- Módulo desacoplado de rescate de LP y monedas -->
   <script src="reward-config.js"></script>
+
+  <!-- Módulo desacoplado Online y Modos de Juego (1v1, 2v2, CPU, WebSockets) -->
+  <script src="pool-online.js"></script>
 
   <!-- Lógica desacoplada de Pool 3D 2v2 -->
   <script src="pool.js"></script>

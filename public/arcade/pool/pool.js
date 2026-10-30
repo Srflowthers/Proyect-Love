@@ -1133,7 +1133,7 @@ function startHand() {
   sink = sink.filter(s => s != 0);
   setMode(false); ph = .4; th = 0; dist = 1100;
 }
-const idle = () => over == null && !moving && !hand;
+let idle = () => over == null && !moving && !hand;
 
 /* ======== ENTRADA ======== */
 const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -R), v2 = new THREE.Vector2();
@@ -1552,6 +1552,12 @@ function frame(now) {
       const dx = drag.sx - mouse.x, dz = drag.sz - mouse.z;
       aim(Math.atan2(dz, dx), Math.min(Math.hypot(dx, dz), 180));
     }
+  } else if (!B[0].in && window.isRivalAiming && window.isRivalAiming()) {
+    // Si es el rival quien está apuntando en una partida online, mostrar su taco y mira en tiempo real
+    const rData = window.getRivalAimData ? window.getRivalAimData() : null;
+    if (rData) {
+      originalAim(rData.yaw, rData.pw * 180);
+    }
   }
   if (hand && over == null && !moving) {
     ghost.position.set(B[0].x, R, B[0].y);
@@ -1589,6 +1595,80 @@ function frame(now) {
   rd.render(sc, cam);
 }
 
+/* ======== INTEGRACIÓN LIMPIA CON EL MÓDULO ONLINE (pool-online.js) ======== */
+// Exponer variables y métodos del motor físico necesarios para el módulo online / bot
+Object.defineProperty(window, 'B', { get() { return B; }, configurable: true });
+window.PK = PK;
+window.NAMES = NAMES;
+window.own = own;
+window.rd = rd;
+window.setAimYaw = (y) => { aimYaw = y; };
+window.startHand = startHand;
+window.setMode = setMode;
+window.newGame = newGame;
+window.notify = notify;
+window.ui = ui;
+
+// Enlace bidireccional de turnos y estados
+Object.defineProperty(window, 'turn', {
+  get() { return turn; },
+  set(v) { turn = v; }
+});
+Object.defineProperty(window, 'over', {
+  get() { return over; },
+  set(v) { over = v; }
+});
+Object.defineProperty(window, 'hand', {
+  get() { return hand; },
+  set(v) { hand = v; }
+});
+Object.defineProperty(window, 'moving', {
+  get() { return moving; },
+  set(v) { moving = v; }
+});
+Object.defineProperty(window, 'grp', {
+  get() { return grp; },
+  set(v) { grp = v; }
+});
+Object.defineProperty(window, 'pot', {
+  get() { return pot; },
+  set(v) { pot = v; }
+});
+
+// Delegación limpia de turnos (permite apuntar y ver taco solo a quien le toca)
+const originalIdle = idle;
+idle = function() {
+  if (window.isPoolMyTurn && !window.isPoolMyTurn()) return false;
+  return originalIdle();
+};
+window.idle = idle;
+window.originalIdle = originalIdle;
+
+// Delegación limpia de apuntado en vivo
+const originalAim = aim;
+aim = function(a, l) {
+  originalAim(a, l);
+  if (window.onPoolAimTransmit) window.onPoolAimTransmit(a, l);
+};
+window.aim = aim;
+window.originalAim = originalAim;
+
+// Delegación limpia de disparo
+const originalShoot = shoot;
+shoot = function(a, p) {
+  originalShoot(a, p);
+  if (window.onPoolShootTransmit) window.onPoolShootTransmit(a, p);
+};
+window.shoot = shoot;
+window.originalShoot = originalShoot;
+
+// Delegación limpia de fin de tiro
+const originalFinish = finish;
+finish = function() {
+  originalFinish();
+  if (window.onPoolFinishTransmit) window.onPoolFinishTransmit();
+};
+
 /* Poblar selectores de vara y fondo */
 for (const [id, k] of Object.entries(CUES)) $('selCue').add(new Option('Vara: ' + k.name, id));
 for (const [id, k] of Object.entries(BACKGROUNDS)) $('selBg').add(new Option('Fondo: ' + k.name, id));
@@ -1598,5 +1678,7 @@ $('selBg').onchange = e => applyBackground(e.target.value);
 applyCue('clasico');
 applyBackground('universo');
 resize();
+if (window.initPoolModeSelector) window.initPoolModeSelector();
 newGame();
 frame();
+

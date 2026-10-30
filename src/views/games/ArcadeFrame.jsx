@@ -121,12 +121,12 @@ export default function ArcadeFrame({
       ref={containerRef}
       className="fixed inset-0 z-40 w-screen h-screen flex flex-col m-0 p-0 overflow-hidden select-none bg-black"
     >
-      {/* Único botón limpio para volver al catálogo (en pool se oculta para no tapar el HUD/modales) */}
-      {onBackToCatalog && gameKey !== 'pool' && (
+      {/* Botón universal para volver al catálogo de juegos */}
+      {onBackToCatalog && (
         <button
           onClick={onBackToCatalog}
           title="Volver al Catálogo de Juegos"
-          className="fixed top-3 left-3 z-50 px-3.5 py-1.5 bg-black/75 hover:bg-black/95 border border-white/25 hover:border-pink-500/60 rounded-full text-xs font-bold text-gray-200 hover:text-white transition-all backdrop-blur-md flex items-center gap-1.5 shadow-2xl active:scale-95 cursor-pointer"
+          className="fixed top-3 left-3 z-[60] px-3.5 py-1.5 bg-black/80 hover:bg-black/95 border border-white/30 hover:border-pink-500/80 rounded-full text-xs font-bold text-gray-200 hover:text-white transition-all backdrop-blur-md flex items-center gap-1.5 shadow-2xl active:scale-95 cursor-pointer pointer-events-auto"
         >
           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -193,7 +193,7 @@ export default function ArcadeFrame({
               src={fullSrc}
               title={meta.title}
               onLoad={() => setIsLoading(false)}
-              allowTransparency="true"
+              allowtransparency="true"
               className={`relative z-10 w-full h-full border-0 block transition-opacity duration-300 ${
                 isLoading ? 'opacity-0' : 'opacity-100'
               }`}

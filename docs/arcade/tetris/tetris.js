@@ -356,6 +356,14 @@ function ui() {
   const spEl = $('sc-speed');
   if (spEl) spEl.textContent = '⚡ Vel ' + (tier + 1);
 
+  // Transmisión en tiempo real al rival si está en modo online
+  if (window.TetrisOnlineManager && run && !over) {
+    window.TetrisOnlineManager.sendScore(tot, ln[0] + ln[1]);
+    if (!window.TetrisOnlineManager.isMobile) {
+      window.TetrisOnlineManager.sendBoard(g, p);
+    }
+  }
+
   const ch = Math.min(1, Math.max(0, (tot - skBase) / skCost));
   $('skf').style.width = (ch * 100) + '%';
   $('sk').classList.toggle('ready', ch >= 1);
@@ -1385,6 +1393,7 @@ const btnSolo = $('btn-play-solo');
 if (btnSolo) {
   btnSolo.onclick = (e) => {
     e.stopPropagation();
+    if (window.TetrisOnlineManager) window.TetrisOnlineManager.stopCpu();
     ['boardwrap-2', 'p1-badge', 'p1-score-card', 'p1-ctrl-card', 'p2-score-card', 'p2-ctrl-card'].forEach(id => {
       const el = $(id);
       if (el) el.style.display = 'none';
@@ -1394,6 +1403,55 @@ if (btnSolo) {
       if (el) el.style.display = 'block';
     });
     if (window.TetrisVersus1v1) window.TetrisVersus1v1.stop();
+    start();
+  };
+}
+
+// Botón 1v1 vs CPU
+const btnCpu = $('btn-play-cpu');
+if (btnCpu) {
+  btnCpu.onclick = (e) => {
+    e.stopPropagation();
+    ['boardwrap-2', 'p1-badge', 'p1-ctrl-card', 'p2-ctrl-card'].forEach(id => {
+      const el = $(id);
+      if (el) el.style.display = 'none';
+    });
+    ['classic-controls-card', 'classic-score-card', 'classic-record-card', 'card-level', 'sk', 'classic-pad-card'].forEach(id => {
+      const el = $(id);
+      if (el) el.style.display = 'block';
+    });
+    if (!window.TetrisOnlineManager?.isMobile) {
+      const p2Sc = $('p2-score-card');
+      if (p2Sc) p2Sc.style.display = 'block';
+    }
+    if (window.TetrisVersus1v1) window.TetrisVersus1v1.stop();
+    if (window.TetrisOnlineManager) window.TetrisOnlineManager.startCpuMode();
+    start();
+  };
+}
+
+// Botón 1v1 Online
+const btnOnline = $('btn-play-online');
+if (btnOnline) {
+  btnOnline.onclick = (e) => {
+    e.stopPropagation();
+    const roomCode = prompt('Ingresa el código de sala (o déjalo vacío para emparejamiento rápido):', '') || 'public_tetris_room';
+    ['boardwrap-2', 'p1-badge', 'p1-ctrl-card', 'p2-ctrl-card'].forEach(id => {
+      const el = $(id);
+      if (el) el.style.display = 'none';
+    });
+    ['classic-controls-card', 'classic-score-card', 'classic-record-card', 'card-level', 'sk', 'classic-pad-card'].forEach(id => {
+      const el = $(id);
+      if (el) el.style.display = 'block';
+    });
+    if (!window.TetrisOnlineManager?.isMobile) {
+      const p2Sc = $('p2-score-card');
+      if (p2Sc) p2Sc.style.display = 'block';
+    }
+    if (window.TetrisVersus1v1) window.TetrisVersus1v1.stop();
+    if (window.TetrisOnlineManager) {
+      window.TetrisOnlineManager.connect(roomCode.trim().toUpperCase());
+    }
     start();
   };
 }

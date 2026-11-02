@@ -159,10 +159,12 @@
       <button id="start" type="button">Empezar a Jugar</button>
 
       <!-- Selector de Modos que aparece al presionar Jugar -->
-      <div id="mode-options" style="display:none; flex-direction:column; gap:10px; width:100%; max-width:240px; margin-top:8px;">
+      <div id="mode-options" style="display:none; flex-direction:column; gap:8px; width:100%; max-width:260px; margin-top:8px;">
         <span style="font-size:0.8rem; color:#f472b6; font-weight:800; text-transform:uppercase; letter-spacing:0.6px;">Selecciona el modo</span>
         <button id="btn-play-solo" class="btn-mode" type="button">💗 1 Jugador (Clásico)</button>
-        <button id="btn-play-1v1" class="btn-mode btn-mode-versus" type="button">⚔️ 1v1 Local (2 Tableros)</button>
+        <button id="btn-play-cpu" class="btn-mode" type="button" style="border-color:#38bdf8; background:rgba(56,189,248,0.15);">🤖 1v1 vs CPU</button>
+        <button id="btn-play-online" class="btn-mode" type="button" style="border-color:#ec4899; background:rgba(236,72,153,0.15);">⚡ 1v1 Online</button>
+        <button id="btn-play-1v1" class="btn-mode btn-mode-versus" type="button">⚔️ 1v1 Local (2 Teclados)</button>
       </div>
     </div>
   </main>
@@ -272,6 +274,8 @@
 
 <!-- Módulo desacoplado de rescate de LP y monedas -->
 <script src="reward-config.js"></script>
+<!-- Módulo desacoplado 1v1 Online y CPU -->
+<script src="modes/tetris-online.js"></script>
 <!-- Módulo de modo 1v1 local (carpeta modes/) -->
 <script src="modes/versus-1v1.js"></script>
 <!-- Lógica desacoplada del juego -->

@@ -1039,11 +1039,13 @@ const mb = (i, c = '') => {
 const GN = { S: 'LISAS (1-7)', T: 'RAYADAS (9-15)' };
 
 function ui() {
-  $('seats').innerHTML = over == null ? `<span class="chip ${turn % 2 ? 'B' : 'R'} on">Turno: ${NAMES[turn]}</span>` : '';
+  const currentSeatName = (window.NAMES && window.NAMES[turn]) || NAMES[turn];
+  $('seats').innerHTML = over == null ? `<span class="chip ${turn % 2 ? 'B' : 'R'} on">Turno: ${currentSeatName}</span>` : '';
   [0, 1].forEach(t => {
     const g = grp[t], cur = turn % 2 == t && over == null, ids = g ? (g == 'S' ? [1, 2, 3, 4, 5, 6, 7] : [9, 10, 11, 12, 13, 14, 15]).concat(8) : [], el = $(t ? 'tR' : 'tL');
     el.className = 'tc ' + (t ? 'B' : 'R') + (cur ? ' on' : '');
-    el.innerHTML = `<div class="th"><b>${t ? 'AZUL' : 'ROJO'}</b><span>${g ? GN[g] : 'Mesa abierta'}</span></div><div class="sl">${g ? ids.map(i => mb(i, tray.includes(i) ? 'dn' : '')).join('') : '<small>Grupo sin asignar</small>'}</div>`;
+    const headerTitle = (window.TEAM_NAMES && window.TEAM_NAMES[t]) ? window.TEAM_NAMES[t] : (t ? 'AZUL' : 'ROJO');
+    el.innerHTML = `<div class="th"><b>${headerTitle}</b><span>${g ? GN[g] : 'Mesa abierta'}</span></div><div class="sl">${g ? ids.map(i => mb(i, tray.includes(i) ? 'dn' : '')).join('') : '<small>Grupo sin asignar</small>'}</div>`;
   });
   $('trWrap').hidden = !tray.length;
   $('trAll').innerHTML = tray.map(i => mb(i)).join('');

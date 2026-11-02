@@ -66,10 +66,6 @@
     <!-- Botón de ajustes -->
     <button id="gear" title="Menú">⚙</button>
 
-    <!-- Botón flotante para volver al Catálogo de Juegos directamente desde la pantalla de juego -->
-    <button id="btnFloatingExit" class="btn-floating-catalog" title="Volver al Catálogo">
-      ← Catálogo
-    </button>
 
     <!-- Menú flotante de configuración y reglas -->
     <div id="menu" hidden>
@@ -180,6 +176,28 @@
         <button id="btnCloseModes" class="btn-close-modal">Jugar Partida Local (2v2)</button>
         <button id="btnBackCatalogBottom" class="btn-catalog-bottom">🚪 Volver al Catálogo</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Banner Épico de Duelo / VS Animado al conectar la partida -->
+  <div id="vsMatchOverlay" class="vs-overlay" hidden>
+    <div class="vs-box">
+      <div class="vs-glow"></div>
+      <div class="vs-badge">⚡ DUELO ONLINE ⚡</div>
+      <div class="vs-teams">
+        <div class="vs-team team-red">
+          <span class="vs-label">TU EQUIPO</span>
+          <strong id="vsPlayer1" class="vs-name">Tú</strong>
+        </div>
+        <div class="vs-center">
+          <span class="vs-text">VS</span>
+        </div>
+        <div class="vs-team team-blue">
+          <span class="vs-label">RIVAL</span>
+          <strong id="vsPlayer2" class="vs-name">Rival</strong>
+        </div>
+      </div>
+      <div id="vsSubtitle" class="vs-sub">¡Mesa servida! Que comience el juego.</div>
     </div>
   </div>
 

@@ -128,18 +128,77 @@
     checkCpuTurn();
   };
 
+  // Muestra el banner épico de enfrentamiento "Tú VS Rival" o "Dúo 1 VS Dúo 2"
+  function showEpicVsBanner(nameRed, nameBlue) {
+    const overlay = document.getElementById('vsMatchOverlay');
+    const p1El = document.getElementById('vsPlayer1');
+    const p2El = document.getElementById('vsPlayer2');
+    const subEl = document.getElementById('vsSubtitle');
+    if (!overlay || !p1El || !p2El) return;
+
+    p1El.textContent = nameRed || 'Rojo';
+    p2El.textContent = nameBlue || 'Azul';
+    if (subEl) {
+      const isRed = myPlayerSeat % 2 === 0;
+      subEl.textContent = isRed ? `¡${nameRed} abre la mesa! Que comience el duelo.` : `¡${nameRed} rompe! Prepárate para tu turno.`;
+    }
+
+    overlay.hidden = false;
+    overlay.classList.remove('vs-exit');
+
+    // Efecto de sonido si está disponible el audio
+    try {
+      if (typeof window.notify === 'function') {
+        window.notify('⚔️ DUELO INICIADO', `${nameRed} VS ${nameBlue}`, true, 3500);
+      }
+    } catch (e) { }
+
+    // Desaparece con animación suave tras 2.8 segundos
+    setTimeout(() => {
+      overlay.classList.add('vs-exit');
+      setTimeout(() => {
+        overlay.hidden = true;
+        overlay.classList.remove('vs-exit');
+      }, 400);
+    }, 2800);
+  }
+
   // Arranque sincronizado de la partida para todos los jugadores
-  function startMatch() {
+  function startMatch(playersList) {
     if (matchStarted) return;
     matchStarted = true;
     const spinnerEl = document.getElementById('matchmakingSpinner');
     if (spinnerEl) spinnerEl.hidden = true;
     document.getElementById('modeModal').hidden = true;
 
-    const team = s => (s % 2 ? 'Azul' : 'Rojo');
+    // Obtener nombres reales de los participantes del roster de la sala
+    let pRedName = '';
+    let pBlueName = '';
+
+    if (Array.isArray(playersList) && playersList.length > 0) {
+      const p0 = playersList.find(p => p.seat === 0);
+      const p1 = playersList.find(p => p.seat === 1);
+      if (p0 && p0.name) pRedName = p0.name;
+      if (p1 && p1.name) pBlueName = p1.name;
+    }
+
+    const p = new URLSearchParams(window.location.search);
+    const myCustomDuo = p.get('duoName') || p.get('name') || '';
+
+    if (myPlayerSeat === 0 && myCustomDuo) pRedName = myCustomDuo;
+    if (myPlayerSeat === 1 && myCustomDuo) pBlueName = myCustomDuo;
+
+    if (!pRedName) pRedName = myPlayerSeat === 0 ? 'Tú (Rojo)' : 'Rival (Rojo)';
+    if (!pBlueName) pBlueName = myPlayerSeat === 1 ? 'Tú (Azul)' : 'Rival (Azul)';
+
     const seats = is1v1() ? 2 : 4;
+    window.TEAM_NAMES = [pRedName, pBlueName];
+
     for (let s = 0; s < seats; s++) {
-      window.NAMES[s] = s === myPlayerSeat ? `Tú (${team(s)})` : (is1v1() ? `Rival (${team(s)})` : `${team(s)} ${s < 2 ? 1 : 2}`);
+      if (s === 0) window.NAMES[0] = pRedName;
+      else if (s === 1) window.NAMES[1] = pBlueName;
+      else if (s === 2) window.NAMES[2] = pRedName + ' (Pareja)';
+      else if (s === 3) window.NAMES[3] = pBlueName + ' (Pareja)';
     }
 
     window.newGame();
@@ -148,8 +207,9 @@
     shotOwnerSeat = null;
     window.ui();
     turnMsg();
-    const startMsg = myPlayerSeat === 0 ? '¡Es tu turno! Tira el taco para romper.' : 'Turno del rival. Espera su tiro.';
-    window.notify('¡PARTIDA LISTA!', startMsg, true, 3000);
+
+    // Lanzar la animación cinemática de VS
+    showEpicVsBanner(pRedName, pBlueName);
   }
 
   // 4. INTELIGENCIA ARTIFICIAL (BOT CPU)
@@ -274,7 +334,7 @@
             statusEl.textContent = `Asiento ${myPlayerSeat + 1} asignado. Conectados: ${currentCount}/${reqSeats}`;
           }
 
-          if (currentCount >= reqSeats) startMatch();
+          if (currentCount >= reqSeats) startMatch(data.players);
         }
 
         // B. Nuevo jugador entra
@@ -287,7 +347,10 @@
             statusEl.textContent = `¡Rival encontrado! Conectados: ${currentCount}/${reqSeats}`;
           }
 
-          if (currentCount >= reqSeats) setTimeout(startMatch, 300);
+          if (currentCount >= reqSeats) {
+            const roster = data.players;
+            setTimeout(() => startMatch(roster), 300);
+          }
         }
 
         // C. TELEMETRÍA EN VIVO (Ver cómo apunta y mide fuerza el rival en tiempo real)
@@ -426,11 +489,9 @@
     // Botones de retroceder / salir al catálogo
     const btnExitModal = document.getElementById('btnExitToCatalogModal');
     const btnExitBottom = document.getElementById('btnBackCatalogBottom');
-    const btnFloatingExit = document.getElementById('btnFloatingExit');
 
     if (btnExitModal) btnExitModal.onclick = (e) => { e.stopPropagation(); exitToCatalog(); };
     if (btnExitBottom) btnExitBottom.onclick = (e) => { e.stopPropagation(); exitToCatalog(); };
-    if (btnFloatingExit) btnFloatingExit.onclick = (e) => { e.stopPropagation(); exitToCatalog(); };
 
     const b1Cpu = document.getElementById('btnMode1v1Cpu');
     if (b1Cpu) {

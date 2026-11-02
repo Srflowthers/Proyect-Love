@@ -121,8 +121,8 @@ export default function ArcadeFrame({
       ref={containerRef}
       className="fixed inset-0 z-40 w-screen h-screen flex flex-col m-0 p-0 overflow-hidden select-none bg-black"
     >
-      {/* Botón universal para volver al catálogo de juegos */}
-      {onBackToCatalog && (
+      {/* Botón universal para volver al catálogo de juegos (oculto en Pool para no obstruir el marcador ni la mesa; Pool ya tiene su botón de salida en el engranaje ⚙️) */}
+      {onBackToCatalog && gameKey !== 'pool' && (
         <button
           onClick={onBackToCatalog}
           title="Volver al Catálogo de Juegos"
@@ -182,8 +182,13 @@ export default function ArcadeFrame({
           const currentLp = Number(userData?.lp) || 0;
           const currentRound = Number(userData?.round) || 1;
           const currentCoins = Number(userData?.coins) || 0;
+          const effectiveDuoName = userData?.arcadeName?.trim() || 
+            ((userData?.user1Name && userData?.user2Name) 
+              ? `${userData.user1Name} & ${userData.user2Name}` 
+              : (userData?.name || userData?.user1Name || userData?.user2Name || 'Dúo Cósmico'));
+          const duoParams = `&duoName=${encodeURIComponent(effectiveDuoName)}&name=${encodeURIComponent(effectiveDuoName)}`;
           const universeParams = `&uColor=${encodeURIComponent(userData?.universeColor || 'purple')}&uVariant=${encodeURIComponent(userData?.universeVariant || 'tunnel')}&uPalette=${encodeURIComponent(userData?.universePalette || 'Cósmico')}`;
-          const userParams = `&lp=${currentLp}&round=${currentRound}&coins=${currentCoins}${universeParams}`;
+          const userParams = `&lp=${currentLp}&round=${currentRound}&coins=${currentCoins}${universeParams}${duoParams}`;
           const modularGames = ['gomi', 'pool', 'puzzle', 'tetris', 'sudoku', 'test'];
           const gamePath = modularGames.includes(gameKey) ? `/arcade/${gameKey}/index.html` : `/arcade/${gameKey}.html`;
           const fullSrc = `${gamePath}?${authParam}${userParams}${gameParams ? `&${gameParams}` : ''}`;

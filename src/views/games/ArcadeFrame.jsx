@@ -182,11 +182,15 @@ export default function ArcadeFrame({
           const currentLp = Number(userData?.lp) || 0;
           const currentRound = Number(userData?.round) || 1;
           const currentCoins = Number(userData?.coins) || 0;
-          const effectiveDuoName = userData?.arcadeName?.trim() || 
-            ((userData?.user1Name && userData?.user2Name) 
-              ? `${userData.user1Name} & ${userData.user2Name}` 
-              : (userData?.name || userData?.user1Name || userData?.user2Name || 'Dúo Cósmico'));
-          const duoParams = `&duoName=${encodeURIComponent(effectiveDuoName)}&name=${encodeURIComponent(effectiveDuoName)}`;
+          const isLinked = !!(userData?.isPartner || userData?.isCollaborator || userData?.isCouple || userData?.isCircleMember);
+          const titularName = userData?.user1Name?.trim() || userData?.ownerName?.trim() || userData?.name?.trim() || 'Titular';
+          const partnerName = userData?.user2Name?.trim() || 'Tu Pareja';
+          const myIndividualName = isLinked ? partnerName : titularName;
+          const partnerIndividualName = isLinked ? titularName : partnerName;
+          const coupleRoomKey = userData?.coupleId || userData?.ownerUid || user?.uid || 'couple_default';
+          const effectiveDuoName = userData?.arcadeName?.trim() || `${titularName} & ${partnerName}`;
+
+          const duoParams = `&duoName=${encodeURIComponent(effectiveDuoName)}&name=${encodeURIComponent(myIndividualName)}&partnerName=${encodeURIComponent(partnerIndividualName)}&isPartner=${isLinked ? '1' : '0'}&coupleId=${encodeURIComponent(coupleRoomKey)}`;
           const universeParams = `&uColor=${encodeURIComponent(userData?.universeColor || 'purple')}&uVariant=${encodeURIComponent(userData?.universeVariant || 'tunnel')}&uPalette=${encodeURIComponent(userData?.universePalette || 'Cósmico')}`;
           const userParams = `&lp=${currentLp}&round=${currentRound}&coins=${currentCoins}${universeParams}${duoParams}`;
           const modularGames = ['gomi', 'pool', 'puzzle', 'tetris', 'sudoku', 'test'];

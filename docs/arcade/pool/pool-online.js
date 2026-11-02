@@ -169,36 +169,50 @@
     matchStarted = true;
     const spinnerEl = document.getElementById('matchmakingSpinner');
     if (spinnerEl) spinnerEl.hidden = true;
+    const coupleCard = document.getElementById('coupleReadyCard');
+    if (coupleCard) coupleCard.hidden = true;
     document.getElementById('modeModal').hidden = true;
 
-    // Obtener nombres reales de los participantes del roster de la sala
+    const p = new URLSearchParams(window.location.search);
+    const myName = p.get('name') || 'Tú';
+    const partnerName = p.get('partnerName') || 'Tu Pareja';
+    const isPartner = p.get('isPartner') === '1';
+
     let pRedName = '';
     let pBlueName = '';
 
-    if (Array.isArray(playersList) && playersList.length > 0) {
-      const p0 = playersList.find(p => p.seat === 0);
-      const p1 = playersList.find(p => p.seat === 1);
-      if (p0 && p0.name) pRedName = p0.name;
-      if (p1 && p1.name) pBlueName = p1.name;
-    }
+    if (currentGameMode === '2v2_cpu') {
+      pRedName = `${p.get('duoName') || (isPartner ? `${partnerName} & ${myName}` : `${myName} & ${partnerName}`)}`;
+      pBlueName = 'Dúo Bots IA';
+      window.TEAM_NAMES = [pRedName, pBlueName];
+      window.NAMES[0] = isPartner ? partnerName : myName;
+      window.NAMES[1] = 'IA Bot 1 (Azul)';
+      window.NAMES[2] = isPartner ? myName : partnerName;
+      window.NAMES[3] = 'IA Bot 2 (Azul)';
+    } else {
+      // Modos Online (1v1 u Online 2v2)
+      if (Array.isArray(playersList) && playersList.length > 0) {
+        const p0 = playersList.find(pl => pl.seat === 0);
+        const p1 = playersList.find(pl => pl.seat === 1);
+        if (p0 && p0.name) pRedName = p0.name;
+        if (p1 && p1.name) pBlueName = p1.name;
+      }
+      const myCustomDuo = p.get('duoName') || myName;
+      if (myPlayerSeat === 0 && myCustomDuo) pRedName = myCustomDuo;
+      if (myPlayerSeat === 1 && myCustomDuo) pBlueName = myCustomDuo;
 
-    const p = new URLSearchParams(window.location.search);
-    const myCustomDuo = p.get('duoName') || p.get('name') || '';
+      if (!pRedName) pRedName = myPlayerSeat === 0 ? myName : 'Rival (Rojo)';
+      if (!pBlueName) pBlueName = myPlayerSeat === 1 ? myName : 'Rival (Azul)';
 
-    if (myPlayerSeat === 0 && myCustomDuo) pRedName = myCustomDuo;
-    if (myPlayerSeat === 1 && myCustomDuo) pBlueName = myCustomDuo;
+      const seats = is1v1() ? 2 : 4;
+      window.TEAM_NAMES = [pRedName, pBlueName];
 
-    if (!pRedName) pRedName = myPlayerSeat === 0 ? 'Tú (Rojo)' : 'Rival (Rojo)';
-    if (!pBlueName) pBlueName = myPlayerSeat === 1 ? 'Tú (Azul)' : 'Rival (Azul)';
-
-    const seats = is1v1() ? 2 : 4;
-    window.TEAM_NAMES = [pRedName, pBlueName];
-
-    for (let s = 0; s < seats; s++) {
-      if (s === 0) window.NAMES[0] = pRedName;
-      else if (s === 1) window.NAMES[1] = pBlueName;
-      else if (s === 2) window.NAMES[2] = pRedName + ' (Pareja)';
-      else if (s === 3) window.NAMES[3] = pBlueName + ' (Pareja)';
+      for (let s = 0; s < seats; s++) {
+        if (s === 0) window.NAMES[0] = pRedName;
+        else if (s === 1) window.NAMES[1] = pBlueName;
+        else if (s === 2) window.NAMES[2] = pRedName + ' (Pareja)';
+        else if (s === 3) window.NAMES[3] = pBlueName + ' (Pareja)';
+      }
     }
 
     window.newGame();
@@ -278,7 +292,7 @@
   }
 
   // 5. GESTOR DE WEBSOCKET ONLINE
-  function connectPoolOnline(roomId, mode) {
+  function connectPoolOnline(roomId, mode, subMode) {
     if (poolWs) {
       try { poolWs.onclose = null; poolWs.close(); } catch (e) { }
     }
@@ -287,31 +301,71 @@
     rivalAimData = null;
 
     const p = new URLSearchParams(window.location.search);
+    const isPartner = p.get('isPartner') === '1';
+    const myName = p.get('name') || (isPartner ? 'Pareja' : 'Titular');
+    const partnerName = p.get('partnerName') || (isPartner ? 'Titular' : 'Pareja');
+
     // Cada pestaña/sesión tiene su propio id de conexión para que 2 pestañas locales o cuentas no colisionen
     let sessionTabId = sessionStorage.getItem('pool_tab_session_id');
     if (!sessionTabId) {
       sessionTabId = 'tab_' + Math.random().toString(36).substring(2, 9);
       sessionStorage.setItem('pool_tab_session_id', sessionTabId);
     }
-    const uid = (p.get('auth') ? p.get('auth') + '_' : '') + sessionTabId;
-    const name = p.get('name') || (p.get('uPalette') ? 'Amor Cósmico' : 'Jugador ' + sessionTabId.substring(4, 7));
+    const uid = (p.get('auth') ? p.get('auth') + '_' : '') + (isPartner ? 'partner_' : 'owner_') + sessionTabId;
+    const coupleSeat = isPartner ? '2' : '0';
 
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const apiHost = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
       ? 'localhost:8787'
       : window.location.host;
 
-    const wsUrl = `${wsProtocol}//${apiHost}/api/pool/ws?room=${encodeURIComponent(roomId)}&mode=${mode}&uid=${encodeURIComponent(uid)}&name=${encodeURIComponent(name)}`;
+    const actualSubMode = subMode || (mode === '1v1' ? '1v1' : '2v2_online');
+    const wsUrl = `${wsProtocol}//${apiHost}/api/pool/ws?room=${encodeURIComponent(roomId)}&mode=${mode}&subMode=${encodeURIComponent(actualSubMode)}&uid=${encodeURIComponent(uid)}&name=${encodeURIComponent(myName)}&coupleSeat=${coupleSeat}`;
 
     const statusEl = document.getElementById('onlineStatusMsg');
     const spinnerEl = document.getElementById('matchmakingSpinner');
-    if (statusEl) statusEl.textContent = 'Conectando a la sala ' + roomId + '...';
+    const spinnerText = document.getElementById('matchmakingSpinnerText');
+    const coupleCard = document.getElementById('coupleReadyCard');
+    const coupleText = document.getElementById('coupleReadyText');
+    const dotMe = document.getElementById('dotPlayerMe');
+    const dotPartner = document.getElementById('dotPlayerPartner');
+    const nameMeEl = document.getElementById('namePlayerMe');
+    const namePartnerEl = document.getElementById('namePlayerPartner');
+    const btnReady = document.getElementById('btnImReady');
+    const roomCodeBox = document.getElementById('roomCodeBox');
+
+    if (nameMeEl) nameMeEl.textContent = myName;
+    if (namePartnerEl) namePartnerEl.textContent = partnerName;
+
+    if (actualSubMode === '2v2_cpu' || actualSubMode === '2v2_online') {
+      if (coupleCard) coupleCard.hidden = false;
+      if (roomCodeBox) roomCodeBox.hidden = true;
+      if (btnReady) {
+        btnReady.classList.remove('ready-active');
+        btnReady.innerHTML = `<svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> ¡Estoy Listo para Jugar!`;
+        btnReady.onclick = (e) => {
+          e.stopPropagation();
+          btnReady.classList.add('ready-active');
+          btnReady.innerHTML = `<svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> ¡Confirmado! Esperando a tu pareja...`;
+          if (dotMe) { dotMe.className = 'pill-dot ready'; }
+          if (poolWs && poolWs.readyState === WebSocket.OPEN) {
+            poolWs.send(JSON.stringify({ t: 'player_ready' }));
+          }
+        };
+      }
+    } else {
+      if (coupleCard) coupleCard.hidden = true;
+      if (roomCodeBox) roomCodeBox.hidden = false;
+    }
+
+    if (statusEl) statusEl.textContent = 'Conectando a la sala...';
     if (spinnerEl) spinnerEl.hidden = false;
+    if (spinnerText) spinnerText.textContent = actualSubMode === '2v2_cpu' ? 'Conectando con tu pareja...' : 'Buscando participantes...';
 
     poolWs = new WebSocket(wsUrl);
 
     poolWs.onopen = () => {
-      if (statusEl) statusEl.textContent = '¡Conectado! Esperando contrincantes...';
+      if (statusEl) statusEl.textContent = '¡Conectado a la sala!';
     };
 
     poolWs.onmessage = (event) => {
@@ -322,34 +376,59 @@
         // A. Bienvenida y asignación de asiento
         if (data.t === 'welcome') {
           myPlayerSeat = data.seat;
-          currentGameMode = data.mode === '1v1' ? '1v1_online' : '2v2_online';
-          window.NAMES[myPlayerSeat] = 'Tú (' + (myPlayerSeat % 2 ? 'Azul' : 'Rojo') + ')';
+          currentGameMode = data.subMode || (data.mode === '1v1' ? '1v1_online' : '2v2_online');
+          window.NAMES[myPlayerSeat] = myName;
           if (data.turn != null) window.turn = data.turn;
           window.ui();
 
-          const reqSeats = currentGameMode === '1v1_online' ? 2 : 4;
+          const reqSeats = (currentGameMode === '2v2_cpu' || currentGameMode === '1v1' || currentGameMode === '1v1_online') ? 2 : 4;
           const currentCount = (data.players && data.players.length) || 1;
 
-          if (statusEl) {
-            statusEl.textContent = `Asiento ${myPlayerSeat + 1} asignado. Conectados: ${currentCount}/${reqSeats}`;
+          if (currentCount < 2) {
+            if (coupleText) coupleText.textContent = `Tu pareja aún no ha entrado. Comparte este momento.`;
+            if (dotPartner) dotPartner.className = 'pill-dot waiting';
+          } else {
+            if (coupleText) coupleText.textContent = `¡Tu pareja está en la sala esperando para empezar!`;
+            if (dotPartner) dotPartner.className = 'pill-dot';
           }
 
-          if (currentCount >= reqSeats) startMatch(data.players);
+          if (data.players) {
+            const partnerPl = data.players.find(p => p.seat !== myPlayerSeat);
+            if (partnerPl && partnerPl.isReady && dotPartner) {
+              dotPartner.className = 'pill-dot ready';
+              if (coupleText) coupleText.textContent = `¡Tu pareja está lista y esperando para empezar!`;
+            }
+          }
+
+          if (statusEl) {
+            statusEl.textContent = `Conectados: ${currentCount}/${reqSeats}`;
+          }
         }
 
         // B. Nuevo jugador entra
         if (data.t === 'player_joined') {
-          window.notify('JUGADOR CONECTADO', `${data.name} entró como ${window.NAMES[data.seat]}`, false, 2000);
-          const reqSeats = currentGameMode === '1v1_online' ? 2 : 4;
+          window.notify('PAREJA CONECTADA', `¡Tu pareja entró a la sala!`, false, 2500);
+          if (coupleText) coupleText.textContent = `¡Tu pareja está esperando para empezar!`;
+          if (dotPartner) dotPartner.className = 'pill-dot';
+          const reqSeats = (currentGameMode === '2v2_cpu' || currentGameMode === '1v1' || currentGameMode === '1v1_online') ? 2 : 4;
           const currentCount = (data.players && data.players.length) || 2;
-
           if (statusEl) {
-            statusEl.textContent = `¡Rival encontrado! Conectados: ${currentCount}/${reqSeats}`;
+            statusEl.textContent = `¡Ambos en sala! Conectados: ${currentCount}/${reqSeats}`;
           }
+        }
 
-          if (currentCount >= reqSeats) {
-            const roster = data.players;
-            setTimeout(() => startMatch(roster), 300);
+        // C. Confirmación de LISTO / AMBOS LISTOS
+        if (data.t === 'player_ready') {
+          if (data.seat !== myPlayerSeat) {
+            if (dotPartner) dotPartner.className = 'pill-dot ready';
+            if (coupleText) coupleText.textContent = `¡Tu pareja está lista esperando para empezar!`;
+            window.notify('¡PAREJA LISTA!', `${data.name} ya está listo para jugar.`, true, 2000);
+          }
+          if (data.allReady) {
+            if (coupleText) coupleText.textContent = `¡Ambos listos! Iniciando la mesa...`;
+            setTimeout(() => {
+              startMatch(data.players);
+            }, 600);
           }
         }
 
@@ -510,14 +589,12 @@
     if (b2Cpu) {
       b2Cpu.onclick = (e) => {
         e.stopPropagation();
-        currentGameMode = '2v2_cpu';
-        window.NAMES[0] = 'Tú (Rojo 1)';
-        window.NAMES[1] = 'IA Bot 1 (Azul 1)';
-        window.NAMES[2] = 'Tu Pareja (Rojo 2)';
-        window.NAMES[3] = 'IA Bot 2 (Azul 2)';
-        modal.hidden = true;
-        window.newGame();
-        window.notify('MODO 2v2 EN PAREJA vs CPU', 'Tú y tu pareja juegan contra 2 Bots de IA.', true, 2800);
+        if (onlinePanel) onlinePanel.hidden = false;
+        document.getElementById('onlinePanelTitle').textContent = '2v2 Pareja vs CPU';
+        const p = new URLSearchParams(window.location.search);
+        const coupleRoom = 'couple_cpu_' + (p.get('coupleId') || 'room_default');
+        // Conexión compartida en tiempo real entre ambos navegadores contra 2 CPUs
+        connectPoolOnline(coupleRoom, '2v2', '2v2_cpu');
       };
     }
 
@@ -526,10 +603,10 @@
       b1Online.onclick = (e) => {
         e.stopPropagation();
         if (onlinePanel) onlinePanel.hidden = false;
-        document.getElementById('onlinePanelTitle').textContent = '⚡ 1v1 Online';
+        document.getElementById('onlinePanelTitle').textContent = '1v1 Online';
         document.getElementById('roomCodeBox').dataset.targetMode = '1v1';
         // Emparejamiento automático instantáneo en la sala pública global de 1v1
-        connectPoolOnline('global_match_1v1', '1v1');
+        connectPoolOnline('global_match_1v1', '1v1', '1v1');
       };
     }
 
@@ -538,10 +615,11 @@
       b2Online.onclick = (e) => {
         e.stopPropagation();
         if (onlinePanel) onlinePanel.hidden = false;
-        document.getElementById('onlinePanelTitle').textContent = '🔥 2v2 Pareja vs Pareja Online';
-        document.getElementById('roomCodeBox').dataset.targetMode = '2v2';
-        // Emparejamiento automático instantáneo en la sala pública global de 2v2
-        connectPoolOnline('global_match_2v2', '2v2');
+        document.getElementById('onlinePanelTitle').textContent = '2v2 Pareja vs Pareja Online';
+        const p = new URLSearchParams(window.location.search);
+        const coupleRoom = 'couple_online_' + (p.get('coupleId') || 'room_default');
+        // Espera y confirmación mutua de la pareja antes de entrar al emparejamiento general
+        connectPoolOnline(coupleRoom, '2v2', '2v2_online');
       };
     }
 

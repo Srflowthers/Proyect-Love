@@ -105,7 +105,7 @@
   window.onPoolTurnMsg = turnMsg;
 
   window.isRivalAiming = function () {
-    return isOnline() && !window.isPoolMyTurn() && !window.moving && !window.hand && rivalAimData != null;
+    return (isOnline() || isCpuTurnNow()) && !window.isPoolMyTurn() && !window.moving && !window.hand && rivalAimData != null;
   };
 
   window.getRivalAimData = function () {
@@ -366,33 +366,54 @@
     showEpicVsBanner(pRedName, pBlueName);
   }
 
-  // 4. INTELIGENCIA ARTIFICIAL (BOT CPU)
+  // 4. INTELIGENCIA ARTIFICIAL (BOT CPU CON GEOMETRÍA GHOST-BALL Y ANIMACIÓN EN VIVO)
+  let cpuAimInterval = null;
+  let cpuThinkTimeout = null;
+
+  // Verifica si el segmento (x1,y1)->(x2,y2) está libre de otras bolas (radio de colisión 2*R = 24)
+  function isSegmentClear(x1, y1, x2, y2, ignoreId1, ignoreId2) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq < 1e-4) return true;
+    const len = Math.sqrt(lenSq);
+
+    for (const b of window.B) {
+      if (b.in || b.i === ignoreId1 || b.i === ignoreId2) continue;
+      // Proyección de la bola sobre el segmento
+      const t = ((b.x - x1) * dx + (b.y - y1) * dy) / lenSq;
+      if (t <= 0.02 || t >= 0.98) continue;
+      const projX = x1 + t * dx;
+      const projY = y1 + t * dy;
+      const dist = Math.hypot(b.x - projX, b.y - projY);
+      if (dist < 23.4) return false;
+    }
+    return true;
+  }
+
   function checkCpuTurn() {
     if (window.over != null || window.moving) return;
     if (!isCpuTurnNow()) return;
 
+    if (cpuThinkTimeout) clearTimeout(cpuThinkTimeout);
+    if (cpuAimInterval) clearInterval(cpuAimInterval);
+
+    const cpuName = (window.NAMES && window.NAMES[window.turn]) || 'IA Rival';
     const M = document.getElementById('msg');
-    if (M) M.textContent = 'La IA ' + window.NAMES[window.turn] + ' está calculando su jugada...';
+    if (M) M.textContent = 'La IA ' + cpuName + ' está apuntando...';
     updatePowerBarState();
 
-    // En 2v2_cpu conectado por WebSocket, solo el asiento 0 calcula y transmite el tiro de la CPU para que ambos navegadores vean exactamente lo mismo
+    // Mostrar el taco de la IA de inmediato detrás de la bola blanca
+    rivalAimData = { yaw: window.aimYaw || 0, pw: 0 };
+
+    // En 2v2_cpu conectado por WebSocket, solo el asiento 0 calcula y transmite el tiro de la CPU
     if (!isCpuAuthority()) return;
 
-    setTimeout(() => {
+    cpuThinkTimeout = setTimeout(() => {
       if (window.over != null || window.moving || !isCpuTurnNow()) return;
 
-      if (window.hand) {
-        window.startHand();
-        window.hand = false;
-        window.setMode(true);
-      }
-
-      const c = window.B[0];
       const t = window.turn % 2;
       const myGrp = window.grp[t];
-
-      let targetBall = null;
-      let minD = 1e9;
 
       const legalBalls = window.B.filter(b => {
         if (b.i === 0 || b.in) return false;
@@ -404,34 +425,159 @@
 
       const poolTarget = legalBalls.length > 0 ? legalBalls : window.B.filter(b => b.i !== 0 && !b.in);
 
-      for (const b of poolTarget) {
-        for (const pk of window.PK) {
-          const d = Math.hypot(b.x - pk[0], b.y - pk[1]);
-          if (d < minD) {
-            minD = d;
-            targetBall = b;
+      // Si la IA tiene "bola en mano" por falta previa del jugador, colocar la blanca en una posición óptima
+      if (window.hand) {
+        window.startHand();
+        const c0 = window.B[0];
+        let bestHandPos = null;
+        let bestHandScore = -1e9;
+        const candidates = [
+          [250, 260], [220, 160], [220, 360],
+          [380, 160], [380, 360], [500, 260],
+          [620, 160], [620, 360]
+        ];
+        for (const [cx, cy] of candidates) {
+          const valid = cx >= 72 && cx <= 928 && cy >= 72 && cy <= 448 &&
+            window.B.every(b => b.i === 0 || b.in || Math.hypot(b.x - cx, b.y - cy) > 26);
+          if (!valid) continue;
+          for (const tb of poolTarget) {
+            if (isSegmentClear(cx, cy, tb.x, tb.y, 0, tb.i)) {
+              const d = Math.hypot(tb.x - cx, tb.y - cy);
+              const sc = 500 - d;
+              if (sc > bestHandScore) {
+                bestHandScore = sc;
+                bestHandPos = [cx, cy];
+              }
+            }
           }
+        }
+        if (bestHandPos) {
+          c0.x = bestHandPos[0];
+          c0.y = bestHandPos[1];
+        }
+        window.hand = false;
+        window.setMode(true);
+        if (window.onPoolHandMoveTransmit) {
+          window.onPoolHandMoveTransmit(c0.x, c0.y, false);
         }
       }
 
-      if (!targetBall) targetBall = poolTarget[0] || window.B[1];
+      const c = window.B[0];
+      let finalAngle = 0;
+      let force = 0.65;
 
-      const angleToTarget = Math.atan2(targetBall.y - c.y, targetBall.x - c.x);
-      const imperfection = (Math.random() - 0.5) * 0.05;
-      const finalAngle = angleToTarget + imperfection;
-      const force = 0.55 + Math.random() * 0.35;
+      // Caso 1: Saque inicial (rotura del triángulo)
+      if (window.brk) {
+        const apex = window.B.find(b => b.i === 1 && !b.in) || poolTarget[0];
+        finalAngle = apex ? Math.atan2(apex.y - c.y, apex.x - c.x) + (Math.random() - 0.5) * 0.025 : 0;
+        force = 0.88 + Math.random() * 0.08;
+      } else {
+        // Caso 2: Búsqueda de tiro con geometría real de Bola Fantasma (Ghost Ball, diámetro 2*R = 24)
+        let bestShot = null;
+        let bestScore = -1e9;
 
-      window.setAimYaw(finalAngle);
-      window.aim(finalAngle, force * 180);
-      window.rd.shadowMap.needsUpdate = true;
+        for (const b of poolTarget) {
+          for (const pk of window.PK) {
+            // Desplazar ligeramente el punto objetivo de la tronera hacia el centro de la mesa para evitar los cuernos
+            const aimPkX = pk[0] + (500 - pk[0]) * 0.025;
+            const aimPkY = pk[1] + (260 - pk[1]) * 0.025;
 
-      setTimeout(() => {
-        const engineIdle = window.originalIdle ? window.originalIdle() : (!window.moving && window.over == null);
-        if (engineIdle && isCpuTurnNow()) {
-          window.shoot(finalAngle, force);
+            const dxP = aimPkX - b.x;
+            const dyP = aimPkY - b.y;
+            const distBToP = Math.hypot(dxP, dyP);
+            if (distBToP < 1) continue;
+
+            const uxP = dxP / distBToP;
+            const uyP = dyP / distBToP;
+
+            // Posición exacta donde debe impactar el centro de la bola blanca (Ghost Ball a 24 unidades)
+            const gx = b.x - uxP * 24;
+            const gy = b.y - uyP * 24;
+
+            // Verificar que la Ghost Ball esté dentro de los límites jugables del paño
+            if (gx < 72 || gx > 928 || gy < 72 || gy > 448) continue;
+
+            const dxC = gx - c.x;
+            const dyC = gy - c.y;
+            const distCToG = Math.hypot(dxC, dyC);
+            if (distCToG < 1) continue;
+
+            const uxC = dxC / distCToG;
+            const uyC = dyC / distCToG;
+
+            // Coseno del ángulo de corte (> 0.16 evita cortes imposibles o golpes por detrás)
+            const cosCut = uxC * uxP + uyC * uyP;
+            if (cosCut < 0.16) continue;
+
+            const clearCueToGhost = isSegmentClear(c.x, c.y, gx, gy, 0, b.i);
+            const clearBallToPocket = isSegmentClear(b.x, b.y, aimPkX, aimPkY, b.i, 0);
+
+            const score =
+              (cosCut * 140) +
+              (clearCueToGhost ? 240 : -320) +
+              (clearBallToPocket ? 180 : -200) -
+              (distBToP * 0.16) -
+              (distCToG * 0.11);
+
+            if (score > bestScore) {
+              bestScore = score;
+              bestShot = { b, gx, gy, cosCut, distBToP, distCToG, clearCueToGhost };
+            }
+          }
         }
-      }, 700);
-    }, 900);
+
+        if (bestShot && bestShot.clearCueToGhost) {
+          const exactAngle = Math.atan2(bestShot.gy - c.y, bestShot.gx - c.x);
+          // Pequeña variación humana natural (~0.35°) para que juegue muy bien sin ser infalible
+          const imperfection = (Math.random() - 0.5) * 0.012;
+          finalAngle = exactAngle + imperfection;
+          const rawForce = 0.38 + (bestShot.distCToG + bestShot.distBToP) / 1450 + (1 - bestShot.cosCut) * 0.18;
+          force = Math.max(0.40, Math.min(0.82, rawForce));
+        } else {
+          // Tiro de seguridad / desbloqueo hacia una bola legal con camino despejado
+          let fallbackBall = poolTarget.find(b => isSegmentClear(c.x, c.y, b.x, b.y, 0, b.i)) || poolTarget[0] || window.B[1];
+          finalAngle = Math.atan2(fallbackBall.y - c.y, fallbackBall.x - c.x) + (Math.random() - 0.5) * 0.02;
+          force = 0.52 + Math.random() * 0.18;
+        }
+      }
+
+      // Animar suavemente el giro del taco y la barra de fuerza de la IA (~640ms) antes de disparar
+      const startYaw = typeof window.aimYaw === 'number' ? window.aimYaw : finalAngle;
+      const angleDiff = Math.atan2(Math.sin(finalAngle - startYaw), Math.cos(finalAngle - startYaw));
+      const totalSteps = 16;
+      let stepIdx = 0;
+
+      cpuAimInterval = setInterval(() => {
+        if (window.over != null || window.moving || !isCpuTurnNow()) {
+          clearInterval(cpuAimInterval);
+          cpuAimInterval = null;
+          return;
+        }
+        stepIdx++;
+        const progress = Math.min(1, stepIdx / totalSteps);
+        // Curva suave easeOutCubic para el giro del taco
+        const ease = 1 - Math.pow(1 - progress, 3);
+        const curYaw = startYaw + angleDiff * ease;
+        const curPw = progress < 0.35 ? 0 : force * ((progress - 0.35) / 0.65);
+
+        rivalAimData = { yaw: curYaw, pw: curPw };
+        window.setAimYaw(curYaw);
+        window.aim(curYaw, curPw * 180);
+        window.rd.shadowMap.needsUpdate = true;
+
+        if (stepIdx >= totalSteps) {
+          clearInterval(cpuAimInterval);
+          cpuAimInterval = null;
+          setTimeout(() => {
+            const engineIdle = window.originalIdle ? window.originalIdle() : (!window.moving && window.over == null);
+            if (engineIdle && isCpuTurnNow()) {
+              rivalAimData = null;
+              window.shoot(finalAngle, force);
+            }
+          }, 220);
+        }
+      }, 40);
+    }, 550);
   }
 
   let queueTimeoutTimer = null;
@@ -451,6 +597,14 @@
     if (finishFallbackTimer) {
       clearTimeout(finishFallbackTimer);
       finishFallbackTimer = null;
+    }
+    if (cpuThinkTimeout) {
+      clearTimeout(cpuThinkTimeout);
+      cpuThinkTimeout = null;
+    }
+    if (cpuAimInterval) {
+      clearInterval(cpuAimInterval);
+      cpuAimInterval = null;
     }
     if (poolWs) {
       try {
@@ -900,12 +1054,18 @@
     if (btnClose) {
       btnClose.onclick = (e) => {
         e.stopPropagation();
+        cancelMatchmaking();
         currentGameMode = '2v2_local';
+        matchStarted = true;
+        window.TEAM_NAMES = ['Equipo Rojo', 'Equipo Azul'];
         window.NAMES[0] = 'Rojo 1';
         window.NAMES[1] = 'Azul 1';
         window.NAMES[2] = 'Rojo 2';
         window.NAMES[3] = 'Azul 2';
         modal.hidden = true;
+        window.newGame();
+        window.ui();
+        turnMsg();
       };
     }
 
@@ -920,12 +1080,22 @@
     if (b1Cpu) {
       b1Cpu.onclick = (e) => {
         e.stopPropagation();
+        cancelMatchmaking();
         currentGameMode = '1v1_cpu';
-        window.NAMES[0] = 'Tú (Rojo)';
+        matchStarted = true;
+        myPlayerSeat = 0;
+        const p = new URLSearchParams(window.location.search);
+        const myName = p.get('name') || 'Tú (Rojo)';
+        window.TEAM_NAMES = [myName, 'IA Rival (Azul)'];
+        window.NAMES[0] = myName;
         window.NAMES[1] = 'IA Rival (Azul)';
+        window.NAMES[2] = myName;
+        window.NAMES[3] = 'IA Rival (Azul)';
         modal.hidden = true;
         window.newGame();
-        window.notify('MODO 1v1 vs CPU', 'Juegas tú contra la IA del sistema.', true, 2500);
+        window.ui();
+        turnMsg();
+        showEpicVsBanner(myName, 'IA Rival (Azul)');
       };
     }
 

@@ -40,6 +40,12 @@
     return is1v1() ? 2 : 4;
   };
 
+  window.getMyPoolTeam = function () {
+    if (currentGameMode === '1v1_cpu' || currentGameMode === '2v2_cpu') return 0; // Humano/Pareja siempre son equipo Rojo (0)
+    if (isOnline()) return myPlayerSeat % 2; // Asientos 0 y 2 = Rojo (0), Asientos 1 y 3 = Azul (1)
+    return window.turn % 2;
+  };
+
   function isCpuTurnNow() {
     return (currentGameMode === '1v1_cpu' && window.turn === 1) ||
       (currentGameMode === '2v2_cpu' && (window.turn === 1 || window.turn === 3));
@@ -813,6 +819,13 @@
             checkCpuTurn();
           } else {
             const won = (window.over === (myPlayerSeat % 2));
+            if (window.enviarRecompensaPool) {
+              window.enviarRecompensaPool({
+                win: won,
+                score: (window.tray && window.tray.length) || 0,
+                durationMs: 300000
+              });
+            }
             window.notify(
               won ? '¡VICTORIA ÉPICA!' : 'FIN DE LA PARTIDA',
               won ? 'Tu equipo ganó la partida.' : `Gana ${window.TEAM_NAMES ? window.TEAM_NAMES[window.over] : 'el rival'}.`,

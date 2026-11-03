@@ -1081,8 +1081,10 @@ function finish() {
 
     // Rescate y envío desacoplado de monedas y LP (ver reward-config.js)
     if (window.enviarRecompensaPool) {
+      const myTeam = (typeof window.getMyPoolTeam === 'function') ? window.getMyPoolTeam() : t;
+      const didIWin = (over === myTeam);
       window.enviarRecompensaPool({
-        win: ok,
+        win: didIWin,
         score: tray.length,
         durationMs: 300000
       });

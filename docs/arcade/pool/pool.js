@@ -1103,7 +1103,8 @@ function finish() {
     M.textContent = NAMES[turn] + ' embocó y sigue.' + asg + ex;
     notify('¡BUEN TIRO!', 'La bola cayó. Sigues jugando. ' + groupHint(turn % 2), true, 2100);
   } else {
-    turn = (turn + 1) % 4;
+    const maxSeats = (typeof window.getPoolMaxSeats === 'function') ? window.getPoolMaxSeats() : 4;
+    turn = (turn + 1) % maxSeats;
     M.textContent = foul ? `Falta: ${why}. ${NAMES[turn]} coloca la blanca (la arrastra y la suelta donde quiera).${ex}` : `Turno de ${NAMES[turn]}.${asg}${ex}`;
     if (foul) { hand = true; startHand(); }
     notify(foul ? '¡FALTA!' : 'CAMBIO DE TURNO', foul ? `${why}. ${NAMES[turn]} puede colocar la blanca donde quiera.` : `Juega ${NAMES[turn]}. ${groupHint(turn % 2)}`, false, 2800);
@@ -1158,14 +1159,16 @@ let isRightMouseDown = false;
 // Manejo unificado de MOUSE y POINTER para garantizar soporte simultáneo de ambos botones
 st.addEventListener('mousedown', e => {
   initAudio();
+  const canInteract = !window.isPoolMyTurn || window.isPoolMyTurn();
   if (e.button === 2) {
-    // Clic DERECHO: Iniciar control de mira
+    // Clic DERECHO: Iniciar control de mira (solo en mi turno) o rotar vista libre
     isRightMouseDown = true;
-    orb = { x: e.clientX, y: e.clientY, aim: aimMode && !hand };
+    orb = { x: e.clientX, y: e.clientY, aim: aimMode && !hand && canInteract };
     return;
   }
   if (e.button === 0) {
-    // Clic IZQUIERDO: Bola en mano o Cargar fuerza
+    // Clic IZQUIERDO: Bola en mano o Cargar fuerza (solo si es mi turno)
+    if (!canInteract) return;
     isLeftMouseDown = true;
     const p = tp(e);
     if (p) mouse.copy(p);
@@ -1189,7 +1192,9 @@ st.addEventListener('mousedown', e => {
 // Para dispositivos táctiles
 st.addEventListener('touchstart', e => {
   initAudio();
+  const canInteract = !window.isPoolMyTurn || window.isPoolMyTurn();
   if (e.touches.length === 1) {
+    if (!canInteract) return;
     const t = e.touches[0];
     const p = tp(t);
     if (p) mouse.copy(p);
@@ -1208,18 +1213,19 @@ st.addEventListener('touchstart', e => {
   } else if (e.touches.length >= 2) {
     // Segundo dedo: mover la mira mientras el primero carga
     const t = e.touches[1];
-    orb = { x: t.clientX, y: t.clientY, aim: aimMode && !hand };
+    orb = { x: t.clientX, y: t.clientY, aim: aimMode && !hand && canInteract };
   }
 }, { passive: true });
 
 window.addEventListener('mousemove', e => {
+  const canInteract = !window.isPoolMyTurn || window.isPoolMyTurn();
   // 1. Mover mira con clic derecho presionado (o shift)
   if (isRightMouseDown && orb) {
     const dx = e.clientX - orb.x, dy = e.clientY - orb.y;
-    if (orb.aim && aimMode && !hand && over == null) {
+    if (orb.aim && aimMode && !hand && over == null && canInteract) {
       aimYaw += dx * .0045;
       phA = Math.max(.6, Math.min(1.3, phA - dy * .004));
-    } else {
+    } else if (!aimMode) {
       th -= dx * .006;
       ph = Math.max(.05, Math.min(1.25, ph - dy * .005));
     }
@@ -1227,6 +1233,7 @@ window.addEventListener('mousemove', e => {
   }
 
   // 2. Si se tiene la bola en mano
+  if (!canInteract) return;
   const p = tp(e);
   if (p) {
     mouse.copy(p);
@@ -1235,23 +1242,26 @@ window.addEventListener('mousemove', e => {
       if (validPos(x, y)) { c.x = x; c.y = y; }
       else if (validPos(x, c.y)) c.x = x;
       else if (validPos(c.x, y)) c.y = y;
+      if (window.onPoolHandMoveTransmit) window.onPoolHandMoveTransmit(c.x, c.y, true);
     }
   }
 });
 
 window.addEventListener('touchmove', e => {
+  const canInteract = !window.isPoolMyTurn || window.isPoolMyTurn();
   if (e.touches.length >= 2 && orb) {
     const t = e.touches[1];
     const dx = t.clientX - orb.x, dy = t.clientY - orb.y;
-    if (orb.aim && aimMode && !hand && over == null) {
+    if (orb.aim && aimMode && !hand && over == null && canInteract) {
       aimYaw += dx * .0045;
       phA = Math.max(.6, Math.min(1.3, phA - dy * .004));
-    } else {
+    } else if (!aimMode) {
       th -= dx * .006;
       ph = Math.max(.05, Math.min(1.25, ph - dy * .005));
     }
     orb.x = t.clientX; orb.y = t.clientY;
   }
+  if (!canInteract) return;
   const p = tp(e.touches[0]);
   if (p) {
     mouse.copy(p);
@@ -1260,6 +1270,7 @@ window.addEventListener('touchmove', e => {
       if (validPos(x, y)) { c.x = x; c.y = y; }
       else if (validPos(x, c.y)) c.x = x;
       else if (validPos(c.x, y)) c.y = y;
+      if (window.onPoolHandMoveTransmit) window.onPoolHandMoveTransmit(c.x, c.y, true);
     }
   }
 }, { passive: true });
@@ -1276,7 +1287,13 @@ window.addEventListener('mouseup', e => {
     isLeftMouseDown = false;
     if (grab) {
       grab = null;
-      if (hand) { hand = false; setMode(true); $('msg').textContent = 'Turno de ' + NAMES[turn]; }
+      if (hand) {
+        hand = false;
+        setMode(true);
+        if (window.onPoolHandMoveTransmit) window.onPoolHandMoveTransmit(B[0].x, B[0].y, false);
+        if (window.onPoolTurnMsg) window.onPoolTurnMsg();
+        else $('msg').textContent = 'Turno de ' + NAMES[turn];
+      }
       return;
     }
 
@@ -1300,7 +1317,13 @@ window.addEventListener('touchend', e => {
     orb = null;
     if (grab) {
       grab = null;
-      if (hand) { hand = false; setMode(true); $('msg').textContent = 'Turno de ' + NAMES[turn]; }
+      if (hand) {
+        hand = false;
+        setMode(true);
+        if (window.onPoolHandMoveTransmit) window.onPoolHandMoveTransmit(B[0].x, B[0].y, false);
+        if (window.onPoolTurnMsg) window.onPoolTurnMsg();
+        else $('msg').textContent = 'Turno de ' + NAMES[turn];
+      }
       return;
     }
     if (charging) {
@@ -1354,6 +1377,7 @@ $('pw').onpointerup = e => { e.preventDefault(); e.stopPropagation(); rel(); };
 $('gear').onclick = () => { $('menu').hidden = !$('menu').hidden; };
 
 addEventListener('keydown', e => {
+  if (window.isPoolMyTurn && !window.isPoolMyTurn()) return;
   if (e.code == 'Space' && !e.repeat) { e.preventDefault(); go(); }
   if (e.key == 'ArrowLeft') aimYaw -= .012;
   if (e.key == 'ArrowRight') aimYaw += .012;
@@ -1636,6 +1660,18 @@ Object.defineProperty(window, 'pot', {
   get() { return pot; },
   set(v) { pot = v; }
 });
+Object.defineProperty(window, 'tray', {
+  get() { return tray; },
+  set(v) { tray = v; }
+});
+Object.defineProperty(window, 'brk', {
+  get() { return brk; },
+  set(v) { brk = v; }
+});
+Object.defineProperty(window, 'aimYaw', {
+  get() { return aimYaw; },
+  set(v) { aimYaw = v; }
+});
 
 // Delegación limpia de turnos (permite apuntar y ver taco solo a quien le toca)
 const originalIdle = idle;
@@ -1658,6 +1694,7 @@ window.originalAim = originalAim;
 // Delegación limpia de disparo
 const originalShoot = shoot;
 shoot = function(a, p) {
+  if (window.canLocalShoot && !window.canLocalShoot()) return;
   originalShoot(a, p);
   if (window.onPoolShootTransmit) window.onPoolShootTransmit(a, p);
 };
@@ -1667,9 +1704,15 @@ window.originalShoot = originalShoot;
 // Delegación limpia de fin de tiro
 const originalFinish = finish;
 finish = function() {
+  if (window.shouldSkipLocalFinish && window.shouldSkipLocalFinish()) {
+    moving = false;
+    if (rollG) rollG.gain.setTargetAtTime(0, ac.currentTime, .1);
+    return;
+  }
   originalFinish();
   if (window.onPoolFinishTransmit) window.onPoolFinishTransmit();
 };
+window.originalFinish = originalFinish;
 
 /* Poblar selectores de vara y fondo */
 for (const [id, k] of Object.entries(CUES)) $('selCue').add(new Option('Vara: ' + k.name, id));

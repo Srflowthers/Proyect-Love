@@ -10,11 +10,51 @@
   let rivalAimData = null;
   let poolWs = null;
   let wsThrottle = 0;
+  let handThrottle = 0;
+  let lastSentYaw = null;
+  let lastSentPw = null;
+  let lastSentAimTime = 0;
   let shotOwnerSeat = null;   // Asiento de quien hizo el tiro en curso (solo él reporta turn_end)
+  let finishFallbackTimer = null;
   let matchStarted = false;
+  let roomOverflowIndex = 0;
 
-  const isOnline = () => currentGameMode === '1v1_online' || currentGameMode === '2v2_online';
-  const is1v1 = () => currentGameMode === '1v1_online' || currentGameMode === '1v1_cpu';
+  function normalizeGameMode(subMode, mode) {
+    if (subMode === '1v1' || subMode === '1v1_online' || (!subMode && mode === '1v1')) return '1v1_online';
+    if (subMode === '2v2_cpu') return '2v2_cpu';
+    if (subMode === '2v2_online' || mode === '2v2') return '2v2_online';
+    return '1v1_online';
+  }
+
+  const isOnline = () =>
+    currentGameMode === '1v1_online' ||
+    currentGameMode === '2v2_online' ||
+    (currentGameMode === '2v2_cpu' && poolWs && poolWs.readyState === WebSocket.OPEN);
+
+  const is1v1 = () =>
+    currentGameMode === '1v1_online' ||
+    currentGameMode === '1v1' ||
+    currentGameMode === '1v1_cpu';
+
+  window.getPoolMaxSeats = function () {
+    return is1v1() ? 2 : 4;
+  };
+
+  function isCpuTurnNow() {
+    return (currentGameMode === '1v1_cpu' && window.turn === 1) ||
+      (currentGameMode === '2v2_cpu' && (window.turn === 1 || window.turn === 3));
+  }
+
+  function isCpuAuthority() {
+    if (currentGameMode === '1v1_cpu') return true;
+    if (currentGameMode === '2v2_cpu') {
+      if (poolWs && poolWs.readyState === WebSocket.OPEN) {
+        return myPlayerSeat === 0;
+      }
+      return true;
+    }
+    return false;
+  }
 
   // Snapshot exacto de las bolas (precisión completa para que la física sea idéntica en ambos clientes)
   function snapshotBalls() {
@@ -38,54 +78,129 @@
     if (m) m.textContent = text;
   }
 
+  function updatePowerBarState() {
+    const pwEl = document.getElementById('pw');
+    if (!pwEl) return;
+    const myTurn = window.isPoolMyTurn();
+    pwEl.style.opacity = myTurn ? '1' : '0.32';
+    pwEl.style.pointerEvents = myTurn ? 'auto' : 'none';
+    pwEl.style.filter = myTurn ? 'none' : 'grayscale(0.8)';
+  }
+
   function turnMsg() {
+    updatePowerBarState();
     if (window.isPoolMyTurn()) {
       setMsg(window.hand ? '¡Tu turno! Coloca la blanca y luego tira.' : '¡Tu turno! Apunta y mantén FUERZA.');
     } else {
-      setMsg('Turno de ' + window.NAMES[window.turn] + ' · espera su tiro...');
+      const activeName = (window.NAMES && window.NAMES[window.turn]) || 'Rival';
+      setMsg('Turno de ' + activeName + ' · viendo su jugada en vivo...');
     }
   }
+  window.onPoolTurnMsg = turnMsg;
 
   window.isRivalAiming = function () {
-    return (currentGameMode === '1v1_online' || currentGameMode === '2v2_online') && !window.isPoolMyTurn() && rivalAimData != null;
+    return isOnline() && !window.isPoolMyTurn() && !window.moving && !window.hand && rivalAimData != null;
   };
 
   window.getRivalAimData = function () {
     return rivalAimData;
   };
 
-  // Helper para saber si es mi turno de interactuar
+  // Helper estricto para saber si el usuario local puede interactuar con la mesa
   window.isPoolMyTurn = function () {
+    const modal = document.getElementById('modeModal');
+    if (modal && !modal.hidden) return false;
+
     if (currentGameMode === '1v1_cpu') {
       return window.turn === 0; // Humano es Asiento 0 (Rojo)
     }
     if (currentGameMode === '2v2_cpu') {
-      return window.turn === 0 || window.turn === 2; // Humano y su pareja son Asientos 0 y 2 (Rojo)
+      if (poolWs && poolWs.readyState === WebSocket.OPEN) {
+        return matchStarted && window.turn === myPlayerSeat;
+      }
+      return window.turn === 0 || window.turn === 2;
     }
     if (currentGameMode === '1v1_online' || currentGameMode === '2v2_online') {
-      return window.turn === myPlayerSeat;
+      return matchStarted && window.turn === myPlayerSeat;
     }
     return true; // En modo local todos los turnos son interactuables
   };
 
-  // 1. TRANSMISIÓN EN VIVO DEL APUNTADO (Emisor hacia WebSocket a 30 Hz)
+  // Permite disparar localmente solo si es mi turno o si soy la autoridad del turno CPU
+  window.canLocalShoot = function () {
+    if (window.isPoolMyTurn()) return true;
+    if (isCpuTurnNow() && isCpuAuthority()) return true;
+    return false;
+  };
+
+  // En partidas online, solo quien efectuó el tiro ejecuta finish() y emite turn_end;
+  // el receptor espera el paquete autoritativo turn_end para evitar doble evaluación o desfase
+  window.shouldSkipLocalFinish = function () {
+    if (!isOnline()) return false;
+    const isMyAuthoritativeShot =
+      shotOwnerSeat === myPlayerSeat ||
+      (isCpuTurnNow() && isCpuAuthority());
+    if (isMyAuthoritativeShot) return false;
+
+    if (finishFallbackTimer) clearTimeout(finishFallbackTimer);
+    finishFallbackTimer = setTimeout(() => {
+      finishFallbackTimer = null;
+      if (shotOwnerSeat !== null && shotOwnerSeat !== myPlayerSeat) {
+        shotOwnerSeat = null;
+        if (window.originalFinish) window.originalFinish();
+        turnMsg();
+      }
+    }, 1500);
+    return true;
+  };
+
+  // 1. TRANSMISIÓN EN VIVO DEL APUNTADO (Emisor hacia WebSocket a 30 Hz cuando cambia o pulso cada 400ms)
   window.onPoolAimTransmit = function (a, l) {
-    if ((currentGameMode === '1v1_online' || currentGameMode === '2v2_online') && poolWs && poolWs.readyState === WebSocket.OPEN && window.isPoolMyTurn()) {
+    const canSendAim = window.isPoolMyTurn() || (isCpuTurnNow() && isCpuAuthority());
+    if (isOnline() && poolWs && poolWs.readyState === WebSocket.OPEN && canSendAim) {
       const now = performance.now();
-      if (now - wsThrottle > 33) { // ~30 FPS para telemetría súper liviana (<30 bytes)
+      const yaw = Number(a.toFixed(4));
+      const pw = Number((l / 180).toFixed(3));
+      const changed = lastSentYaw === null || Math.abs(yaw - lastSentYaw) > 0.0005 || Math.abs(pw - lastSentPw) > 0.002;
+      const keepAliveAim = (now - lastSentAimTime) > 400;
+
+      if ((changed && (now - wsThrottle > 33)) || keepAliveAim) {
         wsThrottle = now;
+        lastSentAimTime = now;
+        lastSentYaw = yaw;
+        lastSentPw = pw;
         poolWs.send(JSON.stringify({
           t: 'aim',
-          yaw: Number(a.toFixed(4)),
-          pw: Number((l / 180).toFixed(3))
+          yaw,
+          pw
         }));
+      }
+    }
+  };
+
+  // 1B. TRANSMISIÓN EN VIVO DE BOLA EN MANO
+  window.onPoolHandMoveTransmit = function (x, y, stillInHand) {
+    if (isOnline() && poolWs && poolWs.readyState === WebSocket.OPEN && window.isPoolMyTurn()) {
+      const now = performance.now();
+      if (!stillInHand || (now - handThrottle > 33)) {
+        handThrottle = now;
+        poolWs.send(JSON.stringify({
+          t: 'hand_move',
+          x: Number(x.toFixed(2)),
+          y: Number(y.toFixed(2)),
+          hand: !!stillInHand
+        }));
+        if (!stillInHand) {
+          lastSentAimTime = 0; // Forzar envío inmediato de la mira tras soltar la blanca
+        }
       }
     }
   };
 
   // 2. TRANSMISIÓN DEL DISPARO (incluye snapshot de bolas para que el rival simule exactamente lo mismo)
   window.onPoolShootTransmit = function (a, p) {
-    if (isOnline() && poolWs && poolWs.readyState === WebSocket.OPEN && window.isPoolMyTurn()) {
+    const canSendShot = window.isPoolMyTurn() || (isCpuTurnNow() && isCpuAuthority());
+    if (isOnline() && poolWs && poolWs.readyState === WebSocket.OPEN && canSendShot) {
       shotOwnerSeat = myPlayerSeat;
       rivalAimData = null;
       poolWs.send(JSON.stringify({
@@ -101,30 +216,39 @@
 
   // 3. TRANSMISIÓN DEL FIN DEL TIRO Y DISPARADOR DE CPU
   window.onPoolFinishTransmit = function () {
-    // En 1v1 solo existen los asientos 0 y 1 (el motor rota 0..3)
+    // En 1v1 solo existen los asientos 0 y 1
     if (is1v1() && window.turn > 1) {
       window.turn = window.turn % 2;
       window.ui();
     }
 
     if (isOnline()) {
-      // Solo quien disparó es la autoridad del resultado (el turno ya cambió localmente, por eso no usamos isPoolMyTurn)
+      // Solo quien disparó (o la autoridad de la CPU en 2v2_cpu) reporta turn_end
       if (shotOwnerSeat === myPlayerSeat && poolWs && poolWs.readyState === WebSocket.OPEN) {
         poolWs.send(JSON.stringify({
           t: 'turn_end',
           nextTurn: window.turn,
           pot: window.pot,
           grp: window.grp,
+          tray: window.tray,
           hand: !!window.hand,
           over: window.over,
           balls: snapshotBalls()
         }));
         shotOwnerSeat = null;
       }
+      lastSentAimTime = 0;
+      if (!window.isPoolMyTurn() && !window.hand && window.over == null) {
+        rivalAimData = { yaw: window.aimYaw || 0, pw: 0 };
+      } else {
+        rivalAimData = null;
+      }
       turnMsg();
+      checkCpuTurn();
       return;
     }
 
+    turnMsg();
     checkCpuTurn();
   };
 
@@ -189,36 +313,46 @@
       window.NAMES[1] = 'IA Bot 1 (Azul)';
       window.NAMES[2] = isPartner ? myName : partnerName;
       window.NAMES[3] = 'IA Bot 2 (Azul)';
-    } else {
-      // Modos Online (1v1 u Online 2v2)
-      if (Array.isArray(playersList) && playersList.length > 0) {
-        const p0 = playersList.find(pl => pl.seat === 0);
-        const p1 = playersList.find(pl => pl.seat === 1);
-        if (p0 && p0.name) pRedName = p0.name;
-        if (p1 && p1.name) pBlueName = p1.name;
-      }
-      const myCustomDuo = p.get('duoName') || myName;
-      if (myPlayerSeat === 0 && myCustomDuo) pRedName = myCustomDuo;
-      if (myPlayerSeat === 1 && myCustomDuo) pBlueName = myCustomDuo;
+    } else if (is1v1()) {
+      // Modo 1v1 Online: nombres individuales exactos sincronizados desde el servidor para ambos navegadores
+      const p0 = Array.isArray(playersList) ? playersList.find(pl => pl.seat === 0) : null;
+      const p1 = Array.isArray(playersList) ? playersList.find(pl => pl.seat === 1) : null;
+      pRedName = (p0 && p0.name) || (myPlayerSeat === 0 ? myName : 'Jugador 1');
+      pBlueName = (p1 && p1.name) || (myPlayerSeat === 1 ? myName : 'Jugador 2');
 
-      if (!pRedName) pRedName = myPlayerSeat === 0 ? myName : 'Rival (Rojo)';
-      if (!pBlueName) pBlueName = myPlayerSeat === 1 ? myName : 'Rival (Azul)';
-
-      const seats = is1v1() ? 2 : 4;
       window.TEAM_NAMES = [pRedName, pBlueName];
+      window.NAMES[0] = pRedName;
+      window.NAMES[1] = pBlueName;
+      window.NAMES[2] = pRedName;
+      window.NAMES[3] = pBlueName;
+    } else {
+      // Modo 2v2 Online: 4 jugadores (2 parejas) sincronizados desde el servidor
+      const p0 = Array.isArray(playersList) ? playersList.find(pl => pl.seat === 0) : null;
+      const p1 = Array.isArray(playersList) ? playersList.find(pl => pl.seat === 1) : null;
+      const p2 = Array.isArray(playersList) ? playersList.find(pl => pl.seat === 2) : null;
+      const p3 = Array.isArray(playersList) ? playersList.find(pl => pl.seat === 3) : null;
 
-      for (let s = 0; s < seats; s++) {
-        if (s === 0) window.NAMES[0] = pRedName;
-        else if (s === 1) window.NAMES[1] = pBlueName;
-        else if (s === 2) window.NAMES[2] = pRedName + ' (Pareja)';
-        else if (s === 3) window.NAMES[3] = pBlueName + ' (Pareja)';
-      }
+      window.NAMES[0] = (p0 && p0.name) || 'Rojo 1';
+      window.NAMES[1] = (p1 && p1.name) || 'Azul 1';
+      window.NAMES[2] = (p2 && p2.name) || 'Rojo 2';
+      window.NAMES[3] = (p3 && p3.name) || 'Azul 2';
+
+      pRedName = (p0 && p2) ? `${p0.name} & ${p2.name}` : window.NAMES[0];
+      pBlueName = (p1 && p3) ? `${p1.name} & ${p3.name}` : window.NAMES[1];
+      window.TEAM_NAMES = [pRedName, pBlueName];
     }
 
     window.newGame();
     window.turn = 0;
-    rivalAimData = null;
+    lastSentAimTime = 0;
+    lastSentYaw = null;
+    lastSentPw = null;
     shotOwnerSeat = null;
+    if (!window.isPoolMyTurn()) {
+      rivalAimData = { yaw: window.aimYaw || 0, pw: 0 };
+    } else {
+      rivalAimData = null;
+    }
     window.ui();
     turnMsg();
 
@@ -229,15 +363,17 @@
   // 4. INTELIGENCIA ARTIFICIAL (BOT CPU)
   function checkCpuTurn() {
     if (window.over != null || window.moving) return;
-    const isCpu = (currentGameMode === '1v1_cpu' && window.turn === 1) ||
-      (currentGameMode === '2v2_cpu' && (window.turn === 1 || window.turn === 3));
-    if (!isCpu) return;
+    if (!isCpuTurnNow()) return;
 
     const M = document.getElementById('msg');
-    if (M) M.textContent = '🤖 La IA ' + window.NAMES[window.turn] + ' está calculando su jugada...';
+    if (M) M.textContent = 'La IA ' + window.NAMES[window.turn] + ' está calculando su jugada...';
+    updatePowerBarState();
+
+    // En 2v2_cpu conectado por WebSocket, solo el asiento 0 calcula y transmite el tiro de la CPU para que ambos navegadores vean exactamente lo mismo
+    if (!isCpuAuthority()) return;
 
     setTimeout(() => {
-      if (window.over != null || window.moving) return;
+      if (window.over != null || window.moving || !isCpuTurnNow()) return;
 
       if (window.hand) {
         window.startHand();
@@ -284,7 +420,8 @@
       window.rd.shadowMap.needsUpdate = true;
 
       setTimeout(() => {
-        if (window.idle()) {
+        const engineIdle = window.originalIdle ? window.originalIdle() : (!window.moving && window.over == null);
+        if (engineIdle && isCpuTurnNow()) {
           window.shoot(finalAngle, force);
         }
       }, 700);
@@ -304,6 +441,10 @@
     if (heartbeatTimer) {
       clearInterval(heartbeatTimer);
       heartbeatTimer = null;
+    }
+    if (finishFallbackTimer) {
+      clearTimeout(finishFallbackTimer);
+      finishFallbackTimer = null;
     }
     if (poolWs) {
       try {
@@ -366,7 +507,8 @@
       }
     }
 
-    const actualSubMode = subMode || (mode === '1v1' ? '1v1' : '2v2_online');
+    const actualSubMode = normalizeGameMode(subMode, mode);
+    currentGameMode = actualSubMode;
     const coupleId = p.get('coupleId') || '';
     const wsUrl = `${wsProtocol}//${apiHost}/api/pool/ws?room=${encodeURIComponent(roomId)}&mode=${mode}&subMode=${encodeURIComponent(actualSubMode)}&uid=${encodeURIComponent(uid)}&name=${encodeURIComponent(myName)}&coupleSeat=${coupleSeat}&coupleId=${encodeURIComponent(coupleId)}`;
 
@@ -446,16 +588,16 @@
         // A. Bienvenida y asignación de asiento
         if (data.t === 'welcome') {
           myPlayerSeat = data.seat;
-          currentGameMode = data.subMode || (data.mode === '1v1' ? '1v1_online' : '2v2_online');
+          currentGameMode = normalizeGameMode(data.subMode, data.mode);
           window.NAMES[myPlayerSeat] = myName;
           if (data.turn != null) window.turn = data.turn;
           window.ui();
 
-          const reqSeats = (currentGameMode === '2v2_cpu' || currentGameMode === '1v1' || currentGameMode === '1v1_online') ? 2 : 4;
+          const reqSeats = (currentGameMode === '2v2_cpu' || currentGameMode === '1v1_online') ? 2 : 4;
           const currentCount = (data.players && data.players.length) || 1;
 
           // Si es 1v1 Online, arrancar en cuanto haya 2 jugadores conectados
-          if (currentGameMode === '1v1' || currentGameMode === '1v1_online') {
+          if (currentGameMode === '1v1_online') {
             if (statusEl) {
               statusEl.textContent = `Asiento ${myPlayerSeat + 1} asignado. Conectados: ${currentCount}/${reqSeats}`;
             }
@@ -494,20 +636,33 @@
           }
         }
 
+        // A2. Sala llena: saltar inmediatamente a la siguiente sala disponible
+        if (data.t === 'room_full') {
+          roomOverflowIndex = (roomOverflowIndex + 1) % 10;
+          const baseRoom = roomId.replace(/_\d+$/, '');
+          const nextRoom = `${baseRoom}_${roomOverflowIndex}`;
+          if (statusEl) statusEl.textContent = 'Sala ocupada, conectando a mesa disponible...';
+          lastConnectAttempt = 0;
+          setTimeout(() => {
+            connectPoolOnline(nextRoom, mode, actualSubMode);
+          }, 250);
+          return;
+        }
+
         // B. Nuevo jugador entra
         if (data.t === 'player_joined') {
-          const reqSeats = (currentGameMode === '2v2_cpu' || currentGameMode === '1v1' || currentGameMode === '1v1_online') ? 2 : 4;
+          const reqSeats = (currentGameMode === '2v2_cpu' || currentGameMode === '1v1_online') ? 2 : 4;
           const currentCount = (data.players && data.players.length) || 2;
 
           // Si es 1v1 Online, avisar y arrancar de inmediato
-          if (currentGameMode === '1v1' || currentGameMode === '1v1_online') {
+          if (currentGameMode === '1v1_online') {
             window.notify('RIVAL CONECTADO', `${data.name} entró a la partida`, false, 2000);
             if (statusEl) {
               statusEl.textContent = `¡Rival encontrado! Conectados: ${currentCount}/${reqSeats}`;
             }
             if (currentCount >= reqSeats) {
               const roster = data.players;
-              setTimeout(() => startMatch(roster), 300);
+              setTimeout(() => startMatch(roster), 250);
             }
             return;
           }
@@ -579,6 +734,23 @@
           }
         }
 
+        // C2. MOVIMIENTO EN VIVO DE BOLA BLANCA EN MANO
+        if (data.t === 'hand_move') {
+          if (data.seat !== myPlayerSeat && window.B && window.B[0]) {
+            window.B[0].x = data.x;
+            window.B[0].y = data.y;
+            window.B[0].in = 0;
+            window.B[0].vx = 0;
+            window.B[0].vy = 0;
+            if (data.hand === false && window.hand) {
+              window.hand = false;
+              window.setMode(true);
+              rivalAimData = { yaw: window.aimYaw || 0, pw: 0 };
+            }
+            window.rd.shadowMap.needsUpdate = true;
+          }
+        }
+
         // D. Disparo del rival: partir EXACTAMENTE del mismo estado y simular el mismo golpe
         if (data.t === 'shot') {
           if (data.seat !== myPlayerSeat) {
@@ -599,17 +771,33 @@
         // E. Fin del tiro: el resultado del tirador es la autoridad
         if (data.t === 'turn_end') {
           if (data.seat === myPlayerSeat) return; // eco de mi propio tiro
-          rivalAimData = null;
+          if (finishFallbackTimer) {
+            clearTimeout(finishFallbackTimer);
+            finishFallbackTimer = null;
+          }
           shotOwnerSeat = null;
           window.moving = false;
+          window.brk = false;
           applyBalls(data.balls);
           if (data.grp) window.grp = data.grp;
+          if (Array.isArray(data.tray)) {
+            window.tray = data.tray;
+          } else if (Array.isArray(data.balls)) {
+            window.tray = data.balls.filter(b => b.i !== 0 && b.in).map(b => b.i);
+          }
           window.turn = data.nextTurn;
-          if (data.over != null) window.over = data.over;
+          if (data.over !== undefined) window.over = data.over;
 
           const wantHand = !!data.hand;
           if (wantHand && !window.hand) { window.hand = true; window.startHand(); }
           else if (!wantHand && window.hand) { window.hand = false; window.setMode(true); }
+
+          lastSentAimTime = 0;
+          if (!window.isPoolMyTurn() && !wantHand && window.over == null) {
+            rivalAimData = { yaw: window.aimYaw || 0, pw: 0 };
+          } else {
+            rivalAimData = null;
+          }
 
           window.ui();
           window.rd.shadowMap.needsUpdate = true;
@@ -621,6 +809,15 @@
               isMe ? (wantHand ? 'Falta del rival: coloca la blanca donde quieras.' : 'Te toca tirar a ti.') : `Turno de ${window.NAMES[window.turn]}.`,
               isMe,
               2200
+            );
+            checkCpuTurn();
+          } else {
+            const won = (window.over === (myPlayerSeat % 2));
+            window.notify(
+              won ? '¡VICTORIA ÉPICA!' : 'FIN DE LA PARTIDA',
+              won ? 'Tu equipo ganó la partida.' : `Gana ${window.TEAM_NAMES ? window.TEAM_NAMES[window.over] : 'el rival'}.`,
+              won,
+              4000
             );
           }
         }
@@ -736,11 +933,12 @@
     if (b1Online) {
       b1Online.onclick = (e) => {
         e.stopPropagation();
+        roomOverflowIndex = 0;
         if (onlinePanel) onlinePanel.hidden = false;
         document.getElementById('onlinePanelTitle').textContent = '1v1 Online';
         document.getElementById('roomCodeBox').dataset.targetMode = '1v1';
         // Emparejamiento automático instantáneo en la sala pública global de 1v1
-        connectPoolOnline('global_match_1v1', '1v1', '1v1');
+        connectPoolOnline('global_match_1v1', '1v1', '1v1_online');
       };
     }
 

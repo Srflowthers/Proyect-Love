@@ -320,7 +320,8 @@
       : window.location.host;
 
     const actualSubMode = subMode || (mode === '1v1' ? '1v1' : '2v2_online');
-    const wsUrl = `${wsProtocol}//${apiHost}/api/pool/ws?room=${encodeURIComponent(roomId)}&mode=${mode}&subMode=${encodeURIComponent(actualSubMode)}&uid=${encodeURIComponent(uid)}&name=${encodeURIComponent(myName)}&coupleSeat=${coupleSeat}`;
+    const coupleId = p.get('coupleId') || '';
+    const wsUrl = `${wsProtocol}//${apiHost}/api/pool/ws?room=${encodeURIComponent(roomId)}&mode=${mode}&subMode=${encodeURIComponent(actualSubMode)}&uid=${encodeURIComponent(uid)}&name=${encodeURIComponent(myName)}&coupleSeat=${coupleSeat}&coupleId=${encodeURIComponent(coupleId)}`;
 
     const statusEl = document.getElementById('onlineStatusMsg');
     const spinnerEl = document.getElementById('matchmakingSpinner');
@@ -341,12 +342,15 @@
       if (coupleCard) coupleCard.hidden = false;
       if (roomCodeBox) roomCodeBox.hidden = true;
       if (btnReady) {
+        btnReady.disabled = true;
         btnReady.classList.remove('ready-active');
-        btnReady.innerHTML = `<svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> ¡Estoy Listo para Jugar!`;
+        btnReady.innerHTML = `<svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Esperando que se una tu pareja...`;
         btnReady.onclick = (e) => {
           e.stopPropagation();
+          if (btnReady.disabled) return;
+          btnReady.disabled = true;
           btnReady.classList.add('ready-active');
-          btnReady.innerHTML = `<svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> ¡Confirmado! Esperando a tu pareja...`;
+          btnReady.innerHTML = `<svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> ¡Confirmado! Esperando confirmación de tu pareja...`;
           if (dotMe) { dotMe.className = 'pill-dot ready'; }
           if (poolWs && poolWs.readyState === WebSocket.OPEN) {
             poolWs.send(JSON.stringify({ t: 'player_ready' }));
@@ -385,18 +389,26 @@
           const currentCount = (data.players && data.players.length) || 1;
 
           if (currentCount < 2) {
-            if (coupleText) coupleText.textContent = `Tu pareja aún no ha entrado. Comparte este momento.`;
+            if (coupleText) coupleText.textContent = `Tu pareja aún no se ha unido a la sala.`;
             if (dotPartner) dotPartner.className = 'pill-dot waiting';
+            if (btnReady) {
+              btnReady.disabled = true;
+              btnReady.innerHTML = `<svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Esperando que se una tu pareja...`;
+            }
           } else {
             if (coupleText) coupleText.textContent = `¡Tu pareja está en la sala esperando para empezar!`;
             if (dotPartner) dotPartner.className = 'pill-dot';
+            if (btnReady && !btnReady.classList.contains('ready-active')) {
+              btnReady.disabled = false;
+              btnReady.innerHTML = `<svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> ¡Estoy Listo para Jugar!`;
+            }
           }
 
           if (data.players) {
             const partnerPl = data.players.find(p => p.seat !== myPlayerSeat);
             if (partnerPl && partnerPl.isReady && dotPartner) {
               dotPartner.className = 'pill-dot ready';
-              if (coupleText) coupleText.textContent = `¡Tu pareja está lista y esperando para empezar!`;
+              if (coupleText) coupleText.textContent = `¡Tu pareja ya está lista y esperando para empezar!`;
             }
           }
 
@@ -405,11 +417,15 @@
           }
         }
 
-        // B. Nuevo jugador entra
+        // B. Nuevo jugador entra (Tu pareja se une)
         if (data.t === 'player_joined') {
           window.notify('PAREJA CONECTADA', `¡Tu pareja entró a la sala!`, false, 2500);
           if (coupleText) coupleText.textContent = `¡Tu pareja está esperando para empezar!`;
           if (dotPartner) dotPartner.className = 'pill-dot';
+          if (btnReady && !btnReady.classList.contains('ready-active')) {
+            btnReady.disabled = false;
+            btnReady.innerHTML = `<svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> ¡Estoy Listo para Jugar!`;
+          }
           const reqSeats = (currentGameMode === '2v2_cpu' || currentGameMode === '1v1' || currentGameMode === '1v1_online') ? 2 : 4;
           const currentCount = (data.players && data.players.length) || 2;
           if (statusEl) {
@@ -417,15 +433,42 @@
           }
         }
 
+        // B2. Un jugador sale
+        if (data.t === 'player_left') {
+          if (dotPartner) dotPartner.className = 'pill-dot waiting';
+          if (coupleText) coupleText.textContent = `Tu pareja salió o se desconectó de la sala.`;
+          if (btnReady) {
+            btnReady.disabled = true;
+            btnReady.classList.remove('ready-active');
+            btnReady.innerHTML = `<svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Esperando que se una tu pareja...`;
+          }
+          if (dotMe) dotMe.className = 'pill-dot';
+        }
+
         // C. Confirmación de LISTO / AMBOS LISTOS
         if (data.t === 'player_ready') {
           if (data.seat !== myPlayerSeat) {
-            if (dotPartner) dotPartner.className = 'pill-dot ready';
-            if (coupleText) coupleText.textContent = `¡Tu pareja está lista esperando para empezar!`;
-            window.notify('¡PAREJA LISTA!', `${data.name} ya está listo para jugar.`, true, 2000);
+            // Verificar si el que puso listo es de mi propia pareja
+            const pReady = data.players && data.players.find(p => p.seat === data.seat);
+            const isMyCouplePartner = pReady && (pReady.coupleId === coupleId || (data.seat === 0 || data.seat === 2));
+
+            if (isMyCouplePartner && dotPartner) {
+              dotPartner.className = 'pill-dot ready';
+              if (coupleText) coupleText.textContent = `¡Tu pareja está lista!`;
+              window.notify('¡PAREJA LISTA!', `${data.name} ya está listo para jugar.`, true, 2000);
+            }
           }
+
+          if (currentGameMode === '2v2_online') {
+            const currentTotal = data.totalConnected || (data.players ? data.players.length : 2);
+            if (currentTotal < 4) {
+              if (coupleText) coupleText.textContent = `Pareja lista. Esperando pareja rival en cola (${currentTotal}/4 jugadores)...`;
+              if (spinnerText) spinnerText.textContent = `Buscando pareja rival en cola (${currentTotal}/4)...`;
+            }
+          }
+
           if (data.allReady) {
-            if (coupleText) coupleText.textContent = `¡Ambos listos! Iniciando la mesa...`;
+            if (coupleText) coupleText.textContent = `¡Todos listos! Iniciando la mesa...`;
             setTimeout(() => {
               startMatch(data.players);
             }, 600);
@@ -616,10 +659,8 @@
         e.stopPropagation();
         if (onlinePanel) onlinePanel.hidden = false;
         document.getElementById('onlinePanelTitle').textContent = '2v2 Pareja vs Pareja Online';
-        const p = new URLSearchParams(window.location.search);
-        const coupleRoom = 'couple_online_' + (p.get('coupleId') || 'room_default');
-        // Espera y confirmación mutua de la pareja antes de entrar al emparejamiento general
-        connectPoolOnline(coupleRoom, '2v2', '2v2_online');
+        // Sala pública global de 2v2 para emparejar 2 parejas distintas (4 jugadores en total)
+        connectPoolOnline('global_match_2v2', '2v2', '2v2_online');
       };
     }
 

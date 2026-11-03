@@ -833,16 +833,26 @@ select {
   gap: 8px;
   cursor: pointer;
   box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);
-  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s, background 0.2s;
 }
-.btn-im-ready:hover {
+.btn-im-ready:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
 }
+.btn-im-ready:disabled {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #6b7280;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
 .btn-im-ready.ready-active {
   background: #047857;
+  border: none;
+  color: #a7f3d0;
   cursor: default;
-  opacity: 0.85;
+  opacity: 0.95;
 }
 
 .room-code-box {

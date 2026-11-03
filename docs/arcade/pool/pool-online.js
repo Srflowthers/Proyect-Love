@@ -291,14 +291,47 @@
     }, 900);
   }
 
-  // 5. GESTOR DE WEBSOCKET ONLINE
-  function connectPoolOnline(roomId, mode, subMode) {
+  let queueTimeoutTimer = null;
+  let heartbeatTimer = null;
+  let lastConnectAttempt = 0;
+
+  // Cancela la búsqueda y limpia completamente sockets y timers
+  function cancelMatchmaking() {
+    if (queueTimeoutTimer) {
+      clearTimeout(queueTimeoutTimer);
+      queueTimeoutTimer = null;
+    }
+    if (heartbeatTimer) {
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = null;
+    }
     if (poolWs) {
-      try { poolWs.onclose = null; poolWs.close(); } catch (e) { }
+      try {
+        poolWs.onopen = null;
+        poolWs.onmessage = null;
+        poolWs.onerror = null;
+        poolWs.onclose = null;
+        poolWs.close(1000, 'USER_CANCELLED');
+      } catch (e) {}
+      poolWs = null;
     }
     matchStarted = false;
     shotOwnerSeat = null;
     rivalAimData = null;
+  }
+
+  // 5. GESTOR DE WEBSOCKET ONLINE
+  function connectPoolOnline(roomId, mode, subMode) {
+    // 1. Rate Limiting anti-spam en el cliente: evitar clicks desesperados continuos (< 1 segundo)
+    const now = Date.now();
+    if (now - lastConnectAttempt < 1000) {
+      window.notify('UN MOMENTO', 'Por favor espera un segundo antes de volver a buscar.', false, 1500);
+      return;
+    }
+    lastConnectAttempt = now;
+
+    // 2. Limpieza exhaustiva de cualquier conexión o timer previo
+    cancelMatchmaking();
 
     const p = new URLSearchParams(window.location.search);
     const isPartner = p.get('isPartner') === '1';
@@ -314,10 +347,24 @@
     const uid = (p.get('auth') ? p.get('auth') + '_' : '') + (isPartner ? 'partner_' : 'owner_') + sessionTabId;
     const coupleSeat = isPartner ? '2' : '0';
 
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const apiHost = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      ? 'localhost:8787'
-      : window.location.host;
+    const isLocalhost = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const paramBackend = p.get('backendUrl');
+
+    let wsProtocol = 'wss:';
+    let apiHost = 'bakeend-love-api.centinal-cl.workers.dev';
+
+    if (isLocalhost) {
+      wsProtocol = 'ws:';
+      apiHost = 'localhost:8787';
+    } else if (paramBackend) {
+      try {
+        const u = new URL(paramBackend);
+        wsProtocol = u.protocol === 'http:' ? 'ws:' : 'wss:';
+        apiHost = u.host;
+      } catch (e) {
+        // Fallback al host predeterminado
+      }
+    }
 
     const actualSubMode = subMode || (mode === '1v1' ? '1v1' : '2v2_online');
     const coupleId = p.get('coupleId') || '';
@@ -369,7 +416,26 @@
     poolWs = new WebSocket(wsUrl);
 
     poolWs.onopen = () => {
-      if (statusEl) statusEl.textContent = '¡Conectado a la sala!';
+      if (statusEl) statusEl.textContent = '¡Conectado a la sala! Buscando oponente...';
+
+      // Enviar Heartbeat Ping cada 15 segundos para evitar desconexiones por inactividad
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      heartbeatTimer = setInterval(() => {
+        if (poolWs && poolWs.readyState === WebSocket.OPEN) {
+          try { poolWs.send(JSON.stringify({ t: 'ping' })); } catch (e) {}
+        }
+      }, 15000);
+
+      // Timeout de búsqueda (60 segundos): evita colas infinitas si no hay nadie buscando
+      if (queueTimeoutTimer) clearTimeout(queueTimeoutTimer);
+      queueTimeoutTimer = setTimeout(() => {
+        if (!matchStarted) {
+          cancelMatchmaking();
+          if (statusEl) statusEl.textContent = 'Tiempo de espera agotado. No se encontró rival en este momento.';
+          if (spinnerEl) spinnerEl.hidden = true;
+          window.notify('TIEMPO AGOTADO', 'No se encontraron contrincantes en este momento. Intenta nuevamente.', false, 4000);
+        }
+      }, 60000);
     };
 
     poolWs.onmessage = (event) => {
@@ -387,6 +453,17 @@
 
           const reqSeats = (currentGameMode === '2v2_cpu' || currentGameMode === '1v1' || currentGameMode === '1v1_online') ? 2 : 4;
           const currentCount = (data.players && data.players.length) || 1;
+
+          // Si es 1v1 Online, arrancar en cuanto haya 2 jugadores conectados
+          if (currentGameMode === '1v1' || currentGameMode === '1v1_online') {
+            if (statusEl) {
+              statusEl.textContent = `Asiento ${myPlayerSeat + 1} asignado. Conectados: ${currentCount}/${reqSeats}`;
+            }
+            if (currentCount >= reqSeats) {
+              startMatch(data.players);
+            }
+            return;
+          }
 
           if (currentCount < 2) {
             if (coupleText) coupleText.textContent = `Tu pareja aún no se ha unido a la sala.`;
@@ -417,8 +494,24 @@
           }
         }
 
-        // B. Nuevo jugador entra (Tu pareja se une)
+        // B. Nuevo jugador entra
         if (data.t === 'player_joined') {
+          const reqSeats = (currentGameMode === '2v2_cpu' || currentGameMode === '1v1' || currentGameMode === '1v1_online') ? 2 : 4;
+          const currentCount = (data.players && data.players.length) || 2;
+
+          // Si es 1v1 Online, avisar y arrancar de inmediato
+          if (currentGameMode === '1v1' || currentGameMode === '1v1_online') {
+            window.notify('RIVAL CONECTADO', `${data.name} entró a la partida`, false, 2000);
+            if (statusEl) {
+              statusEl.textContent = `¡Rival encontrado! Conectados: ${currentCount}/${reqSeats}`;
+            }
+            if (currentCount >= reqSeats) {
+              const roster = data.players;
+              setTimeout(() => startMatch(roster), 300);
+            }
+            return;
+          }
+
           window.notify('PAREJA CONECTADA', `¡Tu pareja entró a la sala!`, false, 2500);
           if (coupleText) coupleText.textContent = `¡Tu pareja está esperando para empezar!`;
           if (dotPartner) dotPartner.className = 'pill-dot';
@@ -426,8 +519,6 @@
             btnReady.disabled = false;
             btnReady.innerHTML = `<svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> ¡Estoy Listo para Jugar!`;
           }
-          const reqSeats = (currentGameMode === '2v2_cpu' || currentGameMode === '1v1' || currentGameMode === '1v1_online') ? 2 : 4;
-          const currentCount = (data.players && data.players.length) || 2;
           if (statusEl) {
             statusEl.textContent = `¡Ambos en sala! Conectados: ${currentCount}/${reqSeats}`;
           }
@@ -669,9 +760,7 @@
       btnCancel.onclick = (e) => {
         e.stopPropagation();
         if (onlinePanel) onlinePanel.hidden = true;
-        if (poolWs) {
-          try { poolWs.close(); } catch (err) { }
-        }
+        cancelMatchmaking();
       };
     }
 

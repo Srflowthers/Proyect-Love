@@ -195,7 +195,8 @@ export default function ArcadeFrame({
           const userParams = `&lp=${currentLp}&round=${currentRound}&coins=${currentCoins}${universeParams}${duoParams}`;
           const modularGames = ['gomi', 'pool', 'puzzle', 'tetris', 'sudoku', 'test'];
           const gamePath = modularGames.includes(gameKey) ? `/arcade/${gameKey}/index.html` : `/arcade/${gameKey}.html`;
-          const fullSrc = `${gamePath}?${authParam}${userParams}${gameParams ? `&${gameParams}` : ''}`;
+          const backendUrlParam = `&backendUrl=${encodeURIComponent(import.meta.env.VITE_API_URL || '')}`;
+          const fullSrc = `${gamePath}?${authParam}${userParams}${backendUrlParam}${gameParams ? `&${gameParams}` : ''}`;
           return (
             <iframe
               key={`${gameKey}-${iframeKey}-${gameParams}`}

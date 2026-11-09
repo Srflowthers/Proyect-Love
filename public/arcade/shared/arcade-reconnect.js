@@ -185,3 +185,4 @@
 
   root.ArcadeReconnectUI = ArcadeReconnectUI;
 })(typeof window !== 'undefined' ? window : this);
+

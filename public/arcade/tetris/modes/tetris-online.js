@@ -26,7 +26,21 @@
   let mode = 'solo'; // 'solo', '1v1_cpu', '1v1_online'
   let cpuInterval = null;
 
+  let reconnectUI = null;
+  let matchStartTime = 0;
+
   function initUI() {
+    // Iniciar UI de reconexión universal compartida
+    if (window.ArcadeReconnectUI && !reconnectUI) {
+      reconnectUI = new window.ArcadeReconnectUI({
+        gameName: 'Tetris',
+        onStateChange: (paused) => {
+          // Bloquear o reanudar el bucle de caída de tetris mientras está en pausa
+          window.isTetrisOnlinePaused = paused;
+        }
+      });
+    }
+
     // Inyectar tarjeta ligera de rival si estamos en móvil
     let mobRivalCard = document.getElementById('mob-rival-score-card');
     if (!mobRivalCard) {
@@ -123,13 +137,45 @@
 
         // 6. Fin de partida
         if (data.t === 'game_over') {
+          if (reconnectUI) reconnectUI.hidePause();
+          window.isTetrisOnlinePaused = false;
           const won = data.winnerSeat === mySeat;
-          alert(won ? '🎉 ¡VICTORIA! El rival ha sido derrotado.' : '💔 DERROTA. Has perdido contra el rival.');
+          const durationMs = matchStartTime ? (Date.now() - matchStartTime) : 120000;
+
+          if (window.enviarRecompensaTetris) {
+            window.enviarRecompensaTetris({
+              score: window.sc || 0,
+              durationMs: durationMs,
+              win: won,
+              abandon: !!data.abandon
+            });
+          }
+
+          if (data.abandon) {
+            alert(won
+              ? '🎉 ¡VICTORIA POR ABANDONO! Tu rival no regresó en 20s. Ganas la partida y los puntos.'
+              : '💔 DERROTA POR ABANDONO. Tiempo de reconexión expirado.');
+          } else {
+            alert(won ? '🎉 ¡VICTORIA! El rival ha sido derrotado.' : '💔 DERROTA. Has perdido contra el rival.');
+          }
         }
 
-        // 7. Rival desconectado
+        // 7. Pausa por desconexión temporal (20s de gracia)
+        if (data.t === 'match_paused') {
+          if (reconnectUI) reconnectUI.showPause(data.name, data.timeoutSeconds || 20);
+          window.isTetrisOnlinePaused = true;
+        }
+
+        // 8. Reanudación tras reconexión exitosa
+        if (data.t === 'match_resumed') {
+          if (reconnectUI) reconnectUI.hidePause();
+          window.isTetrisOnlinePaused = false;
+        }
+
+        // 9. Rival desconectado fuera de partida
         if (data.t === 'player_left') {
-          alert('El rival se ha desconectado de la sala.');
+          if (reconnectUI) reconnectUI.hidePause();
+          window.isTetrisOnlinePaused = false;
         }
 
       } catch (e) {
@@ -142,6 +188,7 @@
   }
 
   function onBothPlayersReady(players) {
+    matchStartTime = Date.now();
     const opp = players.find(p => p.seat !== mySeat);
     opponentName = opp ? opp.name : 'Rival';
 

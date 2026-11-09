@@ -26,8 +26,10 @@ window.TETRIS_REWARD_CONFIG = {
 /**
  * Calcula monedas y LP ganados en Tetris y los envía a Firebase
  * @param {Object} data
- * @param {number} data.score - Puntaje total alcanzado
- * @param {number} data.durationMs - Duración de la partida en ms
+ * @param {number} [data.score] - Puntaje total alcanzado
+ * @param {number} [data.durationMs] - Duración de la partida en ms
+ * @param {boolean} [data.win] - Si ganó la partida 1v1
+ * @param {boolean} [data.abandon] - Si hubo abandono en 1v1
  * @returns {{ earnedCoins: number, lpAward: number }}
  */
 window.enviarRecompensaTetris = function (data) {
@@ -35,13 +37,33 @@ window.enviarRecompensaTetris = function (data) {
   const score = Number(data.score) || 0;
   const durationMs = Number(data.durationMs) || 60000;
   const minutes = Math.min(durationMs / 60000, 30);
+  const win = data.win !== undefined ? Boolean(data.win) : null;
+  const abandon = Boolean(data.abandon);
 
   // 1. Cálculo de monedas
-  const rawCoins = (minutes * cfg.BASE_RATE_MINUTES) + (score / cfg.SCORE_DIVISOR);
-  const earnedCoins = Math.max(cfg.MIN_COINS, Math.round(Math.min(cfg.MAX_COINS, rawCoins)));
+  let earnedCoins = 0;
+  if (abandon && win === false) {
+    earnedCoins = 0;
+  } else if (win === true) {
+    earnedCoins = Math.min(cfg.MAX_COINS, Math.max(18, Math.round(15 + minutes * 1.5 + score / 500)));
+  } else if (win === false) {
+    earnedCoins = Math.min(cfg.MAX_COINS, Math.max(8, Math.round(6 + minutes * 1.0 + score / 800)));
+  } else {
+    const rawCoins = (minutes * cfg.BASE_RATE_MINUTES) + (score / cfg.SCORE_DIVISOR);
+    earnedCoins = Math.max(cfg.MIN_COINS, Math.round(Math.min(cfg.MAX_COINS, rawCoins)));
+  }
 
   // 2. Cálculo de LP
-  const lpAward = cfg.calcLp(score, minutes);
+  let lpAward = 0;
+  if (abandon && win === false) {
+    lpAward = -35; // Sanción por abandono
+  } else if (win === true) {
+    lpAward = Math.min(110, Math.round(70 + Math.min(minutes * 3, 25) + Math.min(score / 400, 15)));
+  } else if (win === false) {
+    lpAward = Math.max(10, Math.round(18 + Math.min(minutes * 1.5, 12)));
+  } else {
+    lpAward = cfg.calcLp(score, minutes);
+  }
 
   // 3. Enviar a GamesView -> Firebase
   try {
@@ -51,6 +73,7 @@ window.enviarRecompensaTetris = function (data) {
         game: 'tetris',
         coins: earnedCoins,
         score: score,
+        win: win,
         lpDelta: lpAward
       }, '*');
     }

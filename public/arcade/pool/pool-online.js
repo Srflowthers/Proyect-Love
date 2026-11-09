@@ -1135,9 +1135,16 @@
     };
 
     const btnOpen = document.getElementById('btnOpenModes');
+    const btnQuickMode = document.getElementById('btnQuickMode');
     const btnClose = document.getElementById('btnCloseModes');
     if (btnOpen) {
       btnOpen.onclick = (e) => {
+        e.stopPropagation();
+        openModes();
+      };
+    }
+    if (btnQuickMode) {
+      btnQuickMode.onclick = (e) => {
         e.stopPropagation();
         openModes();
       };

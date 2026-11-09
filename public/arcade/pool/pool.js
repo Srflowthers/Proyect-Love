@@ -1372,7 +1372,7 @@ const rel = () => {
 $('pw').onpointerdown = e => { e.preventDefault(); e.stopPropagation(); go(); };
 $('pw').onpointerup = e => { e.preventDefault(); e.stopPropagation(); rel(); };
 
-['gear', 'menu', 'trWrap'].forEach(id => {
+['gear', 'btnQuickMode', 'menu', 'trWrap'].forEach(id => {
   const el = $(id);
   if (el) el.onpointerdown = e => e.stopPropagation();
 });

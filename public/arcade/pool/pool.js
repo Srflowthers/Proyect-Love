@@ -732,10 +732,10 @@ function step(B, pot) {
   let m = false, sp = 0;
   for (const b of B) {
     if (b.in) continue;
-    b.vx *= .9905;
-    b.vy *= .9905;
+    b.vx *= .985;
+    b.vy *= .985;
     const s = Math.hypot(b.vx, b.vy);
-    if (s < .06) b.vx = b.vy = 0;
+    if (s < .14) b.vx = b.vy = 0;
     else { m = true; sp = Math.max(sp, s); }
   }
   if (rollG) {
@@ -1530,7 +1530,7 @@ function frame(now) {
 
   // Simulación a tiempo real (60 FPS fluidos sin ralentizaciones artificiales)
   const fdt = rdt;
-  acc = Math.min(acc + dtMs, 50);
+  acc = Math.min(acc + dtMs * 1.35, 70);
   let ns = 0;
   while (acc >= 16.667) {
     acc -= 16.667;

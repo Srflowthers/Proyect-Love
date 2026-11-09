@@ -35,17 +35,24 @@ window.POOL_REWARD_CONFIG = {
 window.enviarRecompensaPool = function (data) {
   const cfg = window.POOL_REWARD_CONFIG;
   const win = Boolean(data.win);
+  const abandon = Boolean(data.abandon);
   const durationMs = Number(data.durationMs) || 180000;
   const score = Number(data.score) || (win ? 1 : 0);
   const minutes = Math.min(durationMs / 60000, 30);
 
   // 1. Cálculo de monedas
-  const base = win ? cfg.BASE_WIN_COINS : cfg.BASE_LOSS_COINS;
+  // Si abandonó el juego pierde monedas; si ganó por abandono se lleva la recompensa completa
+  const base = win ? cfg.BASE_WIN_COINS : (abandon ? 0 : cfg.BASE_LOSS_COINS);
   const timeBonus = Math.round(minutes * cfg.TIME_RATE_PER_MINUTE);
-  const earnedCoins = Math.min(cfg.MAX_COINS, base + timeBonus);
+  const earnedCoins = win ? Math.min(cfg.MAX_COINS, base + timeBonus) : (abandon ? 0 : Math.min(cfg.MAX_COINS, base + timeBonus));
 
-  // 2. Cálculo de LP
-  const lpAward = cfg.calcLp(win, minutes);
+  // 2. Cálculo de LP: si el jugador abandonó y pasaron los 20s, se le penaliza quitándole puntos (-35 LP)
+  let lpAward = 0;
+  if (abandon && !win) {
+    lpAward = -35;
+  } else {
+    lpAward = cfg.calcLp(win, minutes);
+  }
 
   // 3. Enviar a GamesView -> Firebase
   try {

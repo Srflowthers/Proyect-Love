@@ -298,6 +298,20 @@
     </div>
   </div>
 
+  <!-- Overlay de Pausa por Desconexión (20s de Gracia para Reconexión) -->
+  <div id="pauseOverlay" class="pause-overlay" hidden>
+    <div class="pause-card">
+      <div class="pause-icon-spinner"></div>
+      <h3 class="pause-title">PARTIDA EN PAUSA</h3>
+      <p id="pauseOverlayText" class="pause-sub">Tu rival se ha desconectado. Esperando que regrese...</p>
+      <div class="pause-timer-wrap">
+        <span class="pause-timer-label">Tiempo restante para reconectar:</span>
+        <strong id="pauseOverlayTimer" class="pause-timer-num">20s</strong>
+      </div>
+      <small class="pause-note">Si no regresa en 20 segundos, la partida finalizará otorgándote la victoria.</small>
+    </div>
+  </div>
+
   <!-- Three.js r128 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 

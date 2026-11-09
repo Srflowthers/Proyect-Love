@@ -114,6 +114,7 @@
 
   // Helper estricto para saber si el usuario local puede interactuar con la mesa
   window.isPoolMyTurn = function () {
+    if (isGamePausedByDisconnect) return false;
     const modal = document.getElementById('modeModal');
     if (modal && !modal.hidden) return false;
 
@@ -583,6 +584,8 @@
   let queueTimeoutTimer = null;
   let heartbeatTimer = null;
   let lastConnectAttempt = 0;
+  let pauseCountdownTimer = null;
+  let isGamePausedByDisconnect = false;
 
   // Cancela la búsqueda y limpia completamente sockets y timers
   function cancelMatchmaking() {
@@ -606,6 +609,13 @@
       clearInterval(cpuAimInterval);
       cpuAimInterval = null;
     }
+    if (pauseCountdownTimer) {
+      clearInterval(pauseCountdownTimer);
+      pauseCountdownTimer = null;
+    }
+    isGamePausedByDisconnect = false;
+    const pauseBanner = document.getElementById('pauseOverlay');
+    if (pauseBanner) pauseBanner.hidden = true;
     if (poolWs) {
       try {
         poolWs.onopen = null;
@@ -645,7 +655,7 @@
       sessionTabId = 'tab_' + Math.random().toString(36).substring(2, 9);
       sessionStorage.setItem('pool_tab_session_id', sessionTabId);
     }
-    const uid = (p.get('auth') ? p.get('auth') + '_' : '') + (isPartner ? 'partner_' : 'owner_') + sessionTabId;
+    const uid = (p.get('auth') ? p.get('auth') + '_' : '') + (isPartner ? 'partner' : 'owner');
     const coupleSeat = isPartner ? '2' : '0';
 
     const isLocalhost = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
@@ -751,7 +761,31 @@
           currentGameMode = normalizeGameMode(data.subMode, data.mode);
           window.NAMES[myPlayerSeat] = myName;
           if (data.turn != null) window.turn = data.turn;
+          if (data.gameState && Array.isArray(data.gameState)) {
+            applyBalls(data.gameState);
+          }
           window.ui();
+
+          // Si el jugador se está reconectando a una partida ya iniciada
+          if (data.matchStarted) {
+            matchStarted = true;
+            document.getElementById('modeModal').hidden = true;
+            const spinnerEl = document.getElementById('matchmakingSpinner');
+            if (spinnerEl) spinnerEl.hidden = true;
+            if (is1v1()) {
+              const p0 = Array.isArray(data.players) ? data.players.find(pl => pl.seat === 0) : null;
+              const p1 = Array.isArray(data.players) ? data.players.find(pl => pl.seat === 1) : null;
+              const pRedName = (p0 && p0.name) || 'Rojo';
+              const pBlueName = (p1 && p1.name) || 'Azul';
+              window.TEAM_NAMES = [pRedName, pBlueName];
+              window.NAMES[0] = pRedName;
+              window.NAMES[1] = pBlueName;
+            }
+            window.ui();
+            turnMsg();
+            window.notify('¡RECONECTADO!', 'Te has reconectado exitosamente a la partida.', true, 2500);
+            return;
+          }
 
           const reqSeats = (currentGameMode === '2v2_cpu' || currentGameMode === '1v1_online') ? 2 : 4;
           const currentCount = (data.players && data.players.length) || 1;
@@ -839,7 +873,53 @@
           }
         }
 
-        // B2. Un jugador sale
+        // B2. Partida en pausa por desconexión temporal (ventana de 20s)
+        if (data.t === 'match_paused') {
+          isGamePausedByDisconnect = true;
+          updatePowerBarState();
+          let secondsLeft = Number(data.timeoutSeconds) || 20;
+
+          const pauseOverlay = document.getElementById('pauseOverlay');
+          const pauseText = document.getElementById('pauseOverlayText');
+          const pauseTimer = document.getElementById('pauseOverlayTimer');
+
+          if (pauseOverlay) pauseOverlay.hidden = false;
+          if (pauseText) pauseText.textContent = `${data.name} se desconectó. Esperando reconexión...`;
+          if (pauseTimer) pauseTimer.textContent = `${secondsLeft}s`;
+
+          if (pauseCountdownTimer) clearInterval(pauseCountdownTimer);
+          pauseCountdownTimer = setInterval(() => {
+            secondsLeft--;
+            if (pauseTimer) pauseTimer.textContent = `${Math.max(0, secondsLeft)}s`;
+            if (secondsLeft <= 0) {
+              clearInterval(pauseCountdownTimer);
+              pauseCountdownTimer = null;
+            }
+          }, 1000);
+
+          window.notify('PARTIDA EN PAUSA', `${data.name} se desconectó. 20 segundos para volver.`, false, 4000);
+          return;
+        }
+
+        // B3. Partida reanudada tras reconexión exitosa
+        if (data.t === 'match_resumed') {
+          isGamePausedByDisconnect = false;
+          if (pauseCountdownTimer) {
+            clearInterval(pauseCountdownTimer);
+            pauseCountdownTimer = null;
+          }
+          const pauseOverlay = document.getElementById('pauseOverlay');
+          if (pauseOverlay) pauseOverlay.hidden = true;
+
+          if (data.balls) applyBalls(data.balls);
+          if (data.turn != null) window.turn = data.turn;
+          window.ui();
+          turnMsg();
+          window.notify('JUGADOR RECONECTADO', `${data.name} regresó. ¡Continúa la partida!`, true, 3000);
+          return;
+        }
+
+        // B4. Un jugador sale sin reconexión previa
         if (data.t === 'player_left') {
           if (dotPartner) dotPartner.className = 'pill-dot waiting';
           if (coupleText) coupleText.textContent = `Tu pareja salió o se desconectó de la sala.`;
@@ -948,6 +1028,14 @@
           window.turn = data.nextTurn;
           if (data.over !== undefined) window.over = data.over;
 
+          if (pauseCountdownTimer) {
+            clearInterval(pauseCountdownTimer);
+            pauseCountdownTimer = null;
+          }
+          isGamePausedByDisconnect = false;
+          const pauseOverlay = document.getElementById('pauseOverlay');
+          if (pauseOverlay) pauseOverlay.hidden = true;
+
           const wantHand = !!data.hand;
           if (wantHand && !window.hand) { window.hand = true; window.startHand(); }
           else if (!wantHand && window.hand) { window.hand = false; window.setMode(true); }
@@ -977,14 +1065,17 @@
               window.enviarRecompensaPool({
                 win: won,
                 score: (window.tray && window.tray.length) || 0,
-                durationMs: 300000
+                durationMs: 300000,
+                abandon: !!data.abandon
               });
             }
+            const victoryTitle = data.abandon ? (won ? '¡VICTORIA POR ABANDONO!' : 'PARTIDA PERDIDA POR ABANDONO') : (won ? '¡VICTORIA ÉPICA!' : 'FIN DE LA PARTIDA');
+            const victoryMsg = data.abandon ? (won ? 'Tu rival no regresó en 20s. Ganas la partida y los puntos.' : 'No regresaste a tiempo. Se restan puntos por abandono.') : (won ? 'Tu equipo ganó la partida.' : `Gana ${window.TEAM_NAMES ? window.TEAM_NAMES[window.over] : 'el rival'}.`);
             window.notify(
-              won ? '¡VICTORIA ÉPICA!' : 'FIN DE LA PARTIDA',
-              won ? 'Tu equipo ganó la partida.' : `Gana ${window.TEAM_NAMES ? window.TEAM_NAMES[window.over] : 'el rival'}.`,
+              victoryTitle,
+              victoryMsg,
               won,
-              4000
+              5000
             );
           }
         }

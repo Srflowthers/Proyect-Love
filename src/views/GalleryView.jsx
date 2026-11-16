@@ -152,8 +152,8 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
     setIsLoadingMore(true);
     try {
       const token = await user.getIdToken();
-      // Traemos lotes de 50 para que el universo se expanda más rápido pero sin asfixiar la red
-      const imgRes = await fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '')}/api/images?limit=50&cursor=${nextCursor}`, {
+      // Traemos lotes de 25 para que el universo se expanda rápido sin saturar la red ni el DOM
+      const imgRes = await fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:8787').replace(/\/+$/, '')}/api/images?limit=25&cursor=${nextCursor}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (imgRes.ok) {

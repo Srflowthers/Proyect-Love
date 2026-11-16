@@ -127,9 +127,9 @@
           <p id="${this.overlayId}-text" class="arcade-pause-sub">Tu rival se ha desconectado. Esperando que regrese...</p>
           <div class="arcade-pause-timer-wrap">
             <span class="arcade-pause-timer-label">Tiempo restante para reconectar:</span>
-            <strong id="${this.overlayId}-timer" class="arcade-pause-timer-num">20s</strong>
+            <strong id="${this.overlayId}-timer" class="arcade-pause-timer-num">5s</strong>
           </div>
-          <small class="arcade-pause-note">Si no regresa en 20 segundos, la partida finalizará otorgándote la victoria.</small>
+          <small class="arcade-pause-note">Si no regresa en 5 segundos, la partida finalizará otorgándote la victoria.</small>
         </div>
       `;
       document.body.appendChild(overlay);
@@ -138,7 +138,7 @@
     /**
      * Activa el estado de pausa con cuenta regresiva.
      */
-    showPause(playerName = 'Tu rival', timeoutSeconds = 20) {
+    showPause(playerName = 'Tu rival', timeoutSeconds = 5) {
       this.isPaused = true;
       this.secondsLeft = timeoutSeconds;
 
@@ -185,3 +185,4 @@
 
   root.ArcadeReconnectUI = ArcadeReconnectUI;
 })(typeof window !== 'undefined' ? window : this);
+

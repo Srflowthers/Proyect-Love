@@ -566,4 +566,55 @@
   animation: coinPulse 0.45s ease-out;
 }
 
+/* ---- Tarjetas de Récords en Perfil Arcade con Escena Animada de Fondo ---- */
+.arcade-record-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--c, #ff5aaa) 35%, rgba(255, 255, 255, 0.1));
+  background: #100b1a;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.arcade-record-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--c, #ff5aaa) 68%, #fff);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.55), 0 0 22px -6px color-mix(in srgb, var(--c, #ff5aaa) 55%, transparent);
+}
+
+.arcade-scene.record-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  font-size: 11px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.arcade-scene.record-scene .fg {
+  justify-items: end;
+  padding-right: 0.7rem;
+}
+
+.arcade-scene.record-scene .fg::before {
+  width: 6.4em;
+  height: 6.4em;
+  right: 0.15rem;
+  background: radial-gradient(circle, rgba(7, 5, 12, 0.65), transparent 72%);
+}
+
+.arcade-scene.record-scene .fg svg {
+  width: 4.3em;
+  height: 4.3em;
+  opacity: 0.92;
+}
+
+.arcade-record-card:hover .arcade-scene.record-scene .fg svg {
+  transform: translate3d(0, 0, 0) scale(1.14) rotate(-6deg);
+}
+
+
 

@@ -289,6 +289,8 @@ function App() {
         setGlobalUserData={setGlobalUserData}
         globalImages={globalImages}
         setGlobalImages={setGlobalImages}
+        globalNextCursor={globalNextCursor}
+        setGlobalNextCursor={setGlobalNextCursor}
       />
     );
   } else if (userRole === 'admin' && view === 'admin') {

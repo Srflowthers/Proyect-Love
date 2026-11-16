@@ -873,11 +873,11 @@
           }
         }
 
-        // B2. Partida en pausa por desconexión temporal (ventana de 20s)
+        // B2. Partida en pausa por desconexión temporal (ventana de 5s)
         if (data.t === 'match_paused') {
           isGamePausedByDisconnect = true;
           updatePowerBarState();
-          let secondsLeft = Number(data.timeoutSeconds) || 20;
+          let secondsLeft = Number(data.timeoutSeconds) || 5;
 
           const pauseOverlay = document.getElementById('pauseOverlay');
           const pauseText = document.getElementById('pauseOverlayText');
@@ -897,7 +897,7 @@
             }
           }, 1000);
 
-          window.notify('PARTIDA EN PAUSA', `${data.name} se desconectó. 20 segundos para volver.`, false, 4000);
+          window.notify('PARTIDA EN PAUSA', `${data.name} se desconectó. 5 segundos para volver.`, false, 4000);
           return;
         }
 

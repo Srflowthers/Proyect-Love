@@ -1430,29 +1430,37 @@ if (btnCpu) {
   };
 }
 
+// Exponer startTetrisLoop para que el gestor online lo invoque en cuanto encuentre rival
+window.startTetrisLoop = function () {
+  if (!run) {
+    start();
+  }
+};
+
 // Botón 1v1 Online
 const btnOnline = $('btn-play-online');
 if (btnOnline) {
   btnOnline.onclick = (e) => {
     e.stopPropagation();
-    const roomCode = prompt('Ingresa el código de sala (o déjalo vacío para emparejamiento rápido):', '') || 'public_tetris_room';
     ['boardwrap-2', 'p1-badge', 'p1-ctrl-card', 'p2-ctrl-card'].forEach(id => {
       const el = $(id);
       if (el) el.style.display = 'none';
     });
-    ['classic-controls-card', 'classic-score-card', 'classic-record-card', 'card-level', 'sk', 'classic-pad-card'].forEach(id => {
+    // En online ocultamos récord para no saturar la columna y que el rival entre al 100%
+    ['classic-controls-card', 'classic-score-card', 'card-level', 'sk', 'classic-pad-card'].forEach(id => {
       const el = $(id);
       if (el) el.style.display = 'block';
     });
+    if ($('classic-record-card')) $('classic-record-card').style.display = 'none';
     if (!window.TetrisOnlineManager?.isMobile) {
       const p2Sc = $('p2-score-card');
       if (p2Sc) p2Sc.style.display = 'block';
     }
     if (window.TetrisVersus1v1) window.TetrisVersus1v1.stop();
     if (window.TetrisOnlineManager) {
-      window.TetrisOnlineManager.connect(roomCode.trim().toUpperCase());
+      window.TetrisOnlineManager.showWaitingQueue('Buscando Rival...', 'Conectando a la cola online...');
+      window.TetrisOnlineManager.connect('global_tetris_1v1');
     }
-    start();
   };
 }
 
@@ -1655,6 +1663,29 @@ requestAnimationFrame(loop);
         if (el) el.style.display = 'block';
       });
       start();
+    }, 150);
+  } else if (mode === 'online' || mode === '1v1_online') {
+    // Si eligió 1v1 Online afuera en el catálogo, conectar directamente a la sala global
+    setTimeout(() => {
+      ['boardwrap-2', 'p1-badge', 'p1-ctrl-card', 'p2-ctrl-card'].forEach(id => {
+        const el = $(id);
+        if (el) el.style.display = 'none';
+      });
+      // Ocultar récord en online para que no desborde verticalmente
+      ['classic-controls-card', 'classic-score-card', 'card-level', 'sk', 'classic-pad-card'].forEach(id => {
+        const el = $(id);
+        if (el) el.style.display = 'block';
+      });
+      if ($('classic-record-card')) $('classic-record-card').style.display = 'none';
+      if (!window.TetrisOnlineManager?.isMobile) {
+        const p2Sc = $('p2-score-card');
+        if (p2Sc) p2Sc.style.display = 'block';
+      }
+      if (window.TetrisVersus1v1) window.TetrisVersus1v1.stop();
+      if (window.TetrisOnlineManager) {
+        window.TetrisOnlineManager.showWaitingQueue('Buscando Rival...', 'Conectando a la cola online...');
+        window.TetrisOnlineManager.connect('global_tetris_1v1');
+      }
     }, 150);
   }
 })();

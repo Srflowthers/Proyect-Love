@@ -47,7 +47,11 @@ window.enviarRecompensaPuzzle = function (data) {
         game: 'puzzle',
         coins: earnedCoins,
         score: pieces,
-        lpDelta: lpAward
+        lpDelta: lpAward,
+        puzzleImg: data.imgUrl || '',
+        puzzlePortrait: data.portrait || '',
+        puzzlePieces: pieces,
+        durationMs: durationMs
       }, '*');
     }
   } catch (err) {

@@ -166,6 +166,16 @@
         <button id="btn-play-online" class="btn-mode" type="button" style="border-color:#ec4899; background:rgba(236,72,153,0.15);">⚡ 1v1 Online</button>
         <button id="btn-play-1v1" class="btn-mode btn-mode-versus" type="button">⚔️ 1v1 Local (2 Teclados)</button>
       </div>
+
+      <!-- Pantalla de Cola de Emparejamiento Online (Matchmaking) -->
+      <div id="queue-overlay" style="display:none; flex-direction:column; align-items:center; justify-content:center; gap:12px; width:100%; max-width:280px; margin-top:10px; background:rgba(18,16,28,0.92); border:1px solid rgba(236,72,153,0.4); border-radius:18px; padding:20px 16px; box-shadow:0 10px 30px rgba(0,0,0,0.8);">
+        <div style="width:38px; height:38px; border:3.5px solid rgba(236,72,153,0.25); border-top-color:#ec4899; border-radius:50%; animation:spinQueue 0.9s linear infinite;"></div>
+        <div style="font-size:0.95rem; font-weight:800; color:#fff; letter-spacing:0.5px;" id="queue-title">Buscando Rival...</div>
+        <div style="font-size:0.75rem; color:#9ca3af; text-align:center;" id="queue-status">En cola de emparejamiento (1/2 jugadores). Esperando a que se una tu oponente...</div>
+        <button id="btn-cancel-queue" type="button" style="margin-top:8px; padding:6px 16px; background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.5); border-radius:20px; color:#fca5a5; font-size:0.75rem; font-weight:700; cursor:pointer; transition:all 0.2s;">
+          ✕ Cancelar Búsqueda
+        </button>
+      </div>
     </div>
   </main>
 
@@ -179,12 +189,18 @@
 
   <!-- Columna derecha: Marcador / P2 en 1v1 -->
   <aside class="side" id="side-right">
-    <!-- Marcador P2 (Modo 1v1) -->
-    <div class="card card-score" id="p2-score-card" style="display:none; border-color: rgba(59,130,246,0.5);">
-      <small style="text-transform:uppercase;letter-spacing:0.5px;font-weight:800;color:#60a5fa;">💙 P2 (Él)</small>
-      <b id="p2-score-val" style="color:#60a5fa !important;">0</b>
-      <small id="p2-lines-val" style="display:block;margin-top:2px;">0 líneas</small>
-      <div id="p2-skb" style="height:6px;border-radius:4px;background:rgba(255,255,255,0.12);overflow:hidden;margin:8px 0 2px;"><i id="p2-skf" style="display:block;height:100%;width:0;background:linear-gradient(90deg,#f59e0b,#fde047);transition:width 0.25s ease;"></i></div>
+    <!-- Marcador P2 / Rival (Modo 1v1 Online y Local) - ROJO para el Rival -->
+    <div class="card card-score" id="p2-score-card" style="display:none; border-color: rgba(244,63,94,0.6); background: rgba(36,14,24,0.88) !important; box-shadow: 0 4px 20px rgba(244,63,94,0.25);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+        <small id="p2-badge-title" style="text-transform:uppercase;letter-spacing:0.8px;font-weight:800;color:#f43f5e;font-size:0.75rem;">⚡ RIVAL ONLINE</small>
+        <span id="p2-status-dot" style="width:8px; height:8px; border-radius:50%; background:#f43f5e; box-shadow:0 0 8px #f43f5e; display:inline-block;"></span>
+      </div>
+      <b id="p2-score-val" style="color:#f43f5e !important; font-size:1.9rem !important; line-height:1.1; margin:2px 0; text-shadow:0 0 15px rgba(244,63,94,0.6);">0</b>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <small id="p2-lines-val" style="color:#fca5a5; font-weight:700;">0 líneas</small>
+        <small id="p2-name-label" style="color:rgba(255,255,255,0.6); font-size:0.7rem;">En vivo</small>
+      </div>
+      <div id="p2-skb" style="height:6px;border-radius:4px;background:rgba(255,255,255,0.12);overflow:hidden;margin:6px 0 2px;"><i id="p2-skf" style="display:block;height:100%;width:0;background:linear-gradient(90deg,#f59e0b,#fde047);transition:width 0.25s ease;"></i></div>
       <small id="p2-skt" style="font-size:0.72rem;color:#fde047;display:block;">🛟 Salvación (Shift / L)</small>
     </div>
 
@@ -229,11 +245,11 @@
       </div>
     </div>
 
-    <!-- Tarjetas Clásicas (Modo Solo) -->
-    <div class="card card-score" id="classic-score-card">
-      <small style="text-transform:uppercase;letter-spacing:0.5px;font-weight:700;">Puntaje</small>
-      <b id="sc-total">0</b>
-      <small id="sc-lines" style="display:block;margin-top:2px;">0 líneas</small>
+    <!-- Tarjetas Clásicas (Mi Puntaje - AZUL) -->
+    <div class="card card-score" id="classic-score-card" style="border-color: rgba(59,130,246,0.6); background: rgba(14,24,48,0.85) !important;">
+      <small style="text-transform:uppercase;letter-spacing:0.5px;font-weight:700;color:#60a5fa;">Tu Puntaje</small>
+      <b id="sc-total" style="color:#60a5fa !important; text-shadow:0 0 20px rgba(59,130,246,0.65) !important;">0</b>
+      <small id="sc-lines" style="display:block;margin-top:2px;color:#93c5fd;">0 líneas</small>
     </div>
 
     <div class="card card-record" id="classic-record-card">

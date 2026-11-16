@@ -61,6 +61,7 @@
       try { ws.close(); } catch (e) {}
     }
 
+    const effectiveRoom = roomId || 'global_tetris_1v1';
     const p = new URLSearchParams(window.location.search);
     const uid = p.get('auth') || 't_' + Math.random().toString(36).substring(2, 6);
     const name = p.get('name') || (p.get('uPalette') ? 'Amor Cósmico' : 'Jugador');
@@ -71,7 +72,7 @@
       ? 'localhost:8787'
       : window.location.host;
 
-    const wsUrl = `${wsProtocol}//${apiHost}/api/tetris/ws?room=${encodeURIComponent(roomId)}&uid=${encodeURIComponent(uid)}&name=${encodeURIComponent(name)}&device=${deviceType}`;
+    const wsUrl = `${wsProtocol}//${apiHost}/api/tetris/ws?room=${encodeURIComponent(effectiveRoom)}&uid=${encodeURIComponent(uid)}&name=${encodeURIComponent(name)}&device=${deviceType}`;
 
     console.log('[TetrisOnline] Conectando a:', wsUrl, 'Dispositivo:', deviceType);
 
@@ -91,6 +92,8 @@
           console.log('[TetrisOnline] Asiento asignado:', mySeat);
           if (data.players && data.players.length === 2) {
             onBothPlayersReady(data.players);
+          } else {
+            showWaitingQueue('Buscando Rival...', 'Esperando a que otro jugador se una a la partida (1/2 conectados)...');
           }
         }
 
@@ -118,6 +121,10 @@
             const p2Ln = document.getElementById('p2-lines-val');
             if (p2Sc) p2Sc.textContent = opponentScore;
             if (p2Ln) p2Ln.textContent = `${opponentLines} líneas`;
+            const p2Title = document.getElementById('p2-badge-title');
+            if (p2Title && opponentName) {
+              p2Title.textContent = `⚡ ${opponentName.toUpperCase()}`;
+            }
           }
         }
 
@@ -142,27 +149,32 @@
           const won = data.winnerSeat === mySeat;
           const durationMs = matchStartTime ? (Date.now() - matchStartTime) : 120000;
 
+          const scoreEl = document.getElementById('sc-total');
+          const currentLocalScore = scoreEl ? (parseInt(scoreEl.textContent.replace(/\D/g, ''), 10) || 0) : 0;
+
           if (window.enviarRecompensaTetris) {
             window.enviarRecompensaTetris({
-              score: window.sc || 0,
+              score: currentLocalScore,
               durationMs: durationMs,
               win: won,
               abandon: !!data.abandon
             });
           }
 
-          if (data.abandon) {
-            alert(won
-              ? '🎉 ¡VICTORIA POR ABANDONO! Tu rival no regresó en 20s. Ganas la partida y los puntos.'
-              : '💔 DERROTA POR ABANDONO. Tiempo de reconexión expirado.');
-          } else {
-            alert(won ? '🎉 ¡VICTORIA! El rival ha sido derrotado.' : '💔 DERROTA. Has perdido contra el rival.');
+          if (window.notify) {
+            const title = data.abandon
+              ? (won ? '¡VICTORIA POR ABANDONO!' : 'DERROTA POR ABANDONO')
+              : (won ? '¡VICTORIA ÉPICA!' : 'FIN DEL DUELO');
+            const msg = data.abandon
+              ? (won ? 'Tu rival no regresó en 5s. Ganas los puntos y monedas.' : 'Tiempo de reconexión expirado.')
+              : (won ? 'Has derrotado a tu rival en tiempo real.' : 'Tu rival ha ganado esta partida.');
+            window.notify(title, msg, won, 4500);
           }
         }
 
-        // 7. Pausa por desconexión temporal (20s de gracia)
+        // 7. Pausa por desconexión temporal (5s de gracia)
         if (data.t === 'match_paused') {
-          if (reconnectUI) reconnectUI.showPause(data.name, data.timeoutSeconds || 20);
+          if (reconnectUI) reconnectUI.showPause(data.name, data.timeoutSeconds || 5);
           window.isTetrisOnlinePaused = true;
         }
 
@@ -187,10 +199,73 @@
     ws.onclose = () => console.log('[TetrisOnline] Conexión cerrada');
   }
 
+  function showWaitingQueue(title, status) {
+    const ov = document.getElementById('ov');
+    if (ov) ov.style.display = 'flex';
+    const startB = document.getElementById('start');
+    if (startB) startB.style.display = 'none';
+    const modeOpt = document.getElementById('mode-options');
+    if (modeOpt) modeOpt.style.display = 'none';
+
+    const queueBox = document.getElementById('queue-overlay');
+    const queueT = document.getElementById('queue-title');
+    const queueS = document.getElementById('queue-status');
+    const btnCancel = document.getElementById('btn-cancel-queue');
+
+    if (queueBox) queueBox.style.display = 'flex';
+    if (queueT) queueT.textContent = title || 'Buscando Rival...';
+    if (queueS) queueS.textContent = status || 'Esperando a otro jugador...';
+
+    if (btnCancel) {
+      btnCancel.onclick = (e) => {
+        e.stopPropagation();
+        leaveQueue();
+      };
+    }
+  }
+
+  function hideWaitingQueue() {
+    const queueBox = document.getElementById('queue-overlay');
+    if (queueBox) queueBox.style.display = 'none';
+    const ov = document.getElementById('ov');
+    if (ov) ov.style.display = 'none';
+  }
+
+  function leaveQueue() {
+    if (ws) {
+      try { ws.close(); } catch (e) {}
+      ws = null;
+    }
+    hideWaitingQueue();
+    const ov = document.getElementById('ov');
+    if (ov) ov.style.display = 'flex';
+    const startB = document.getElementById('start');
+    if (startB) {
+      startB.textContent = 'Empezar a Jugar';
+      startB.style.display = 'block';
+    }
+    const modeOpt = document.getElementById('mode-options');
+    if (modeOpt) modeOpt.style.display = 'none';
+    if (window.notify) {
+      window.notify('BÚSQUEDA CANCELADA', 'Has salido de la cola de emparejamiento.', false, 2500);
+    }
+  }
+
   function onBothPlayersReady(players) {
+    hideWaitingQueue();
     matchStartTime = Date.now();
     const opp = players.find(p => p.seat !== mySeat);
     opponentName = opp ? opp.name : 'Rival';
+
+    // Actualizar título de la tarjeta en desktop
+    const p2Title = document.getElementById('p2-badge-title');
+    if (p2Title) {
+      p2Title.textContent = `⚡ ${opponentName.toUpperCase()}`;
+    }
+    const p2Label = document.getElementById('p2-name-label');
+    if (p2Label) {
+      p2Label.textContent = 'En vivo';
+    }
 
     if (isMobile) {
       const card = document.getElementById('mob-rival-score-card');
@@ -199,7 +274,16 @@
       if (nameEl) nameEl.textContent = `⚡ Rival: ${opponentName}`;
     }
 
-    alert(`¡Rival conectado: ${opponentName}! Empieza la partida.`);
+    if (window.notify) {
+      window.notify('¡RIVAL ENCONTRADO!', `${opponentName} se ha unido. ¡Comienza el duelo!`, true, 3000);
+    } else {
+      console.log(`[TetrisOnline] Rival conectado: ${opponentName}`);
+    }
+
+    // Iniciar el bucle de juego si la partida no ha comenzado
+    if (typeof window.startTetrisLoop === 'function') {
+      window.startTetrisLoop();
+    }
   }
 
   // Enviar puntuación (se llama cada vez que se completan líneas o suma puntos)
@@ -287,6 +371,8 @@
     sendGarbage: sendGarbage,
     startCpuMode: startCpuMode,
     stopCpu: stopCpu,
+    showWaitingQueue: showWaitingQueue,
+    leaveQueue: leaveQueue,
     onGarbageReceived: null
   };
 });

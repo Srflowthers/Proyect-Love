@@ -303,6 +303,7 @@
   };
 
   let url = null;
+  let externalPhotoUrl = '';
   let G = null;
   let refImg, fullImg, drag = null;
 
@@ -310,6 +311,28 @@
      5. CARGA Y RECORTE DE IMÁGENES
      ============================================================================ */
   const revoke = () => { url = null; };
+
+  function generatePortraitDataUrl() {
+    try {
+      const src = fullImg || el.prev;
+      if (!src) return '';
+      const sw = src.width || src.naturalWidth || 200;
+      const sh = src.height || src.naturalHeight || 200;
+      if (!sw || !sh) return '';
+      const maxDim = 180;
+      const scale = Math.min(1, maxDim / Math.max(sw, sh));
+      const tw = Math.max(1, Math.round(sw * scale));
+      const th = Math.max(1, Math.round(sh * scale));
+      const cv = document.createElement('canvas');
+      cv.width = tw;
+      cv.height = th;
+      const ctx = cv.getContext('2d');
+      ctx.drawImage(src, 0, 0, tw, th);
+      return cv.toDataURL('image/webp', 0.65);
+    } catch (_) {
+      return '';
+    }
+  }
 
   document.querySelectorAll('.lp-lv').forEach(b => {
     b.setAttribute('aria-checked', b.classList.contains('sel'));
@@ -336,6 +359,9 @@
     rd.onload = () => {
       revoke();
       url = rd.result;
+      externalPhotoUrl = f.name ? ('custom_upload_' + f.name) : '';
+      try { sessionStorage.removeItem('puzzle_random_photo'); } catch (_) {}
+      el.prev.removeAttribute('crossOrigin');
       el.prev.onload = () => {
         SFX.ready();
         el.host.hidden = false;
@@ -357,38 +383,73 @@
     rd.readAsDataURL(f);
   };
 
+  function getBackendProxyUrl(photoUrl) {
+    try {
+      const qParams = new URLSearchParams(window.location.search);
+      const rawBackend = qParams.get('backendUrl') || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8787' : '');
+      const cleanBackend = rawBackend.replace(/\/+$/, '');
+      return `${cleanBackend}/api/images/proxy?url=${encodeURIComponent(photoUrl)}`;
+    } catch (_) {
+      return '';
+    }
+  }
+
   function loadExternalImage(photoUrl, autoStart = true) {
     if (!photoUrl) return;
+    externalPhotoUrl = photoUrl;
     el.err.textContent = '';
     el.create.disabled = true;
-    el.prev.crossOrigin = 'anonymous';
 
-    fetch(photoUrl)
+    const onLoadedSuccess = () => {
+      SFX.ready();
+      el.host.hidden = false;
+      el.hint.hidden = true;
+      el.fit.hidden = false;
+      setMode('whole');
+      el.create.disabled = false;
+      checkRandomBtn();
+      if (autoStart) {
+        setTimeout(() => {
+          if (url && el.prev.naturalWidth) {
+            SFX.start();
+            startGame();
+            burst(window.innerWidth / 2, window.innerHeight / 3, 30, { v: 5, life: 60, types: ['heart', 'star'] });
+          }
+        }, 350);
+      }
+    };
+
+    if (photoUrl.startsWith('data:')) {
+      revoke();
+      url = photoUrl;
+      el.prev.removeAttribute('crossOrigin');
+      el.prev.onload = onLoadedSuccess;
+      el.prev.onerror = () => fail('No se pudo procesar el retrato guardado.');
+      el.prev.src = photoUrl;
+      return;
+    }
+
+    el.prev.crossOrigin = 'anonymous';
+    const isR2OrRemote = /^https?:\/\//i.test(photoUrl) && (photoUrl.includes('r2.cloudflarestorage.com') || photoUrl.includes('Produccion/users/'));
+    const primaryFetchUrl = isR2OrRemote ? (getBackendProxyUrl(photoUrl) || photoUrl) : photoUrl;
+
+    fetch(primaryFetchUrl)
       .then(res => {
         if (!res.ok) throw new Error('Fetch status ' + res.status);
         return res.blob();
       })
+      .catch(() => {
+        const fallbackUrl = primaryFetchUrl !== photoUrl ? photoUrl : getBackendProxyUrl(photoUrl);
+        if (!fallbackUrl) throw new Error('No fallback');
+        return fetch(fallbackUrl, { cache: 'reload' }).then(r => {
+          if (!r.ok) throw new Error('Fallback status ' + r.status);
+          return r.blob();
+        });
+      })
       .then(blob => {
         revoke();
         url = URL.createObjectURL(blob);
-        el.prev.onload = () => {
-          SFX.ready();
-          el.host.hidden = false;
-          el.hint.hidden = true;
-          el.fit.hidden = false;
-          setMode('whole');
-          el.create.disabled = false;
-          checkRandomBtn();
-          if (autoStart) {
-            setTimeout(() => {
-              if (url && el.prev.naturalWidth) {
-                SFX.start();
-                startGame();
-                burst(window.innerWidth / 2, window.innerHeight / 3, 30, { v: 5, life: 60, types: ['heart', 'star'] });
-              }
-            }, 350);
-          }
-        };
+        el.prev.onload = onLoadedSuccess;
         el.prev.onerror = () => {
           fail('No se pudo procesar la foto elegida.');
         };
@@ -397,23 +458,8 @@
       .catch(() => {
         revoke();
         url = photoUrl;
-        el.prev.onload = () => {
-          SFX.ready();
-          el.host.hidden = false;
-          el.hint.hidden = true;
-          el.fit.hidden = false;
-          setMode('whole');
-          el.create.disabled = false;
-          checkRandomBtn();
-          if (autoStart) {
-            setTimeout(() => {
-              if (url && el.prev.naturalWidth) {
-                SFX.start();
-                startGame();
-              }
-            }, 350);
-          }
-        };
+        el.prev.removeAttribute('crossOrigin');
+        el.prev.onload = onLoadedSuccess;
         el.prev.onerror = () => {
           fail('No se pudo cargar la imagen del recuerdo.');
         };
@@ -1074,10 +1120,14 @@
     refImg.classList.remove('on');
     SFX.win();
 
-    // Rescate y envío desacoplado de monedas y LP (ver reward-config.js)
+    // Rescate y envío desacoplado de monedas, LP y retrato de historial (ver reward-config.js)
+    const portraitDataUrl = generatePortraitDataUrl();
+    const resolvedPhotoUrl = externalPhotoUrl || sessionStorage.getItem('puzzle_random_photo') || url || (el.prev ? el.prev.src : '');
     const { earnedCoins, lpAward: lpEarned } = window.enviarRecompensaPuzzle ? window.enviarRecompensaPuzzle({
       pieces: N,
-      durationMs: Date.now() - G.t0
+      durationMs: Date.now() - G.t0,
+      imgUrl: resolvedPhotoUrl,
+      portrait: portraitDataUrl
     }) : { earnedCoins: 5, lpAward: 15 };
 
     toast(N >= 500 ? '¡Hiciste lo IMPOSIBLE!' : '¡Lo lograste! +' + earnedCoins + ' monedas');
@@ -1185,7 +1235,10 @@
         x.setAttribute('aria-checked', isMatch);
       });
     }
-    const initialImg = params.get('img') || sessionStorage.getItem('puzzle_random_photo');
+    let initialImg = params.get('img') || sessionStorage.getItem('puzzle_random_photo');
+    if (initialImg === '__portrait__') {
+      initialImg = sessionStorage.getItem('puzzle_portrait_override') || sessionStorage.getItem('puzzle_random_photo');
+    }
     if (initialImg) {
       loadExternalImage(initialImg, true);
     } else {

@@ -261,13 +261,15 @@
     burst(e.clientX, e.clientY, 5, { v: 2.5, g: 0.05, life: 30, size: 5, types: ['star', 'heart'] });
   });
 
-  $('lpSnd').onclick = () => {
-    muted = !muted;
-    if (bgm) { muted ? bgm.pause() : bgm.play().catch(() => {}); }
-    $('lpSnd').textContent = muted ? '🔇 Sonido' : '🔊 Sonido';
-    $('lpSnd').setAttribute('aria-pressed', !muted);
-    if (!muted) SFX.ready();
-  };
+  if ($('lpSnd')) {
+    $('lpSnd').onclick = () => {
+      muted = !muted;
+      if (bgm) { muted ? bgm.pause() : bgm.play().catch(() => {}); }
+      $('lpSnd').textContent = muted ? '🔇 Sonido' : '🔊 Sonido';
+      $('lpSnd').setAttribute('aria-pressed', !muted);
+      if (!muted) SFX.ready();
+    };
+  }
 
   /* ============================================================================
      4. EXTENSIONES Y EMISIÓN DE EVENTOS
@@ -757,38 +759,60 @@
   };
 
   /* ============================================================================
-     8. MOTOR DE LAYOUT RESPONSIVO Y ALAS LATERALES
+     8. MOTOR DE LAYOUT RESPONSIVO Y ALAS LATERALES (AJUSTADO A DISPOSITIVO/TABLET/PC)
      ============================================================================ */
-  function plan(cw, W, wide) {
-    const GAPZ = 12, P = 6, ch = Math.max(8, Math.round(cw * G.chS / G.cwS));
+  function plan(cw, W, availH, wide) {
+    const GAPZ = availH <= 420 ? 8 : 12;
+    const P = availH <= 420 ? 5 : 8;
+    const ch = Math.max(8, Math.round(cw * G.chS / G.cwS));
     const bw = COLS * cw, bh = ROWS * ch;
     const kx = cw / G.cwS, ky = ch / G.chS;
     const boxW = G.pw * kx, boxH = G.ph * ky;
-    const ov = N >= 500 ? 0.68 : N >= 240 ? 0.74 : 0.78;
-    const px = Math.max(14, boxW * ov), py = Math.max(14, boxH * ov);
+    const ov = N >= 500 ? 0.50 : N >= 240 ? 0.60 : N >= 120 ? 0.68 : 0.74;
+    const px = Math.max(10, boxW * ov), py = Math.max(10, boxH * ov);
     const zoneW = wide ? Math.max(0, (W - bw - 2 * GAPZ) / 2) : 0;
-    const a = wide && zoneW >= boxW ? Math.floor((zoneW - boxW) / px) + 1 : 0;
-    const sideH = wide ? Math.max(bh + 120, window.innerHeight - 130) : bh;
-    const sr = wide ? Math.max(1, Math.floor((sideH - boxH) / py) + 1) : 0;
-    const tc = Math.max(1, Math.floor((W - 2 * P - boxW) / px) + 1);
-    return { cw, ch, bw, bh, boxW, boxH, px, py, zoneW, a, sr, tc, GAPZ, P, kx, ky, sideH };
+    const usableWingW = Math.max(0, zoneW - P);
+    const a = wide && usableWingW >= boxW
+      ? Math.floor((usableWingW - boxW) / px) + 1
+      : (wide && usableWingW >= boxW * 0.70 ? 1 : 0);
+    const sideH = Math.max(bh, availH - 2 * P);
+    const sr = wide && sideH >= boxH
+      ? Math.max(1, Math.floor((sideH - boxH) / py) + 1)
+      : 1;
+    const tc = Math.max(1, Math.floor((Math.max(boxW, bw) - boxW) / px) + 1);
+    return { cw, ch, bw, bh, boxW, boxH, px, py, zoneW, usableWingW, a, sr, tc, GAPZ, P, kx, ky, sideH };
   }
 
   function layout(animate) {
     if (!G) return;
-    const W = el.stage.clientWidth || window.innerWidth || 360;
-    const wide = W >= 580;
+    try {
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('landscape').catch(() => {});
+      }
+    } catch (_) {}
+
+    const W = el.stage.clientWidth || (window.innerWidth - 24) || 640;
+    const stageRect = el.stage.getBoundingClientRect();
+    const topOffset = (stageRect.top > 18 && stageRect.top < window.innerHeight - 120) ? stageRect.top : 50;
+    const bottomPad = window.innerHeight <= 540 ? 8 : 14;
+    const availH = Math.max(220, Math.floor(window.innerHeight - topOffset - bottomPad));
+    const wide = W >= 460;
     let pl = null;
 
     if (wide) {
-      const maxBW = Math.min(Math.max(460, W * 0.50), 850);
-      const maxBH = Math.min(Math.max(320, (window.innerHeight - 140) * 0.62), 580);
-      const cwMax = Math.floor(Math.min(95, maxBW / COLS, (maxBH / ROWS) * (G.cwS / G.chS)));
+      const maxBW = Math.min(Math.floor(W * 0.56), 920);
+      const maxBH = Math.floor(availH - 14);
+      const cwMax = Math.max(10, Math.floor(Math.min(105, maxBW / COLS, (maxBH / ROWS) * (G.cwS / G.chS))));
+      const minComfortCW = Math.max(10, Math.floor(cwMax * (N >= 500 ? 0.72 : N >= 240 ? 0.78 : 0.84)));
 
-      for (let cw = cwMax; cw >= 10 && !pl; cw--) {
-        const q = plan(cw, W, true);
+      for (let cw = cwMax; cw >= minComfortCW && !pl; cw--) {
+        const q = plan(cw, W, availH, true);
         const sideCap = 2 * q.a * q.sr;
-        for (let t = 1; t <= (N >= 500 ? 6 : N >= 240 ? 3 : 2); t++) {
+        const maxT = N >= 500 ? 3 : N >= 240 ? 2 : 1;
+        for (let t = 0; t <= maxT; t++) {
+          const topH = t > 0 ? ((t - 1) * q.py + q.boxH) : 0;
+          const reqH = q.bh + 2 * q.P + (t > 0 ? 2 * (topH + q.GAPZ) : 0);
+          if (reqH > availH) continue;
           if (sideCap + 2 * t * q.tc >= N) {
             pl = q;
             pl.t = t;
@@ -797,46 +821,62 @@
         }
       }
       if (!pl) {
-        pl = plan(10, W, true);
-        const sideCap = 2 * pl.a * pl.sr;
-        pl.t = Math.max(1, Math.ceil(Math.max(0, N - sideCap) / (2 * Math.max(1, pl.tc))));
+        pl = plan(Math.max(10, Math.floor(cwMax * 0.86)), W, availH, true);
+        pl.t = 0;
       }
     } else {
-      pl = plan(Math.max(10, Math.floor((W - 16) / COLS)), W, false);
-      pl.t = Math.ceil(N / (2 * Math.max(1, pl.tc)));
+      const maxBH = Math.floor(availH * 0.62);
+      const cwFit = Math.max(10, Math.floor(Math.min((W - 16) / COLS, (maxBH / ROWS) * (G.cwS / G.chS))));
+      pl = plan(cwFit, W, availH, false);
+      pl.t = Math.max(1, Math.ceil(N / (2 * Math.max(1, pl.tc))));
     }
 
-    const { cw, ch, bw, bh, boxW, boxH, px, py, zoneW, a, sr, tc, GAPZ, P, t } = pl;
-    const topH = (t - 1) * py + boxH;
-    const bx = wide ? zoneW + GAPZ : (W - bw) / 2;
-    const by = P + topH + GAPZ;
+    const { cw, ch, bw, bh, boxW, boxH, px, py, zoneW, usableWingW, a, sr, tc, GAPZ, P, sideH, t } = pl;
+    const topH = t > 0 ? ((t - 1) * py + boxH) : 0;
+    const contentH = bh + (t > 0 ? 2 * (topH + GAPZ) : 0);
+    const startY = Math.max(P, Math.round((availH - contentH) / 2));
+    const bx = Math.round((W - bw) / 2);
+    const by = t > 0 ? (startY + topH + GAPZ) : Math.max(P, Math.round((availH - bh) / 2));
+
     const slots = [];
-    const rowX = (n, from, len) => from + Math.max(0, (len - ((n - 1) * px + boxW)) / 2);
+    const rowX = (n, from, len, stepX) => from + Math.max(0, (len - ((n - 1) * stepX + boxW)) / 2);
 
     for (let i = 0; i < t; i++) {
       for (let j = 0; j < tc; j++) {
-        const x = rowX(tc, 0, W) + j * px;
-        slots.push({ x, y: P + i * py }, { x, y: by + bh + GAPZ + i * py });
+        const x = rowX(tc, bx, bw, px) + j * px;
+        slots.push({ x, y: startY + i * py }, { x, y: by + bh + GAPZ + i * py });
       }
     }
 
-    if (wide && a > 0) {
-      for (let k = 0; k < sr; k++) {
-        const y = P + k * py;
-        for (let j = 0; j < a; j++) {
-          const leftX = rowX(a, P, zoneW - P) + j * px;
-          const rightX = rowX(a, bx + bw + GAPZ, zoneW - P) + j * px;
+    if (wide) {
+      const neededInWings = Math.max(0, N - slots.length);
+      const perWing = Math.max(1, Math.ceil(neededInWings / 2));
+      let wingA = Math.max(1, a);
+      let wingSr = Math.max(1, sr);
+      while (wingA * wingSr < perWing) {
+        if ((wingA / Math.max(1, usableWingW)) <= (wingSr / Math.max(1, sideH))) {
+          wingA++;
+        } else {
+          wingSr++;
+        }
+      }
+      const wingPx = wingA > 1 ? Math.min(px, Math.max(4, (usableWingW - boxW) / (wingA - 1))) : px;
+      const wingPy = wingSr > 1 ? Math.min(py, Math.max(4, (sideH - boxH) / (wingSr - 1))) : py;
+      const wingTotalH = (wingSr - 1) * wingPy + boxH;
+      const wingStartY = Math.max(P, Math.round((availH - wingTotalH) / 2));
+
+      for (let k = 0; k < wingSr; k++) {
+        const y = wingStartY + k * wingPy;
+        for (let j = 0; j < wingA; j++) {
+          const leftX = rowX(wingA, P, usableWingW, wingPx) + j * wingPx;
+          const rightX = rowX(wingA, bx + bw + GAPZ, usableWingW, wingPx) + j * wingPx;
           slots.push({ x: leftX, y }, { x: rightX, y });
         }
       }
     }
 
-    G.L = { cw, ch, bx, by, boxW, boxH, px, py, slots, cap: slots.length, mdx: G.m * pl.kx, mdy: G.m * pl.ky };
-
-    const stageH = Math.max(
-      by + bh + GAPZ + topH + P + 10,
-      wide ? P + sr * py + boxH + P : 0
-    );
+    const stageH = availH;
+    G.L = { cw, ch, bx, by, boxW, boxH, px, py, slots, cap: Math.max(1, slots.length), W, stageH, mdx: G.m * pl.kx, mdy: G.m * pl.ky };
     el.stage.style.height = stageH + 'px';
 
     Object.assign(el.board.style, { left: bx + 'px', top: by + 'px', width: bw + 'px', height: bh + 'px' });
@@ -849,7 +889,14 @@
 
   const slotXY = p => {
     const L = G.L, s = L.slots[Math.min(L.cap - 1, Math.floor(p.rank * L.cap / N))];
-    return { x: s.x + p.jx * L.px, y: s.y + p.jy * L.py };
+    const rawX = s.x + p.jx * Math.min(L.px, 18);
+    const rawY = s.y + p.jy * Math.min(L.py, 18);
+    const maxX = Math.max(2, (L.W || el.stage.clientWidth || 640) - L.boxW - 2);
+    const maxY = Math.max(2, (L.stageH || el.stage.clientHeight || 360) - L.boxH - 2);
+    return {
+      x: Math.max(2, Math.min(maxX, rawX)),
+      y: Math.max(2, Math.min(maxY, rawY))
+    };
   };
 
   const targetXY = p => ({
@@ -869,10 +916,13 @@
   }
 
   let rt;
-  new ResizeObserver(() => {
+  const scheduleLayout = (delay = 60) => {
     clearTimeout(rt);
-    rt = setTimeout(() => layout(false), 60);
-  }).observe(el.stage);
+    rt = setTimeout(() => layout(false), delay);
+  };
+  new ResizeObserver(() => scheduleLayout(60)).observe(el.stage);
+  window.addEventListener('resize', () => scheduleLayout(70));
+  window.addEventListener('orientationchange', () => scheduleLayout(140));
 
   /* ============================================================================
      9. ARRASTRE Y ENCAJE DE PIEZAS (POINTER DRAG ENGINE)
@@ -1021,8 +1071,13 @@
 
   function updateHelp() {
     const b = $('lpHelp');
-    b.textContent = '💡 Ayuda (' + G.help + ')';
-    b.disabled = G.help <= 0 || G.done || G.helping;
+    const txt = $('lpHelpTxt');
+    if (txt) {
+      txt.textContent = 'Ayuda (' + G.help + ')';
+    } else if (b) {
+      b.textContent = 'Ayuda (' + G.help + ')';
+    }
+    if (b) b.disabled = G.help <= 0 || G.done || G.helping;
   }
 
   $('lpHelp').onclick = () => {
@@ -1035,7 +1090,7 @@
     G.helping = true;
     updateHelp();
     SFX.mile();
-    toast('💡 ¡Te ayudo con una pieza!');
+    toast('¡Te ayudo con una pieza!');
     p.placed = true;
     p.el.style.zIndex = 1000;
     put(p, true);
@@ -1179,7 +1234,7 @@
     el.ref.textContent = 'Ver imagen de referencia';
   }
 
-  $('lpReset').onclick = restart;
+  if ($('lpReset')) $('lpReset').onclick = restart;
   $('lpAgain').onclick = restart;
 
   $('lpMix').onclick = () => {

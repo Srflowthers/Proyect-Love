@@ -45,34 +45,59 @@
   <main class="game">
     <!-- Sección principal del tablero y controles -->
     <section class="stage" aria-label="Tablero de juego">
-      <!-- Marcadores de estado superior -->
-      <div class="stats">
-        <div class="stat">
-          <span class="label">Puntaje</span>
-          <b id="score">0</b>
+      <!-- Panel HUD lateral en PC / superior en móvil -->
+      <div class="hud-column">
+        <!-- Encabezado de la Partida con dificultad textual -->
+        <div class="level-banner">
+          <div class="level-banner-info">
+            <div class="level-top-row">
+              <span class="level-badge" id="lvlBadgeTxt">ETAPA 1</span>
+              <span class="run-risk-pill easy" id="runRiskTxt">Muy Fácil</span>
+            </div>
+            <strong class="level-title" id="roundLbl">Primer Suspiro Dulce</strong>
+          </div>
         </div>
-        <div class="stat">
-          <span class="label">Meta</span>
-          <b id="target">0</b>
-        </div>
-        <div class="stat">
-          <span class="label">Movimientos</span>
-          <b id="moves">25</b>
-        </div>
-      </div>
 
-      <!-- Barra de progreso hacia la meta -->
-      <div class="goal" aria-hidden="true"><i id="prog"></i></div>
-      <div class="goalrow">
-        <span id="roundLbl">Ronda 1</span>
-        <span id="goalTxt"></span>
+        <!-- Marcadores de estado -->
+        <div class="stats">
+          <div class="stat stat-moves">
+            <span class="label">Movimientos</span>
+            <b id="moves">25</b>
+          </div>
+          <div class="stat">
+            <span class="label">Puntaje</span>
+            <b id="score">0</b>
+          </div>
+          <div class="stat" title="Al llegar a este puntaje ganas un poder extra (Rayo, Color o Martillo)">
+            <span class="label">Hito Poder</span>
+            <b id="target">1.000</b>
+          </div>
+        </div>
+
+        <!-- Barra de progreso general del nivel -->
+        <div class="goal-box">
+          <div class="goal-head">
+            <span class="label">Progreso del nivel</span>
+            <span id="goalTxt">Completa los objetivos</span>
+          </div>
+          <div class="goal" aria-hidden="true"><i id="prog"></i></div>
+        </div>
+
+        <!-- Tarjeta de Misión: Objetivos de figuras del nivel actual -->
+        <div class="mission-box" id="missionBox">
+          <div class="mission-head">
+            <span class="label">Misión: Figuras a recolectar</span>
+          </div>
+          <div class="obj-bar" id="objBar" aria-label="Objetivos de figuras del nivel"></div>
+        </div>
       </div>
 
       <!-- Área central: Habilidades laterales y Tablero Canvas -->
       <div class="board-with-skills">
         <!-- Barra lateral de poderes / habilidades activas -->
         <aside class="skills-sidebar" aria-label="Poderes especiales">
-          <button class="skill" id="sk-hammer" type="button" aria-pressed="false" title="Martillo: elimina cruz completa">
+          <div class="skills-title">Poderes</div>
+          <button class="skill" id="sk-hammer" type="button" aria-pressed="false" title="Martillo: elimina fila y columna (cruz completa)">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <rect x="8" y="7.5" width="12" height="5" rx="1.5" transform="rotate(45 14 10)"/>
               <path d="M4 20l8-8"/>
@@ -81,7 +106,7 @@
             <span class="ct" id="ct-hammer">1</span>
           </button>
 
-          <button class="skill" id="sk-bolt" type="button" aria-pressed="false" title="Rayo: elimina diagonales">
+          <button class="skill" id="sk-bolt" type="button" aria-pressed="false" title="Rayo: elimina las dos diagonales">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M13 2L5 14h6l-1 8 8-12h-6z"/>
             </svg>
@@ -89,7 +114,7 @@
             <span class="ct" id="ct-bolt">0</span>
           </button>
 
-          <button class="skill" id="sk-rainbow" type="button" aria-pressed="false" title="Arcoíris: elimina un color completo">
+          <button class="skill" id="sk-rainbow" type="button" aria-pressed="false" title="Color: elimina todas las piezas de un mismo tipo">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M3 18a9 9 0 0 1 18 0"/>
               <path d="M7 18a5 5 0 0 1 10 0"/>
@@ -172,8 +197,70 @@
   </main>
 </div>
 
+<!-- Modal de Administración y Visualización de los 101 Niveles (0 al 100) -->
+<div class="adm-modal" id="lvlModal" hidden role="dialog" aria-modal="true" aria-labelledby="admHeadTitle">
+  <div class="adm-dialog">
+    <div class="adm-header">
+      <div class="adm-header-titles">
+        <h2 id="admHeadTitle">Mapa de Campaña · 101 Niveles (0–100)</h2>
+        <p id="admSummary">Validando niveles...</p>
+      </div>
+      <button class="btn ghost small adm-close-btn" id="closeLevelsBtn" type="button">✕ Cerrar</button>
+    </div>
+
+    <!-- Barra de bloques de dificultad envuelta sin scrollbar horizontal -->
+    <div class="adm-blocks" id="admBlocks" aria-label="Filtrar por bloque de dificultad"></div>
+
+    <div class="adm-body">
+      <!-- Columna izquierda: Lista de niveles -->
+      <div class="adm-list" id="admLvlList" aria-label="Lista de niveles 0 al 100"></div>
+
+      <!-- Columna derecha: Ficha completa del nivel sin scroll forzado -->
+      <div class="adm-detail">
+        <div class="adm-detail-top">
+          <div class="adm-detail-head">
+            <div class="adm-sub" id="admLvlSub">Bloque 1 · Muy fácil</div>
+            <h3 id="admLvlTitle">Nivel 0</h3>
+            <p class="adm-desc" id="admLvlDesc"></p>
+          </div>
+          <button class="btn adm-play-btn" id="playSelectedLvlBtn" type="button">▶ Jugar Nivel</button>
+        </div>
+
+        <div class="adm-kpi-grid">
+          <div class="adm-stat-box">
+            <span class="label">Movimientos</span>
+            <b id="admLvlMoves">25 movs</b>
+          </div>
+          <div class="adm-stat-box">
+            <span class="label">Puntuación mínima</span>
+            <b id="admLvlScore">0 pts</b>
+          </div>
+          <div class="adm-stat-box">
+            <span class="label">Estado del nivel</span>
+            <b class="adm-val ok" id="admLvlVal">✓ Válido</b>
+          </div>
+        </div>
+
+        <div class="adm-preview-row">
+          <div class="adm-canvas-wrap">
+            <canvas id="lvlPreviewCv" width="192" height="192"></canvas>
+            <small>Vista previa del tablero 8×8</small>
+          </div>
+          <div class="adm-figs-box">
+            <span class="label">Objetivos: Figuras a recolectar</span>
+            <p class="adm-figs-help">Reúne estas cantidades combinando 3 o más iguales antes de agotar tus movimientos:</p>
+            <div class="adm-figs" id="admLvlFigs"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Módulo desacoplado de recompensas y rescate de LP/monedas -->
 <script src="reward-config.js"></script>
+<!-- Sistema de 101 niveles (0 al 100), layouts y validador automático -->
+<script src="levels-gomi.js"></script>
 <!-- Lógica del juego desacoplada -->
 <script src="gomi.js"></script>
 

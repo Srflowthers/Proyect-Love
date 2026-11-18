@@ -15,13 +15,146 @@ const K = 6;          // Cantidad de tipos de dulces base
 const HEART = 6;      // Tipo especial de pieza rara: Corazón del Amor
 const MOVES = 25;     // Movimientos iniciales por ronda
 let uid = 0;          // Contador para identificadores únicos de piezas
+let curLevelId = 0;   // Nivel activo sorteado por % (0 a 100)
 
-/** Genera un color aleatorio para piezas base (0 a K-1) */
+// Tabla de puntos, Oro y ELO ganados al superar cada nivel según su bloque de dificultad (B1..B10)
+const DIFF_CLEAR_BONUS = {
+  1:  { pts: 350,   coins: 1,  elo: 4,  label: 'Muy Fácil' },
+  2:  { pts: 700,   coins: 2,  elo: 7,  label: 'Fácil' },
+  3:  { pts: 1100,  coins: 3,  elo: 11, label: 'Medio' },
+  4:  { pts: 1600,  coins: 4,  elo: 15, label: 'Medio+' },
+  5:  { pts: 2300,  coins: 6,  elo: 20, label: 'Difícil' },
+  6:  { pts: 3200,  coins: 8,  elo: 26, label: 'Difícil+' },
+  7:  { pts: 4400,  coins: 11, elo: 33, label: 'Muy Difícil' },
+  8:  { pts: 6000,  coins: 15, elo: 42, label: 'Muy Difícil+' },
+  9:  { pts: 8000,  coins: 20, elo: 55, label: 'Extremo' },
+  10: { pts: 11000, coins: 28, elo: 75, label: 'Imposible' }
+};
+
+// Estado de la Partida continua (Run)
+let runState = {
+  active: false,
+  stage: 1,
+  stagesCleared: 0,
+  totalScore: 0,
+  totalTarget: 0,
+  bonusCoins: 0,
+  bonusElo: 0,
+  startTime: 0,
+  nextMs: 1000,
+  playedLevels: new Set(),
+  defeatPct: 12,
+  pressure: 0,
+  activeWeights: null,
+  activeHeartRate: null,
+  activeMask: null
+};
+
+/** Obtiene la configuración del nivel actual (0 a 100) desde GOMI_LEVELS */
+function getActiveLevel() {
+  if (window.GOMI_LEVELS && window.GOMI_LEVELS.length) {
+    const idx = Math.min(window.GOMI_LEVELS.length - 1, Math.max(0, curLevelId | 0));
+    return window.GOMI_LEVELS[idx];
+  }
+  return null;
+}
+
+/**
+ * Sortea un nivel de los 10 bloques (B1..B10) por probabilidad (%) desde que empieza la partida.
+ * Apenas inicia la partida (Etapa 1), todas las dificultades tienen un % de salir (mayor % en
+ * Muy Fácil / Fácil / Medio, pero con posibilidad real de retos mayores), y conforme avanzas
+ * de etapa el % se desplaza hacia Difícil, Extremo e Imposible. Nunca dos partidas son iguales.
+ */
+function rollLevelByProbability(stage) {
+  const levels = window.GOMI_LEVELS || [];
+  if (!levels.length) return { level: null, pressure: 0, rollPct: 100 };
+
+  // Distribución de probabilidades (%) por bloque [B1..B10] según la etapa:
+  // Desde Etapa 1 hay % de variedad en todos los tipos de dificultad para que ninguna partida sea igual
+  const STAGE_DISTRIBUTIONS = [
+    // Etapa 1 (inicio de partida: mayoría Fácil/Muy Fácil, pero puede sorprenderte Medio o Difícil)
+    [38, 27, 15, 8, 5, 3, 2, 1, 0.7, 0.3],
+    // Etapa 2
+    [14, 28, 24, 15, 9, 5, 2.5, 1.3, 0.8, 0.4],
+    // Etapa 3
+    [5, 13, 24, 24, 16, 9, 5, 2.2, 1.2, 0.6],
+    // Etapa 4
+    [2, 5, 12, 20, 24, 18, 10, 5, 2.5, 1.5],
+    // Etapa 5
+    [1, 2, 6, 12, 19, 23, 18, 11, 5, 3],
+    // Etapa 6
+    [0.5, 1, 3, 6, 12, 18, 24, 19, 11, 5.5],
+    // Etapa 7
+    [0.2, 0.5, 1.5, 3, 7, 12, 20, 25, 19, 11.8],
+    // Etapa 8+ (predominan Muy Difícil+, Extremo e Imposible)
+    [0.1, 0.2, 0.7, 1.5, 3.5, 7, 14, 23, 27, 23]
+  ];
+
+  const distIdx = Math.min(STAGE_DISTRIBUTIONS.length - 1, Math.max(0, (stage | 0) - 1));
+  const weights = STAGE_DISTRIBUTIONS[distIdx];
+  let wTotal = 0;
+  for (let i = 0; i < weights.length; i++) wTotal += weights[i];
+
+  let r = Math.random() * (wTotal || 100);
+  let chosenBlock = 1;
+  let chosenW = weights[0];
+  for (let i = 0; i < weights.length; i++) {
+    r -= weights[i];
+    if (r <= 0) {
+      chosenBlock = i + 1;
+      chosenW = weights[i];
+      break;
+    }
+  }
+
+  let candidates = levels.filter(function (l) {
+    return l.block === chosenBlock && !runState.playedLevels.has(l.id);
+  });
+  if (!candidates.length) {
+    candidates = levels.filter(function (l) { return l.block === chosenBlock; });
+  }
+  if (!candidates.length) candidates = levels;
+
+  const picked = candidates[(Math.random() * candidates.length) | 0];
+  return {
+    level: picked,
+    pressure: Math.min(1.2, (chosenBlock - 1) / 8),
+    rollPct: Number(((chosenW / (wTotal || 100)) * 100).toFixed(1))
+  };
+}
+
+/** Indica si la celda (r, c) está activa en la máscara 8x8 del nivel actual */
+function isMaskOpen(r, c) {
+  if (r < 0 || r >= N || c < 0 || c >= N) return false;
+  if (runState && runState.activeMask && runState.activeMask[r]) {
+    return Boolean(runState.activeMask[r][c]);
+  }
+  const lvl = getActiveLevel();
+  if (!lvl || !lvl.mask || !lvl.mask[r]) return true;
+  return Boolean(lvl.mask[r][c]);
+}
+
+/** Genera un color aleatorio para piezas base (0 a K-1) respetando pesos dinámicos de la partida */
 function randColor() {
+  const lvl = getActiveLevel();
+  const wArr = (runState && Array.isArray(runState.activeWeights))
+    ? runState.activeWeights
+    : (lvl && Array.isArray(lvl.weights) ? lvl.weights : null);
+  if (wArr && wArr.length === K) {
+    let sum = 0;
+    for (let i = 0; i < K; i++) sum += wArr[i];
+    if (sum > 0) {
+      let r = Math.random() * sum;
+      for (let i = 0; i < K; i++) {
+        r -= wArr[i];
+        if (r <= 0) return i;
+      }
+    }
+  }
   return Math.floor(Math.random() * K);
 }
 
-/** Cuenta el número actual de corazones en el tablero */
+/** Cuenta el número actual de corazones (Cartas de amor) en el tablero */
 function countHearts(b) {
   let n = 0;
   for (let r = 0; r < N; r++) {
@@ -33,11 +166,15 @@ function countHearts(b) {
 }
 
 /**
- * Controla la probabilidad de aparición de corazones raros.
- * Mantiene una tendencia a tener al menos 3 en el tablero.
+ * Controla la probabilidad de aparición de Cartas de amor (HEART).
+ * Respeta la frecuencia configurada en la etapa actual.
  */
 function spawnColor(hearts) {
-  const p = hearts < 3 ? 0.03 : hearts < 5 ? 0.01 : 0;
+  const lvl = getActiveLevel();
+  const baseP = (runState && typeof runState.activeHeartRate === 'number')
+    ? runState.activeHeartRate
+    : ((lvl && typeof lvl.heartRate === 'number') ? lvl.heartRate : 0.03);
+  const p = hearts < 3 ? baseP : hearts < 5 ? (baseP * 0.35) : 0;
   return Math.random() < p ? HEART : randColor();
 }
 
@@ -120,7 +257,9 @@ function resolveMatches(b, hint) {
   for (const run of runs) {
     if (cellOf(b, run.cells[0]).t === HEART) {
       const all = new Set();
-      for (let k = 0; k < N * N; k++) all.add(k);
+      for (let k = 0; k < N * N; k++) {
+        if (cellOf(b, k)) all.add(k);
+      }
       return { runs: runs, clear: all, specials: [], love: true };
     }
   }
@@ -176,7 +315,7 @@ function expand(b, clear) {
       }
     }
     for (const j of add) {
-      if (!clear.has(j)) {
+      if (!clear.has(j) && cellOf(b, j)) {
         clear.add(j);
         q.push(j);
       }
@@ -189,7 +328,9 @@ function expand(b, clear) {
 function bombSet(b, i, j) {
   const a = cellOf(b, i), o = cellOf(b, j), set = new Set([i, j]);
   if (a.s === 3 && o.s === 3) {
-    for (let k = 0; k < N * N; k++) set.add(k);
+    for (let k = 0; k < N * N; k++) {
+      if (cellOf(b, k)) set.add(k);
+    }
     return set;
   }
   const color = a.s === 3 ? o.t : a.t;
@@ -255,27 +396,35 @@ function step(b, hint, forced) {
   };
 }
 
-/** Aplica gravedad al tablero haciendo caer piezas y rellenando los huecos superiores */
+/** Aplica gravedad al tablero haciendo caer piezas y rellenando los huecos superiores (respeta máscara del nivel) */
 function gravity(b) {
   let hearts = countHearts(b);
   for (let c = 0; c < N; c++) {
+    const activeRows = [];
     const col = [];
     for (let r = N - 1; r >= 0; r--) {
-      if (b[r][c]) col.push(b[r][c]);
+      if (isMaskOpen(r, c)) {
+        activeRows.push(r);
+        if (b[r][c]) col.push(b[r][c]);
+      } else {
+        b[r][c] = null;
+      }
     }
-    const missing = N - col.length;
+    const missing = activeRows.length - col.length;
     for (let k = 0; k < col.length; k++) {
-      b[N - 1 - k][c] = col[k];
+      b[activeRows[k]][c] = col[k];
     }
-    for (let r = missing - 1; r >= 0; r--) {
+    for (let k = 0; k < missing; k++) {
+      const targetR = activeRows[col.length + k];
       const col0 = spawnColor(hearts);
       if (col0 === HEART) hearts++;
       const t = mk(col0);
       t.x = c;
-      t.y = r - missing;
-      b[r][c] = t;
+      t.y = -1 - k;
+      b[targetR][c] = t;
     }
-    for (let r = 0; r < N; r++) {
+    for (let k = 0; k < activeRows.length; k++) {
+      const r = activeRows[k];
       const t = b[r][c];
       t.tx = c;
       t.ty = r;
@@ -297,11 +446,13 @@ function swapInBoard(b, i, j) {
 function hasMatchMove(b) {
   for (let r = 0; r < N; r++) {
     for (let c = 0; c < N; c++) {
+      if (!b[r][c]) continue;
       const nbs = [];
-      if (c + 1 < N) nbs.push([r, c + 1]);
-      if (r + 1 < N) nbs.push([r + 1, c]);
+      if (c + 1 < N && b[r][c + 1]) nbs.push([r, c + 1]);
+      if (r + 1 < N && b[r + 1][c]) nbs.push([r + 1, c]);
       for (const n of nbs) {
         const a = b[r][c], o = b[n[0]][n[1]];
+        if (!a || !o) continue;
         if (a.s === 3 || o.s === 3) return true;
         b[r][c] = o; b[n[0]][n[1]] = a;
         const ok = findRuns(b).length > 0;
@@ -317,19 +468,70 @@ function hasMove(b) {
   return hasMatchMove(b);
 }
 
-/** Genera un nuevo tablero garantizando que tenga movimientos válidos y sin matches iniciales */
+/** Obtiene el ID de la única pieza que hay que mover para formar una combinación (pista) */
+function findHintIds(b) {
+  if (!b) return null;
+  const moves = [];
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) {
+      const nbs = [];
+      if (c + 1 < N) nbs.push([r, c + 1]);
+      if (r + 1 < N) nbs.push([r + 1, c]);
+      for (const n of nbs) {
+        const a = b[r][c], o = b[n[0]][n[1]];
+        if (!a || !o) continue;
+        if (a.s === 3 || o.s === 3) {
+          moves.push({ ids: new Set([(a.s === 3 ? a : o).id]), prio: 2 });
+          continue;
+        }
+        const idxA = r * N + c, idxO = n[0] * N + n[1];
+        b[r][c] = o; b[n[0]][n[1]] = a;
+        const runs = findRuns(b);
+        if (runs.length > 0) {
+          let mover = null;
+          let prio = 1;
+          for (const run of runs) {
+            const first = cellOf(b, run.cells[0]);
+            if (first && first.t === HEART) prio = 10;
+            else if (run.cells.length >= 4 && prio < 3) prio = 3;
+            if (!mover) {
+              if (run.cells.indexOf(idxO) >= 0) mover = a;
+              else if (run.cells.indexOf(idxA) >= 0) mover = o;
+            }
+          }
+          if (mover) moves.push({ ids: new Set([mover.id]), prio: prio });
+        }
+        b[r][c] = a; b[n[0]][n[1]] = o;
+      }
+    }
+  }
+  if (!moves.length) return null;
+  moves.sort(function (x, y) { return y.prio - x.prio; });
+  const bestPrio = moves[0].prio;
+  const top = moves.filter(function (m) { return m.prio === bestPrio; });
+  return top[(Math.random() * top.length) | 0].ids;
+}
+
+/** Genera un nuevo tablero garantizando que tenga movimientos válidos, sin matches iniciales y respetando la máscara del nivel */
 function newBoard() {
-  for (;;) {
+  for (let guard = 0; guard < 120; guard++) {
     const b = Array.from({ length: N }, function () { return Array(N).fill(null); });
     let hearts = 0;
     for (let r = 0; r < N; r++) {
       for (let c = 0; c < N; c++) {
-        let t;
+        if (!isMaskOpen(r, c)) {
+          b[r][c] = null;
+          continue;
+        }
+        let t, tries = 0;
         do {
           t = spawnColor(hearts);
+          tries++;
         } while (
-          (c >= 2 && b[r][c - 1].t === t && b[r][c - 2].t === t) ||
-          (r >= 2 && b[r - 1][c].t === t && b[r - 2][c].t === t)
+          tries < 40 && (
+            (c >= 2 && b[r][c - 1] && b[r][c - 2] && b[r][c - 1].t === t && b[r][c - 2].t === t) ||
+            (r >= 2 && b[r - 1][c] && b[r - 2][c] && b[r - 1][c].t === t && b[r - 2][c].t === t)
+          )
         );
         if (t === HEART) hearts++;
         const o = mk(t);
@@ -340,6 +542,15 @@ function newBoard() {
     }
     if (hasMatchMove(b)) return b;
   }
+  return Array.from({ length: N }, function (_, r) {
+    return Array.from({ length: N }, function (__, c) {
+      if (!isMaskOpen(r, c)) return null;
+      const o = mk((r + c) % K);
+      o.x = o.tx = c;
+      o.y = o.ty = r;
+      return o;
+    });
+  });
 }
 
 /* ============================================================================
@@ -588,6 +799,7 @@ let busy = true, ended = false, sel = null, drag = null;
 let ghosts = [], parts = [], floats = [], waiters = [];
 let rings = [], beams = [], confetti = [], shake = 0, flash = 0, flashCol = '255,255,255';
 let glints = [], glintT = 1, hammers = [];
+let idleTime = 0, hintIds = null;
 let skills = { hammer: 1, bolt: 0, rainbow: 0 }, skillMode = null, lc = null;
 let C = { board: '#3A2A5C', board2: '#443268', ink: '#241A38' };
 
@@ -789,171 +1001,272 @@ function miniHeart(c, x, y, s, fill) {
   c.restore();
 }
 
-// 0 manzana (la fruta prohibida, con mordisco)
-function pApple(c) {
-  c.beginPath();
-  c.moveTo(0, -0.62);
-  c.bezierCurveTo(-0.25, -0.86, -0.98, -0.8, -0.98, -0.05);
-  c.bezierCurveTo(-0.98, 0.56, -0.52, 0.98, -0.2, 0.94);
-  c.bezierCurveTo(-0.1, 0.92, -0.06, 0.84, 0, 0.84);
-  c.bezierCurveTo(0.06, 0.84, 0.1, 0.92, 0.2, 0.94);
-  c.bezierCurveTo(0.52, 0.98, 0.98, 0.56, 0.98, -0.05);
-  c.lineTo(0.98, -0.08);
-  c.quadraticCurveTo(0.74, -0.05, 0.8, -0.3);
-  c.quadraticCurveTo(0.58, -0.24, 0.66, -0.52);
-  c.quadraticCurveTo(0.42, -0.5, 0.5, -0.74);
-  c.bezierCurveTo(0.36, -0.8, 0.12, -0.72, 0, -0.62);
-  c.closePath();
+// Rejilla 256x256 -> [-1, 1] centrada en (0,0)
+function _u(c) { c.translate(-1, -1); c.scale(1 / 128, 1 / 128); }
+
+// Anillo (corona circular): círculo exterior en un sentido, interior en el contrario
+function _ring(c, cx, cy, ro, ri) {
+  c.moveTo(cx + ro, cy); c.arc(cx, cy, ro, 0, Math.PI * 2, false);
+  c.moveTo(cx + ri, cy); c.arc(cx, cy, ri, 0, Math.PI * 2, true);
 }
 
-function biteLine(c) {
-  c.beginPath();
-  c.moveTo(0.98, -0.08);
-  c.quadraticCurveTo(0.74, -0.05, 0.8, -0.3);
-  c.quadraticCurveTo(0.58, -0.24, 0.66, -0.52);
-  c.quadraticCurveTo(0.42, -0.5, 0.5, -0.74);
+function _rrect(c, x, y, w, h, r) {                   // rectángulo redondeado (horario)
+  c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.arcTo(x + w, y, x + w, y + r, r);
+  c.lineTo(x + w, y + h - r); c.arcTo(x + w, y + h, x + w - r, y + h, r);
+  c.lineTo(x + r, y + h); c.arcTo(x, y + h, x, y + h - r, r);
+  c.lineTo(x, y + r); c.arcTo(x, y, x + r, y, r); c.closePath();
 }
 
-function dApple(c) {
-  c.save();
-  c.lineCap = 'round';
-  c.lineJoin = 'round';
-  biteLine(c);
-  c.lineWidth = 0.2;
-  c.strokeStyle = 'rgba(255,238,196,.95)';
-  c.stroke();
-  biteLine(c);
-  c.lineWidth = 0.06;
-  c.strokeStyle = 'rgba(255,255,255,.85)';
-  c.stroke();
+/* ======================= HELADO DE CONO BAÑADO ====================== */
+const _HEL_TIERS = [[128, 108, 66, 26], [128, 78, 52, 24], [128, 52, 36, 20]];
+const _HEL_GOTAS = [[84, 34], [112, 26], [138, 44], [164, 30], [184, 22]];   // [x, largo]
+
+function _helCono(c) {
+  c.moveTo(66, 118); c.lineTo(190, 118); c.lineTo(134, 236);
+  c.quadraticCurveTo(128, 248, 122, 236); c.closePath();
+}
+function _helPunta(c) {
+  c.moveTo(106, 42); c.bezierCurveTo(104, 26, 124, 22, 138, 6);
+  c.bezierCurveTo(140, 18, 150, 28, 150, 42); c.closePath();
+}
+
+function pHelado(c) {
+  c.save(); _u(c);
+  c.beginPath();
+  _helCono(c);
+  for (const [x, y, rx, ry] of _HEL_TIERS) { c.moveTo(x + rx, y); c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); }
+  _helPunta(c);
   c.restore();
 }
 
-function appleExtras(c) {
-  c.save();
-  c.lineCap = 'round';
+function dHelado(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _u(c);
+  c.lineJoin = 'round'; c.lineCap = 'round';
+
+  // cono de barquillo
+  let g = c.createLinearGradient(66, 0, 190, 0);
+  g.addColorStop(0, '#e8b46a'); g.addColorStop(0.45, '#f6cf8c'); g.addColorStop(1, '#c98f4a');
+  c.beginPath(); _helCono(c); c.fillStyle = g; c.fill();
+  c.save(); c.clip();
+  // rejilla del barquillo
+  c.strokeStyle = '#b9803f'; c.lineWidth = 2.5; c.globalAlpha = 0.7;
   c.beginPath();
-  c.moveTo(0.02, -0.55);
-  c.quadraticCurveTo(0.02, -0.85, 0.16, -1.06);
-  c.lineWidth = 0.13;
-  c.strokeStyle = '#5A3418';
+  for (let x = -60; x <= 260; x += 24) { c.moveTo(x, 110); c.lineTo(x + 130, 250); c.moveTo(x, 110); c.lineTo(x - 130, 250); }
   c.stroke();
-  c.lineWidth = 0.06;
-  c.strokeStyle = '#A8723A';
-  c.stroke();
-  const lg = c.createLinearGradient(0.1, -1.1, 0.8, -0.8);
-  lg.addColorStop(0, '#7BE08F');
-  lg.addColorStop(1, '#2C9A55');
-  c.beginPath();
-  c.moveTo(0.16, -0.9);
-  c.bezierCurveTo(0.34, -1.2, 0.78, -1.18, 0.86, -1.0);
-  c.bezierCurveTo(0.7, -0.78, 0.32, -0.74, 0.16, -0.9);
-  c.closePath();
-  c.fillStyle = lg;
+  c.globalAlpha = 1;
+  // baño de chocolate con gotas
+  g = c.createLinearGradient(0, 118, 0, 165);
+  g.addColorStop(0, '#6b3a20'); g.addColorStop(1, '#3f1d0e');
+  c.fillStyle = g; c.beginPath();
+  _rrect(c, 56, 112, 150, 28, 4);
+  for (const [x, l] of _HEL_GOTAS) _rrect(c, x - 8, 118, 16, l + 14, 8);
   c.fill();
-  c.lineWidth = 0.04;
-  c.strokeStyle = '#1B6B3A';
-  c.stroke();
-  c.beginPath();
-  c.moveTo(0.2, -0.9);
-  c.quadraticCurveTo(0.5, -1.02, 0.8, -1.0);
-  c.strokeStyle = 'rgba(255,255,255,.5)';
-  c.lineWidth = 0.025;
-  c.stroke();
+  c.strokeStyle = '#d9a070'; c.lineWidth = 2.5; c.globalAlpha = 0.4; c.beginPath();
+  for (const [x, l] of _HEL_GOTAS) { c.moveTo(x - 3, 128); c.lineTo(x - 3, 118 + l - 4); }
+  c.stroke(); c.globalAlpha = 1;
+  c.restore();
+  // contorno del cono
+  c.beginPath(); _helCono(c); c.strokeStyle = '#a8692c'; c.lineWidth = 4; c.stroke();
+
+  // helado de chocolate: de abajo hacia arriba
+  for (const [x, y, rx, ry] of _HEL_TIERS) {
+    c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+    c.strokeStyle = '#3d1c0e'; c.lineWidth = 5; c.stroke();
+    g = c.createRadialGradient(x - rx * 0.3, y - ry * 0.5, 2, x, y, rx * 1.1);
+    g.addColorStop(0, '#b87848'); g.addColorStop(0.5, '#7a4326'); g.addColorStop(1, '#4a2412');
+    c.fillStyle = g; c.fill();
+    // ranura de la espiral
+    c.strokeStyle = '#3d1c0e'; c.lineWidth = 3; c.globalAlpha = 0.35 * k;
+    c.beginPath(); c.moveTo(x - rx * 0.8, y + ry * 0.2); c.quadraticCurveTo(x, y + ry * 1.1, x + rx * 0.8, y - ry * 0.25); c.stroke();
+    // sombra inferior y brillo superior
+    c.lineWidth = 5; c.globalAlpha = 0.3 * k;
+    c.beginPath(); c.ellipse(x, y, rx - 6, ry - 4, 0, 0.15 * Math.PI, 0.85 * Math.PI); c.stroke();
+    c.strokeStyle = '#f1c79a'; c.lineWidth = 4; c.globalAlpha = 0.7;
+    c.beginPath(); c.ellipse(x, y, rx - 8, ry - 6, 0, 1.05 * Math.PI, 1.5 * Math.PI); c.stroke();
+    c.globalAlpha = 1;
+  }
+  // punta rizada
+  c.beginPath(); _helPunta(c); c.strokeStyle = '#3d1c0e'; c.lineWidth = 5; c.stroke();
+  g = c.createLinearGradient(106, 6, 150, 42);
+  g.addColorStop(0, '#b87848'); g.addColorStop(1, '#6b3a20');
+  c.fillStyle = g; c.fill();
+  c.strokeStyle = '#f1c79a'; c.lineWidth = 3; c.globalAlpha = 0.7;
+  c.beginPath(); c.moveTo(114, 36); c.quadraticCurveTo(116, 26, 130, 16); c.stroke();
+  c.globalAlpha = 1;
+
+  // destello
+  c.fillStyle = '#fff'; c.globalAlpha = 0.9;
+  c.beginPath(); c.moveTo(196, 56); c.lineTo(199, 65); c.lineTo(208, 68); c.lineTo(199, 71);
+  c.lineTo(196, 80); c.lineTo(193, 71); c.lineTo(184, 68); c.lineTo(193, 65); c.closePath(); c.fill();
   c.restore();
 }
 
-// Gusano de goma y menta
-function wormPt(t) {
-  return [-0.78 + 1.56 * t, -0.36 * Math.sin(t * Math.PI * 2 + 0.3) + 0.05 * (t - 0.5)];
+/* ============================ GUSANO ÁCIDO ========================== */
+const _GS_H = 24;   // mitad del ancho de la tira
+
+function _gsPunto(t) {                                  // punto, tangente y normal de la curva central
+  const a = t * Math.PI * 2;
+  const x = 128 + 46 * Math.sin(a), y = 28 + 200 * t;
+  const dx = 46 * Math.PI * 2 * Math.cos(a), dy = 200, l = Math.hypot(dx, dy);
+  const tx = dx / l, ty = dy / l;
+  return { x, y, tx, ty, nx: -ty, ny: tx };
 }
 
-function wormR(t) {
-  return 0.27 + 0.05 * Math.sin(t * Math.PI);
+function _gsContorno(c) {                               // silueta cerrada: lado, tapa, lado y tapa
+  const N = 48, h = _GS_H, M = 10;
+  const P0 = _gsPunto(0), P1 = _gsPunto(1);
+  c.moveTo(P0.x + P0.nx * h, P0.y + P0.ny * h);
+  for (let i = 1; i <= N; i++) { const q = _gsPunto(i / N); c.lineTo(q.x + q.nx * h, q.y + q.ny * h); }
+  for (let i = 1; i <= M; i++) {                        // tapa redonda final
+    const a = Math.PI * i / M;
+    c.lineTo(P1.x + h * (Math.cos(a) * P1.nx + Math.sin(a) * P1.tx), P1.y + h * (Math.cos(a) * P1.ny + Math.sin(a) * P1.ty));
+  }
+  for (let i = N - 1; i >= 0; i--) { const q = _gsPunto(i / N); c.lineTo(q.x - q.nx * h, q.y - q.ny * h); }
+  for (let i = 1; i < M; i++) {                         // tapa redonda inicial
+    const a = Math.PI * i / M;
+    c.lineTo(P0.x + h * (-Math.cos(a) * P0.nx - Math.sin(a) * P0.tx), P0.y + h * (-Math.cos(a) * P0.ny - Math.sin(a) * P0.ty));
+  }
+  c.closePath();
 }
 
-function pWorm(c) {
+function pGusano(c) {
+  c.save(); _u(c);
+  c.beginPath(); _gsContorno(c);
+  c.restore();
+}
+
+function _gsLinea(c, off, t0, t1) {                     // línea paralela a la curva central
   c.beginPath();
-  for (let i = 0; i <= 28; i++) {
-    const t = i / 28, q = wormPt(t);
-    el(c, q[0], q[1], wormR(t), wormR(t));
+  for (let i = 0; i <= 40; i++) {
+    const q = _gsPunto(t0 + (t1 - t0) * i / 40);
+    const x = q.x + q.nx * off, y = q.y + q.ny * off;
+    i ? c.lineTo(x, y) : c.moveTo(x, y);
   }
 }
-pWorm.merged = true;
 
-function dWorm(c, p, deep) {
-  c.lineCap = 'round';
-  for (let i = 2; i < 28; i += 3) {
-    const t = i / 28, q = wormPt(t), q2 = wormPt(t + 0.01), a = Math.atan2(q2[1] - q[1], q2[0] - q[0]), r = wormR(t);
-    c.strokeStyle = rgba(deep, 0.35);
-    c.lineWidth = 0.035;
-    c.beginPath();
-    c.moveTo(q[0] - Math.sin(a) * r, q[1] + Math.cos(a) * r);
-    c.lineTo(q[0] + Math.sin(a) * r, q[1] - Math.cos(a) * r);
-    c.stroke();
+function dGusano(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _u(c);
+  c.lineJoin = 'round'; c.lineCap = 'round';
+
+  // contorno en tonos más oscuros del arcoíris
+  let g = c.createLinearGradient(0, 14, 0, 242);
+  g.addColorStop(0, '#d63a6c'); g.addColorStop(0.28, '#e08a1c'); g.addColorStop(0.5, '#e0c022');
+  g.addColorStop(0.72, '#2f9f3a'); g.addColorStop(1, '#1488b8');
+  c.beginPath(); _gsContorno(c); c.strokeStyle = g; c.lineWidth = 6; c.stroke();
+
+  // cuerpo arcoíris
+  g = c.createLinearGradient(0, 14, 0, 242);
+  g.addColorStop(0, '#ff6f9c'); g.addColorStop(0.28, '#ffb340'); g.addColorStop(0.5, '#ffe94d');
+  g.addColorStop(0.72, '#66d65f'); g.addColorStop(1, '#3cc0ee');
+  c.beginPath(); _gsContorno(c); c.fillStyle = g; c.fill();
+
+  // volumen: brillo a un lado y sombra al otro
+  c.strokeStyle = '#fff'; c.lineWidth = 6; c.globalAlpha = 0.5;
+  _gsLinea(c, -_GS_H * 0.55, 0.04, 0.96); c.stroke();
+  c.strokeStyle = '#6a2a5a'; c.lineWidth = 7; c.globalAlpha = 0.16 * k;
+  _gsLinea(c, _GS_H * 0.6, 0.04, 0.96); c.stroke();
+  c.globalAlpha = 1;
+
+  // azúcar ácida: muchos cristalitos (posiciones fijas, siempre iguales)
+  let s = 12345; const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  for (let i = 0; i < 190; i++) {
+    const q = _gsPunto(0.02 + 0.96 * rnd()), off = (rnd() * 2 - 1) * _GS_H * 0.9;
+    const x = q.x + q.nx * off, y = q.y + q.ny * off, r = 0.8 + rnd() * 1.4, al = 0.55 + rnd() * 0.4;
+    if (Math.abs(x - 128) < 34 && y > 108 && y < 150) continue;    // deja libre la carita
+    c.globalAlpha = 0.18 * k; c.fillStyle = '#5a2a6a';
+    c.beginPath(); c.arc(x + 0.9, y + 0.9, r, 0, Math.PI * 2); c.fill();
+    c.globalAlpha = al; c.fillStyle = '#fff';
+    c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
   }
-  c.strokeStyle = 'rgba(255,255,255,.45)';
-  c.lineWidth = 0.06;
-  c.beginPath();
-  for (let i = 0; i <= 28; i++) {
-    const t = i / 28, q = wormPt(t);
-    const x = q[0] - 0.03, y = q[1] - wormR(t) * 0.5;
-    if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
-  }
-  c.stroke();
-  const h = wormPt(1);
-  c.fillStyle = '#2b1030';
-  c.beginPath();
-  el(c, h[0] - 0.05, h[1] - 0.08, 0.045, 0.06);
-  el(c, h[0] + 0.07, h[1] - 0.05, 0.045, 0.06);
-  c.fill();
+  c.globalAlpha = 1;
+
+  // carita ácida y tierna: ojitos apretados, mejillas y boquita fruncida
+  c.strokeStyle = '#5a2a3a'; c.lineWidth = 4.5;
+  c.beginPath(); c.moveTo(110, 118); c.lineTo(121, 124); c.lineTo(110, 130);
+  c.moveTo(146, 118); c.lineTo(135, 124); c.lineTo(146, 130); c.stroke();
+  c.fillStyle = '#ff5f8a'; c.globalAlpha = 0.45;
+  c.beginPath(); c.ellipse(104, 136, 7, 4.5, 0, 0, Math.PI * 2); c.fill();
+  c.beginPath(); c.ellipse(152, 136, 7, 4.5, 0, 0, Math.PI * 2); c.fill();
+  c.globalAlpha = 1; c.fillStyle = '#5a2a3a';
+  c.beginPath(); c.ellipse(128, 138, 5, 6, 0, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#ff7a9a';
+  c.beginPath(); c.ellipse(128, 141, 3, 2.4, 0, 0, Math.PI * 2); c.fill();
+
+  // destellos de azúcar
   c.fillStyle = '#fff';
-  c.beginPath();
-  el(c, h[0] - 0.06, h[1] - 0.1, 0.015, 0.015);
-  el(c, h[0] + 0.06, h[1] - 0.07, 0.015, 0.015);
-  c.fill();
-  c.strokeStyle = '#2b1030';
-  c.lineWidth = 0.025;
-  c.beginPath();
-  c.moveTo(h[0] - 0.05, h[1] + 0.07);
-  c.quadraticCurveTo(h[0] + 0.02, h[1] + 0.13, h[0] + 0.09, h[1] + 0.05);
-  c.stroke();
-}
-
-function pMint(c) {
-  c.beginPath();
-  [[0, -0.1, 0.5], [-0.52, 0.0, 0.38], [0.52, 0.0, 0.38], [-0.32, -0.5, 0.38], [0.32, -0.5, 0.38], [-0.34, 0.4, 0.38], [0.34, 0.4, 0.38], [0, 0.2, 0.5], [0, -0.62, 0.34]].forEach(function (a) {
-    c.moveTo(a[0] + a[2], a[1]);
-    c.arc(a[0], a[1], a[2], 0, Math.PI * 2);
+  [[66, 62, 10], [190, 196, 10], [214, 124, 6]].forEach(([x, y, r]) => {
+    c.beginPath(); c.moveTo(x, y - r); c.lineTo(x + r * 0.28, y - r * 0.28); c.lineTo(x + r, y);
+    c.lineTo(x + r * 0.28, y + r * 0.28); c.lineTo(x, y + r); c.lineTo(x - r * 0.28, y + r * 0.28);
+    c.lineTo(x - r, y); c.lineTo(x - r * 0.28, y - r * 0.28); c.closePath(); c.fill();
   });
+  c.restore();
 }
 
-function dMint(c, p, deep) {
+/* ============================ ALGODÓN DE AZÚCAR ===================== */
+const _ALGODON_PUFFS = [
+  [128, 41, 27], [110, 62, 29], [147, 64, 29],
+  [98, 94, 34], [158, 94, 34], [128, 86, 34],
+  [84, 132, 37], [172, 132, 37], [128, 128, 42],
+  [96, 168, 34], [160, 168, 34], [128, 170, 39],
+  [128, 192, 23]
+];
+
+function _algodonPalito(c) {
+  c.moveTo(122, 190); c.lineTo(134, 190); c.lineTo(139, 246);
+  c.quadraticCurveTo(139, 251, 134, 251); c.lineTo(126, 251);
+  c.quadraticCurveTo(121, 251, 121, 246); c.closePath();
+}
+
+function pAlgodon(c) {
+  c.save(); _u(c);
+  c.beginPath();
+  for (const [x, y, r] of _ALGODON_PUFFS) { c.moveTo(x + r, y); c.arc(x, y, r, 0, Math.PI * 2); }
+  _algodonPalito(c);
+  c.restore();
+}
+
+function dAlgodon(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _u(c);
+
+  // palito
+  let g = c.createLinearGradient(121, 0, 139, 0);
+  g.addColorStop(0, '#f0cf9a'); g.addColorStop(1, '#c8975a');
+  c.beginPath(); _algodonPalito(c); c.fillStyle = g; c.fill();
+
+  // contorno de las nubes
+  c.beginPath();
+  for (const [x, y, r] of _ALGODON_PUFFS) { c.moveTo(x + r, y); c.arc(x, y, r, 0, Math.PI * 2); }
+  c.lineWidth = 6; c.strokeStyle = '#e9588f'; c.stroke();
+
+  // cada nube con su propio degradado radial
+  for (const [x, y, r] of _ALGODON_PUFFS) {
+    const gx = x - 0.24 * r, gy = y - 0.4 * r;
+    g = c.createRadialGradient(gx, gy, 0, gx, gy, 1.6 * r);
+    g.addColorStop(0, '#ffd3e8'); g.addColorStop(0.5, '#ff9ccb'); g.addColorStop(1, '#f0629f');
+    c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fillStyle = g; c.fill();
+  }
+
   c.lineCap = 'round';
-  c.strokeStyle = rgba(deep, 0.28);
-  c.lineWidth = 0.05;
-  [[-0.3, 0.55, 0.3, 0.1, 3.6], [0.35, 0.5, 0.28, 0.2, 5.2], [0, 0.78, 0.4, 0.1, 3.9]].forEach(function (a) {
-    c.beginPath();
-    c.arc(a[0], a[1], a[2], a[4], a[4] + 2.2);
-    c.stroke();
-  });
-  c.strokeStyle = 'rgba(255,255,255,.62)';
-  c.lineWidth = 0.055;
-  [[-0.35, -0.3, 0.3, 3.5], [0.33, -0.2, 0.26, 0.2], [-0.05, -0.55, 0.28, 3.9], [0.0, 0.05, 0.34, 5.0], [-0.45, 0.2, 0.22, 4.4], [0.45, 0.25, 0.2, 5.4], [-0.05, 0.4, 0.26, 0.5]].forEach(function (a) {
-    c.beginPath();
-    c.arc(a[0], a[1], a[2], a[3], a[3] + 2.4);
-    c.stroke();
-  });
-  c.fillStyle = 'rgba(255,255,255,.4)';
-  c.beginPath();
-  el(c, -0.28, -0.52, 0.2, 0.12, -0.5);
-  c.fill();
-  c.fillStyle = 'rgba(255,255,255,.9)';
-  [[-0.5, -0.12, 0.035], [0.12, -0.7, 0.03], [0.55, 0.18, 0.03], [-0.15, 0.62, 0.03]].forEach(function (a) {
-    c.beginPath();
-    c.arc(a[0], a[1], a[2], 0, Math.PI * 2);
-    c.fill();
-  });
+  // hebras claras
+  c.strokeStyle = '#ffe3f1'; c.lineWidth = 3; c.globalAlpha = 0.7;
+  c.beginPath(); c.moveTo(100, 60); c.quadraticCurveTo(122, 44, 144, 56);
+  c.moveTo(70, 112); c.quadraticCurveTo(100, 94, 130, 108); c.quadraticCurveTo(158, 120, 184, 102);
+  c.moveTo(66, 150); c.quadraticCurveTo(100, 134, 128, 150); c.quadraticCurveTo(160, 166, 188, 146);
+  c.moveTo(84, 184); c.quadraticCurveTo(114, 170, 146, 186); c.stroke();
+  // hebras oscuras
+  c.strokeStyle = '#e5508d'; c.lineWidth = 2.5; c.globalAlpha = 0.45 * k;
+  c.beginPath(); c.moveTo(92, 128); c.quadraticCurveTo(120, 118, 152, 132);
+  c.moveTo(104, 166); c.quadraticCurveTo(130, 156, 158, 168); c.stroke();
+
+  // brillos
+  c.fillStyle = '#fff';
+  c.globalAlpha = 0.85; c.beginPath(); c.ellipse(102, 74, 14, 7, -35 * Math.PI / 180, 0, Math.PI * 2); c.fill();
+  c.globalAlpha = 0.65; c.beginPath(); c.ellipse(74, 128, 7, 4, -50 * Math.PI / 180, 0, Math.PI * 2); c.fill();
+  c.globalAlpha = 0.9;  c.beginPath(); c.arc(116, 46, 3.5, 0, Math.PI * 2); c.fill();
+  c.restore();
 }
 
 function el(c, x, y, rx, ry, rot) {
@@ -962,58 +1275,107 @@ function el(c, x, y, rx, ry, rot) {
   c.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2);
 }
 
-function pBear(c) {
-  c.beginPath();
-  el(c, -0.36, -0.8, 0.2, 0.2);
-  el(c, 0.36, -0.8, 0.2, 0.2);
-  el(c, 0, -0.42, 0.46, 0.4);
-  el(c, 0, 0.3, 0.5, 0.5);
-  el(c, -0.6, 0.08, 0.2, 0.3, 0.5);
-  el(c, 0.6, 0.08, 0.2, 0.3, -0.5);
-  el(c, -0.32, 0.8, 0.26, 0.2);
-  el(c, 0.32, 0.8, 0.26, 0.2);
-}
-pBear.merged = true;
+/* ===================== SUSHI FRITO (un trozo de rollo) ============== */
+const _SF = { x: 128, y: 120, r: 84, d: 10 };                  // centro, radio y grosor del trozo
 
-function dBear(c, p, deep) {
-  c.fillStyle = 'rgba(255,255,255,.35)';
+function _uSushi(c) { _u(c); }
+
+// contorno irregular (empanizado): círculo con ondulaciones suaves
+function _sfBorde(c, cx, cy, r) {
+  const N = 72;
+  for (let i = 0; i <= N; i++) {
+    const a = (i / N) * Math.PI * 2;
+    const rr = r + 1.1 * Math.sin(a * 9 + 1) + 0.8 * Math.sin(a * 15 + 2) + 0.6 * Math.sin(a * 23);
+    const px = cx + Math.cos(a) * rr, py = cy + Math.sin(a) * rr;
+    if (i) c.lineTo(px, py); else c.moveTo(px, py);
+  }
+  c.closePath();
+}
+
+function pSushi(c) {
+  c.save(); _uSushi(c);
   c.beginPath();
-  el(c, -0.36, -0.8, 0.1, 0.1);
-  el(c, 0.36, -0.8, 0.1, 0.1);
-  c.fill();
-  c.fillStyle = rgba(deep, 0.28);
-  c.beginPath();
-  el(c, 0, 0.42, 0.28, 0.28);
-  c.fill();
-  c.fillStyle = 'rgba(255,255,255,.28)';
-  c.beginPath();
-  el(c, 0, -0.3, 0.22, 0.16);
-  c.fill();
-  c.fillStyle = '#2b1030';
-  c.beginPath();
-  el(c, -0.2, -0.5, 0.06, 0.075);
-  el(c, 0.2, -0.5, 0.06, 0.075);
-  c.fill();
-  c.beginPath();
-  el(c, 0, -0.36, 0.07, 0.05);
-  c.fill();
-  c.strokeStyle = '#2b1030';
-  c.lineWidth = 0.03;
-  c.lineCap = 'round';
-  c.beginPath();
-  c.moveTo(0, -0.32);
-  c.lineTo(0, -0.26);
-  c.moveTo(-0.08, -0.22);
-  c.quadraticCurveTo(0, -0.15, 0.08, -0.22);
-  c.stroke();
-  c.strokeStyle = rgba(deep, 0.35);
-  c.lineWidth = 0.035;
-  c.beginPath();
-  c.moveTo(-0.5, 0.0);
-  c.lineTo(-0.44, 0.0);
-  c.moveTo(0, 0.0);
-  c.lineTo(0, 0);
-  c.stroke();
+  _sfBorde(c, _SF.x, _SF.y, _SF.r + 2);
+  _sfBorde(c, _SF.x, _SF.y + _SF.d, _SF.r + 2);
+  c.restore();
+}
+
+function dSushi(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  const { x, y, r, d } = _SF;
+  c.save(); _uSushi(c);
+  c.lineJoin = 'round'; c.lineCap = 'round';
+  let s = 77; const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  const migas = (rmin, rmax, n, cy) => {
+    for (let i = 0; i < n; i++) {
+      const a = rnd() * 6.283, rr = rmin + rnd() * (rmax - rmin), mr = 1.5 + rnd() * 2, mx = x + Math.cos(a) * rr, my = cy + Math.sin(a) * rr;
+      c.globalAlpha = 0.5; c.fillStyle = '#9a4f10'; c.beginPath(); c.arc(mx + 0.8, my + 1, mr, 0, 6.283); c.fill();
+      c.globalAlpha = 1; c.fillStyle = rnd() < 0.5 ? '#fff3c0' : '#ffe08a'; c.beginPath(); c.arc(mx, my, mr * 0.78, 0, 6.283); c.fill();
+    }
+  };
+
+  // sombra en el suelo
+  c.globalAlpha = 0.25 * k; c.fillStyle = '#000';
+  c.beginPath(); c.ellipse(x, y + d + r * 0.92, r * 0.8, 9, 0, 0, 6.283); c.fill(); c.globalAlpha = 1;
+
+  // grosor del trozo (borde de abajo, más oscuro)
+  let g = c.createLinearGradient(0, y, 0, y + d + r);
+  g.addColorStop(0, '#d98f2c'); g.addColorStop(1, '#a8601a');
+  c.beginPath(); _sfBorde(c, x, y + d, r + 2); c.fillStyle = g; c.fill();
+  c.strokeStyle = '#6e3a0c'; c.lineWidth = 5; c.stroke();
+
+  // cara: empanizado dorado
+  g = c.createRadialGradient(x - 24, y - 30, 6, x, y, r * 1.3);
+  g.addColorStop(0, '#ffeeb0'); g.addColorStop(0.5, '#f8c85a'); g.addColorStop(1, '#e19b2c');
+  c.beginPath(); _sfBorde(c, x, y, r + 2); c.fillStyle = g; c.fill();
+  c.strokeStyle = '#8f4d12'; c.lineWidth = 5; c.stroke();
+  migas(r - 14, r - 2, 46, y);
+
+  // arroz
+  g = c.createLinearGradient(0, y - 60, 0, y + 60); g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#dde3ee');
+  c.beginPath(); c.arc(x, y, 58, 0, 6.283); c.fillStyle = g; c.fill();
+  c.strokeStyle = '#aab6cc'; c.lineWidth = 2.5; c.stroke();
+  c.fillStyle = '#c3cde0';
+  for (const rad of [51, 44]) for (let a = rnd() * 0.3; a < 6.283; a += 0.34 + rnd() * 0.08) {
+    c.beginPath(); c.ellipse(x + Math.cos(a) * rad, y + Math.sin(a) * rad, 5, 2.2, a + Math.PI / 2, 0, 6.283); c.fill();
+  }
+
+  // alga nori
+  c.beginPath(); c.arc(x, y, 38, 0, 6.283); c.fillStyle = '#14241b'; c.fill();
+  c.strokeStyle = '#6a9c7a'; c.lineWidth = 3; c.globalAlpha = 0.6;
+  c.beginPath(); c.arc(x, y, 34.5, -2.8, -1.5); c.stroke(); c.globalAlpha = 1;
+  c.beginPath(); c.arc(x, y, 31, 0, 6.283); c.fillStyle = '#f7f9fc'; c.fill();
+
+  // relleno: pollo y palta
+  c.save(); c.translate(x, y); c.scale(1.05, 1.05);
+  c.beginPath(); c.arc(0, 0, 29, 0, 6.283); c.clip();
+  g = c.createLinearGradient(-24, -14, 8, 20); g.addColorStop(0, '#fff7ea'); g.addColorStop(1, '#ebcfa6');
+  c.beginPath(); c.moveTo(-26, 2); c.bezierCurveTo(-26, -11, -12, -15, -2, -10);
+  c.bezierCurveTo(8, -5, 9, 8, 2, 16); c.bezierCurveTo(-7, 25, -26, 19, -26, 2); c.closePath();
+  c.fillStyle = g; c.fill(); c.strokeStyle = '#c9a87a'; c.lineWidth = 2.5; c.stroke();
+  c.strokeStyle = '#dcc093'; c.lineWidth = 1.8;
+  c.beginPath(); c.moveTo(-19, -2); c.quadraticCurveTo(-10, -5, -3, 0); c.moveTo(-18, 9); c.quadraticCurveTo(-9, 6, -2, 10); c.stroke();
+  const gajo = (pts, fill, hi, hx, hy) => {
+    c.beginPath(); c.moveTo(...pts[0]);
+    for (let i = 1; i < pts.length; i += 3) c.bezierCurveTo(...pts[i], ...pts[i + 1], ...pts[i + 2]);
+    c.closePath(); c.fillStyle = fill; c.fill(); c.strokeStyle = '#4f8a22'; c.lineWidth = 2.5; c.stroke();
+    c.beginPath(); c.ellipse(hx, hy, 5, 3.4, -0.5, 0, 6.283); c.fillStyle = hi; c.fill();
+  };
+  gajo([[5, -22], [16, -27], [27, -17], [23, -5], [21, 0], [8, -2], [5, -9], [3, -13], [3, -18], [5, -22]], '#b8e06c', '#e6f7ae', 13, -13);
+  gajo([[8, 6], [19, 2], [28, 8], [23, 17], [19, 25], [6, 23], [6, 14], [6, 10], [6, 8], [8, 6]], '#9cd24a', '#d6ef8e', 14, 13);
+  c.restore();
+
+  // brillo de la cara
+  c.strokeStyle = '#fff'; c.lineWidth = 6; c.globalAlpha = 0.55;
+  c.beginPath(); c.arc(x, y, r - 4, -2.7, -2.05); c.stroke(); c.globalAlpha = 1;
+
+  // destellos
+  c.fillStyle = '#fff'; c.globalAlpha = 0.9;
+  const star = (sx, sy, z) => { c.beginPath(); c.moveTo(sx, sy - 12 * z); c.lineTo(sx + 3 * z, sy - 3 * z); c.lineTo(sx + 12 * z, sy);
+    c.lineTo(sx + 3 * z, sy + 3 * z); c.lineTo(sx, sy + 12 * z); c.lineTo(sx - 3 * z, sy + 3 * z); c.lineTo(sx - 12 * z, sy);
+    c.lineTo(sx - 3 * z, sy - 3 * z); c.closePath(); c.fill(); };
+  star(226, 30, 1); star(30, 196, 0.6);
+  c.restore();
 }
 
 function pDuck(c) {
@@ -1064,59 +1426,206 @@ function dDuck(c, p, deep) {
   c.fill();
 }
 
-function pRing(c) {
-  c.beginPath();
-  c.arc(0, 0.32, 0.76, 0, Math.PI * 2);
-  c.moveTo(0.46, 0.32);
-  c.arc(0, 0.32, 0.46, 0, Math.PI * 2, true);
-  c.moveTo(-0.42, -0.72);
-  c.lineTo(-0.22, -1.0);
-  c.lineTo(0.22, -1.0);
-  c.lineTo(0.42, -0.72);
-  c.lineTo(0, -0.22);
-  c.closePath();
+/* ========================= ANILLO DE COMPROMISO ===================== */
+function _gema(c) {   // diamante (sentido horario)
+  c.moveTo(88, 62); c.lineTo(108, 30); c.lineTo(148, 30); c.lineTo(168, 62); c.lineTo(128, 118); c.closePath();
+}
+function _garras(c) {
+  c.moveTo(96, 84); c.lineTo(116, 108); c.lineTo(104, 112); c.closePath();
+  c.moveTo(160, 84); c.lineTo(152, 112); c.lineTo(140, 108); c.closePath();
 }
 
-function dRing(c, p, deep) {
-  const A = [-0.42, -0.72], B = [-0.22, -1.0], C = [0.22, -1.0], D = [0.42, -0.72], E = [0, -0.22], M = [0, -0.7];
+function pAnilloCompromiso(c) {
+  c.save(); _u(c);
   c.beginPath();
-  c.moveTo(A[0], A[1]);
-  c.lineTo(B[0], B[1]);
-  c.lineTo(C[0], C[1]);
-  c.lineTo(D[0], D[1]);
-  c.lineTo(E[0], E[1]);
-  c.closePath();
-  c.fillStyle = 'rgba(236,250,255,.92)';
-  c.fill();
-  tri(c, A, B, M, 'rgba(255,255,255,.85)');
-  tri(c, B, C, M, 'rgba(190,232,252,.8)');
-  tri(c, C, D, M, 'rgba(120,190,230,.65)');
-  tri(c, A, M, E, 'rgba(120,190,230,.55)');
-  tri(c, D, M, E, 'rgba(255,255,255,.4)');
-  c.beginPath();
-  c.moveTo(A[0], A[1]);
-  c.lineTo(B[0], B[1]);
-  c.lineTo(C[0], C[1]);
-  c.lineTo(D[0], D[1]);
-  c.lineTo(E[0], E[1]);
-  c.closePath();
-  c.lineWidth = 0.035;
-  c.strokeStyle = rgba(deep, 0.75);
-  c.stroke();
+  _ring(c, 128, 174, 76, 44);
+  _garras(c);
+  _gema(c);
+  c.restore();
+}
+
+function dAnilloCompromiso(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _u(c);
+
+  // banda: borde oscuro + plata/oro blanco
+  c.beginPath(); _ring(c, 128, 174, 76, 44); c.fillStyle = '#5b6a80'; c.fill();
+  let g = c.createLinearGradient(78.3, 103, 177.7, 245);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, '#d6dfea'); g.addColorStop(1, '#8d9db3');
+  c.beginPath(); _ring(c, 128, 174, 71, 39); c.fillStyle = g; c.fill();
+  // brillo de la banda
   c.lineCap = 'round';
+  c.beginPath(); c.arc(128, 174, 61, -2.95, -2.1);
+  c.strokeStyle = '#fff'; c.lineWidth = 7; c.globalAlpha = 0.8; c.stroke();
+  c.globalAlpha = 1;
+
+  // garras
+  c.beginPath(); _garras(c);
+  c.fillStyle = '#c9d3df'; c.fill();
+  c.lineWidth = 2; c.lineJoin = 'round'; c.strokeStyle = '#6b7a8f'; c.stroke();
+
+  // diamante
+  g = c.createLinearGradient(88, 30, 168, 118);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, '#bfeaff'); g.addColorStop(1, '#6cc4ee');
+  c.beginPath(); _gema(c); c.fillStyle = g; c.fill();
+  c.lineWidth = 3; c.strokeStyle = '#4aa9d6'; c.stroke();
+  // facetas
+  c.lineWidth = 2; c.globalAlpha = 0.8;
   c.beginPath();
-  c.arc(0, 0.32, 0.61, Math.PI * 1.1, Math.PI * 1.42);
-  c.lineWidth = 0.07;
-  c.strokeStyle = 'rgba(255,255,255,.75)';
+  c.moveTo(88, 62); c.lineTo(168, 62);
+  c.moveTo(108, 30); c.lineTo(118, 62); c.moveTo(148, 30); c.lineTo(138, 62);
+  c.moveTo(118, 62); c.lineTo(128, 118); c.moveTo(138, 62); c.lineTo(128, 118);
   c.stroke();
+  // mesa brillante
+  c.globalAlpha = 0.55; c.fillStyle = '#fff';
+  c.beginPath(); c.moveTo(108, 30); c.lineTo(148, 30); c.lineTo(138, 62); c.lineTo(118, 62); c.closePath(); c.fill();
+  // destello
+  c.globalAlpha = 0.9; c.strokeStyle = '#fff'; c.lineWidth = 5;
+  c.beginPath(); c.moveTo(98, 56); c.lineTo(112, 38); c.stroke();
+  // estrellita
+  c.fillStyle = '#fff';
+  c.beginPath(); c.moveTo(176, 40); c.lineTo(180, 28); c.lineTo(184, 40); c.lineTo(196, 44);
+  c.lineTo(184, 48); c.lineTo(180, 60); c.lineTo(176, 48); c.lineTo(164, 44); c.closePath(); c.fill();
+  c.restore();
 }
 
-function dHeart(c) {
-  const T = [0, -0.62], L = [-1, -0.27], R = [1, -0.27], B = [0, 0.9], C0 = [0, 0.05];
-  tri(c, L, T, C0, 'rgba(255,255,255,.2)');
-  tri(c, T, R, C0, 'rgba(0,0,0,.12)');
-  tri(c, L, C0, B, 'rgba(0,0,0,.16)');
-  tri(c, C0, R, B, 'rgba(255,255,255,.12)');
+/* ================== ANILLO DE BODA (dos argollas de plata) ========== */
+const _ARG_A = [98, 140], _ARG_B = [158, 116], _ARG_RO = 66, _ARG_RI = 40;
+
+function pAnilloBoda(c) {
+  c.save(); _u(c);
+  c.beginPath();
+  _ring(c, _ARG_A[0], _ARG_A[1], _ARG_RO, _ARG_RI);
+  _ring(c, _ARG_B[0], _ARG_B[1], _ARG_RO, _ARG_RI);
+  c.restore();
+}
+
+function _argolla(c, x, y, k) {
+  const ro = _ARG_RO, ri = _ARG_RI, mid = (ro + ri) / 2;
+  // borde oscuro (marca bien el contorno)
+  c.beginPath(); _ring(c, x, y, ro, ri); c.fillStyle = '#5b6a80'; c.fill();
+  // plata
+  const g = c.createLinearGradient(x - ro * 0.7, y - ro, x + ro * 0.7, y + ro);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, '#d6dfea'); g.addColorStop(1, '#8d9db3');
+  c.beginPath(); _ring(c, x, y, ro - 5, ri + 5); c.fillStyle = g; c.fill();
+  // línea clara central
+  c.beginPath(); c.arc(x, y, mid, 0, Math.PI * 2);
+  c.strokeStyle = '#fff'; c.lineWidth = 2.5; c.globalAlpha = 0.5; c.stroke();
+  // brillo y sombra
+  c.lineCap = 'round';
+  c.beginPath(); c.arc(x, y, mid, -2.7, -1.7);
+  c.strokeStyle = '#fff'; c.lineWidth = 6; c.globalAlpha = 0.95; c.stroke();
+  c.beginPath(); c.arc(x, y, mid, 0.5, 1.3);
+  c.strokeStyle = '#5b6a80'; c.lineWidth = 5; c.globalAlpha = 0.35 * k; c.stroke();
+  c.globalAlpha = 1;
+}
+
+function dAnilloBoda(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _u(c);
+  _argolla(c, _ARG_A[0], _ARG_A[1], k);
+  _argolla(c, _ARG_B[0], _ARG_B[1], k);
+  // entrelazado: la argolla A pasa por encima de B en el cruce inferior derecho
+  c.save(); c.beginPath(); c.arc(143.6, 167, 34, 0, Math.PI * 2); c.clip();
+  _argolla(c, _ARG_A[0], _ARG_A[1], k);
+  c.restore();
+  // destello
+  c.fillStyle = '#fff'; c.globalAlpha = 0.95;
+  c.beginPath(); c.moveTo(214, 52); c.lineTo(217, 61); c.lineTo(226, 64); c.lineTo(217, 67);
+  c.lineTo(214, 76); c.lineTo(211, 67); c.lineTo(202, 64); c.lineTo(211, 61); c.closePath(); c.fill();
+  c.restore();
+}
+
+/* ============================ CARTA DE AMOR ========================= */
+function _uCarta(c) { _u(c); c.translate(0, 10); }   // centra el conjunto en (0,0)
+
+function _corazon(c, cx, cy, s, rot) {                // corazón (horario), s = semiancho
+  c.save(); c.translate(cx, cy); c.rotate(rot || 0); c.scale(s, s);
+  c.moveTo(0, -0.35);
+  c.bezierCurveTo(0, -0.9, 1, -0.9, 1, -0.3);
+  c.bezierCurveTo(1, 0.2, 0.4, 0.55, 0, 1);
+  c.bezierCurveTo(-0.4, 0.55, -1, 0.2, -1, -0.3);
+  c.bezierCurveTo(-1, -0.9, 0, -0.9, 0, -0.35);
+  c.closePath(); c.restore();
+}
+
+function pCarta(c) {
+  c.save(); _uCarta(c);
+  c.beginPath();
+  _rrect(c, 28, 74, 200, 126, 14);
+  _corazon(c, 128, 150, 24, 0);
+  _corazon(c, 204, 56, 13, 0.24);
+  _corazon(c, 172, 40, 8, -0.2);
+  c.restore();
+}
+
+function dCarta(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _uCarta(c);
+  c.lineJoin = 'round'; c.lineCap = 'round';
+
+  // papel
+  let g = c.createLinearGradient(0, 74, 0, 200);
+  g.addColorStop(0, '#fff8f0'); g.addColorStop(1, '#ffc9d8');
+  c.beginPath(); _rrect(c, 28, 74, 200, 126, 14); c.fillStyle = g; c.fill();
+
+  // pliegues y solapa (recortados al sobre)
+  c.save(); c.clip();
+  c.fillStyle = '#ff9db9'; c.globalAlpha = 0.28;
+  c.beginPath(); c.moveTo(28, 74); c.lineTo(128, 146); c.lineTo(28, 200); c.closePath(); c.fill();
+  c.beginPath(); c.moveTo(228, 74); c.lineTo(128, 146); c.lineTo(228, 200); c.closePath(); c.fill();
+  c.globalAlpha = 0.35;
+  c.beginPath(); c.moveTo(28, 200); c.lineTo(128, 146); c.lineTo(228, 200); c.closePath(); c.fill();
+  c.globalAlpha = 0.6; c.strokeStyle = '#d4577a'; c.lineWidth = 3;
+  c.beginPath(); c.moveTo(28, 200); c.lineTo(128, 146); c.lineTo(228, 200); c.stroke();
+  // sombra de la solapa
+  c.globalAlpha = 0.22 * k; c.fillStyle = '#9a2a4f';
+  c.beginPath(); c.moveTo(28, 80); c.lineTo(228, 80); c.lineTo(128, 152); c.closePath(); c.fill();
+  // solapa
+  c.globalAlpha = 1;
+  g = c.createLinearGradient(0, 74, 0, 146);
+  g.addColorStop(0, '#fffdf9'); g.addColorStop(1, '#ffdbe6');
+  c.fillStyle = g;
+  c.beginPath(); c.moveTo(28, 74); c.lineTo(228, 74); c.lineTo(128, 146); c.closePath(); c.fill();
+  c.restore();
+
+  // contornos
+  c.strokeStyle = '#d4577a'; c.lineWidth = 5;
+  c.beginPath(); _rrect(c, 28, 74, 200, 126, 14); c.stroke();
+  c.lineWidth = 4;
+  c.save(); c.beginPath(); _rrect(c, 28, 74, 200, 126, 14); c.clip();
+  c.beginPath(); c.moveTo(28, 74); c.lineTo(128, 146); c.lineTo(228, 74); c.stroke();
+  c.restore();
+  // brillo de la solapa
+  c.strokeStyle = '#fff'; c.lineWidth = 3; c.globalAlpha = 0.7;
+  c.beginPath(); c.moveTo(40, 84); c.lineTo(118, 140); c.stroke();
+  c.globalAlpha = 1;
+
+  // sello de corazón: sombra, contorno, cuerpo, relieve y brillo
+  c.fillStyle = '#7a1236'; c.globalAlpha = 0.3 * k;
+  c.beginPath(); _corazon(c, 128, 154, 24, 0); c.fill();
+  c.globalAlpha = 1;
+  c.strokeStyle = '#a3173d'; c.lineWidth = 6;
+  c.beginPath(); _corazon(c, 128, 150, 24, 0); c.stroke();
+  g = c.createRadialGradient(118, 140, 2, 128, 152, 36);
+  g.addColorStop(0, '#ff8aa3'); g.addColorStop(0.5, '#e8325f'); g.addColorStop(1, '#b81f48');
+  c.fillStyle = g; c.beginPath(); _corazon(c, 128, 150, 24, 0); c.fill();
+  c.strokeStyle = '#ff9fb4'; c.lineWidth = 2.5; c.globalAlpha = 0.55;
+  c.beginPath(); _corazon(c, 128, 152, 14, 0); c.stroke();
+  c.globalAlpha = 0.85; c.fillStyle = '#fff';
+  c.beginPath(); c.ellipse(112, 138, 7, 4, -40 * Math.PI / 180, 0, Math.PI * 2); c.fill();
+  c.globalAlpha = 1;
+
+  // corazoncitos flotando
+  [[204, 56, 13, 0.24], [172, 40, 8, -0.2]].forEach(([x, y, s, r]) => {
+    c.strokeStyle = '#c9335f'; c.lineWidth = 3;
+    c.beginPath(); _corazon(c, x, y, s, r); c.stroke();
+    c.fillStyle = '#ff6f95'; c.beginPath(); _corazon(c, x, y, s, r); c.fill();
+    c.fillStyle = '#fff'; c.globalAlpha = 0.85;
+    c.beginPath(); c.arc(x - s * 0.45, y - s * 0.35, s * 0.18, 0, Math.PI * 2); c.fill();
+    c.globalAlpha = 1;
+  });
+  c.restore();
 }
 
 function pBomb(c) {
@@ -1168,46 +1677,55 @@ function newSpriteCtx(R, D) {
   return { cvs: cvs, c: c };
 }
 
+function shadeCustom(c, pathFn, detailFn, p) {
+  c.save();
+  c.shadowColor = 'rgba(12,2,34,.5)';
+  c.shadowBlur = curR * 0.2;
+  c.shadowOffsetY = curR * 0.1;
+  pathFn(c);
+  c.fillStyle = p[2];
+  c.fill();
+  c.restore();
+  detailFn(c, p, false);
+}
+
 function makeSprite(k, s, R, D) {
   const o = newSpriteCtx(R, D), c = o.c, p = PAL[k];
   let body;
   if (k === 0) {
-    body = pApple;
-    shade(c, pApple, p, dApple);
-    appleExtras(c);
+    body = pHelado;
+    shadeCustom(c, pHelado, dHelado, p);
   } else if (k === 1) {
-    body = pDuck;
-    shade(c, pDuck, p, dDuck);
+    body = pAnilloCompromiso;
+    shadeCustom(c, pAnilloCompromiso, dAnilloCompromiso, p);
   } else if (k === 2) {
-    body = pBear;
-    shade(c, pBear, p, dBear);
+    body = pSushi;
+    shadeCustom(c, pSushi, dSushi, p);
   } else if (k === 3) {
-    body = pRing;
-    shade(c, pRing, p, dRing);
+    body = pAnilloBoda;
+    shadeCustom(c, pAnilloBoda, dAnilloBoda, p);
   } else if (k === 4) {
-    body = pWorm;
-    shade(c, pWorm, p, dWorm);
+    body = pGusano;
+    shadeCustom(c, pGusano, dGusano, p);
   } else if (k === 5) {
-    body = pMint;
-    shade(c, pMint, p, dMint);
+    body = pAlgodon;
+    shadeCustom(c, pAlgodon, dAlgodon, p);
   } else {
-    body = pHeart;
-    shade(c, pHeart, p, dHeart);
-    c.save();
-    c.lineJoin = 'round';
-    pHeart(c);
-    c.lineWidth = 0.08;
-    c.strokeStyle = '#FFD36B';
-    c.stroke();
-    pHeart(c);
-    c.lineWidth = 0.025;
-    c.strokeStyle = '#FFF4C8';
-    c.stroke();
-    c.restore();
+    body = pCarta;
+    shadeCustom(c, pCarta, dCarta, p);
   }
   if (s && k < 6) bakeStripes(c, body, s);
   return o.cvs;
 }
+
+// Exponer las 7 figuras en window para el validador y el previsualizador de niveles
+window.pHelado = pHelado; window.dHelado = dHelado;
+window.pAnilloCompromiso = pAnilloCompromiso; window.dAnilloCompromiso = dAnilloCompromiso;
+window.pSushi = pSushi; window.dSushi = dSushi;
+window.pAnilloBoda = pAnilloBoda; window.dAnilloBoda = dAnilloBoda;
+window.pGusano = pGusano; window.dGusano = dGusano;
+window.pAlgodon = pAlgodon; window.dAlgodon = dAlgodon;
+window.pCarta = pCarta; window.dCarta = dCarta;
 
 function makeBomb(R, D) {
   const o = newSpriteCtx(R, D);
@@ -1236,6 +1754,15 @@ function drawTile(t, pxx, pyy, scale, alpha, selected, now) {
   ctx.translate(pxx, pyy);
   ctx.globalAlpha = alpha;
   let sx = scale, sy = scale;
+  const isHint = !busy && !ended && !selected && idleTime >= 3 && hintIds && hintIds.has(t.id);
+  if (isHint && !REDUCED) {
+    const ph = (now % 2200) / 2200;
+    if (ph < 0.22) {
+      const env = Math.sin((ph / 0.22) * Math.PI);
+      ctx.translate(Math.sin(now * 0.038) * cell * 0.018 * env, 0);
+      ctx.rotate(Math.sin(now * 0.038) * 0.045 * env);
+    }
+  }
   if (selected) {
     const b = 1.1 + (REDUCED ? 0 : Math.sin(now / 120) * 0.04);
     sx *= b;
@@ -1430,6 +1957,21 @@ function update(dt, now) {
     waiters = [];
     w.forEach(function (f) { f(); });
   }
+
+  if (busy || ended || moving || drag) {
+    idleTime = 0;
+    hintIds = null;
+  } else {
+    idleTime += dt;
+    if (idleTime >= 3 && !hintIds && board) {
+      hintIds = findHintIds(board);
+    }
+  }
+
+  // Actualizar reloj en vivo y % de riesgo de la partida
+  if (runState.active && !ended && (frameNo % 20 === 0)) {
+    updateRunClockHud();
+  }
 }
 
 function draw(now) {
@@ -1453,7 +1995,14 @@ function draw(now) {
 
   for (let r = 0; r < N; r++) {
     for (let c = 0; c < N; c++) {
-      if ((r + c) % 2) {
+      if (!isMaskOpen(r, c)) {
+        rr(ctx, pad + c * cell + 2, pad + r * cell + 2, cell - 4, cell - 4, cell * 0.22);
+        ctx.fillStyle = 'rgba(10, 4, 22, 0.55)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      } else if ((r + c) % 2) {
         rr(ctx, pad + c * cell + 1, pad + r * cell + 1, cell - 2, cell - 2, cell * 0.2);
         ctx.fillStyle = C.board2;
         ctx.fill();
@@ -1730,24 +2279,164 @@ function toast(msg) {
   toastT = setTimeout(function () { el.classList.remove('on'); }, 1900);
 }
 
+/** Evalúa si todos los objetivos de figuras del nivel actual se han cumplido */
+function isLevelCompleted() {
+  if (!round.objectives || !round.objectives.length) {
+    return round.score >= round.target;
+  }
+  const collectObjs = round.objectives.filter(function (o) { return o.type === 'collect'; });
+  if (collectObjs.length > 0) {
+    for (let i = 0; i < collectObjs.length; i++) {
+      const o = collectObjs[i];
+      const got = (round.collected && round.collected[o.figureId]) || 0;
+      if (got < o.target) return false;
+    }
+    return true;
+  }
+  return round.score >= round.target;
+}
+
+/** Calcula el porcentaje global de avance en las figuras de la misión del nivel */
+function getLevelProgressPct() {
+  if (!round.objectives || !round.objectives.length) {
+    return Math.min(100, (round.score / Math.max(1, round.target)) * 100);
+  }
+  const collectObjs = round.objectives.filter(function (o) { return o.type === 'collect'; });
+  if (collectObjs.length > 0) {
+    let gotTotal = 0, reqTotal = 0;
+    for (let i = 0; i < collectObjs.length; i++) {
+      const o = collectObjs[i];
+      gotTotal += Math.min(o.target, (round.collected && round.collected[o.figureId]) || 0);
+      reqTotal += Math.max(1, o.target);
+    }
+    return Math.min(100, (gotTotal / Math.max(1, reqTotal)) * 100);
+  }
+  return Math.min(100, (round.score / Math.max(1, round.target)) * 100);
+}
+
+/** Dibuja un icono pequeño de figura en un canvas 2D */
+function drawMiniFigureIcon(canvasEl, figId) {
+  if (!canvasEl) return;
+  const size = 22, dpr0 = window.devicePixelRatio || 1;
+  canvasEl.width = size * dpr0;
+  canvasEl.height = size * dpr0;
+  canvasEl.style.width = size + 'px';
+  canvasEl.style.height = size + 'px';
+  const c = canvasEl.getContext('2d');
+  c.scale(dpr0, dpr0);
+  c.translate(size / 2, size / 2);
+  c.scale(size / 2.15, size / 2.15);
+  const fig = window.GOMI_FIGURES && window.GOMI_FIGURES[figId];
+  if (fig && typeof window[fig.dFn] === 'function') {
+    window[fig.dFn](c, PAL[figId] || PAL[0], false);
+  }
+}
+
+function renderObjectivesHud() {
+  const bar = $('objBar'), box = $('missionBox');
+  if (!bar) return;
+  const objs = round.objectives || [];
+  const collectObjs = objs.filter(function (o) { return o.type === 'collect'; });
+  if (!collectObjs.length) {
+    if (box) box.hidden = true;
+    bar.hidden = true;
+    return;
+  }
+  if (box) box.hidden = false;
+  bar.hidden = false;
+
+  // Reconstruir chips si cambió el nivel
+  if (bar.dataset.lvl !== String(round.levelId)) {
+    bar.dataset.lvl = String(round.levelId);
+    bar.innerHTML = '';
+    collectObjs.forEach(function (o) {
+      const chip = document.createElement('div');
+      chip.className = 'obj-chip';
+      chip.dataset.fid = String(o.figureId);
+      chip.title = o.name;
+
+      const left = document.createElement('span');
+      left.className = 'obj-chip-left';
+      const ic = document.createElement('canvas');
+      drawMiniFigureIcon(ic, o.figureId);
+      const nm = document.createElement('span');
+      nm.className = 'obj-name';
+      nm.textContent = o.shortName || o.name;
+      left.append(ic, nm);
+
+      const txt = document.createElement('span');
+      txt.className = 'obj-cnt';
+      chip.append(left, txt);
+      bar.appendChild(chip);
+    });
+  }
+
+  collectObjs.forEach(function (o) {
+    const chip = bar.querySelector('.obj-chip[data-fid="' + o.figureId + '"]');
+    if (!chip) return;
+    const got = Math.min(o.target, (round.collected && round.collected[o.figureId]) || 0);
+    const done = got >= o.target;
+    chip.classList.toggle('done', done);
+    const txt = chip.querySelector('.obj-cnt');
+    if (txt) txt.textContent = done ? ('✓ ' + o.target + '/' + o.target) : (got + ' / ' + o.target);
+  });
+}
+
+function formatMMSS(ms) {
+  const sec = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+function updateRunClockHud() {
+  const pill = $('runRiskTxt');
+  if (!pill) return;
+  const lvl = getActiveLevel();
+  const blk = lvl ? lvl.block : 1;
+  const diffName = lvl ? lvl.difficulty : 'Muy Fácil';
+  pill.textContent = diffName;
+  pill.className = 'run-risk-pill ' + (
+    blk <= 2 ? 'easy' :
+    blk <= 4 ? 'mid' :
+    blk <= 7 ? 'hard' : 'danger'
+  );
+}
+
 function renderHud() {
-  if ($('score')) $('score').textContent = fmt(round.score);
-  if ($('target')) $('target').textContent = fmt(round.target);
+  const totalSc = (runState.totalScore || 0) + (round.score || 0);
+  if ($('score')) $('score').textContent = fmt(totalSc);
+  if ($('target')) {
+    $('target').textContent = fmt(runState.nextMs || 1000);
+  }
   if ($('moves')) $('moves').textContent = round.moves;
 
+  const doneAll = isLevelCompleted();
+  const pct = Math.round(getLevelProgressPct());
   const p = $('prog');
   if (p) {
-    p.style.width = Math.min(100, round.score / round.target * 100) + '%';
-    p.classList.toggle('done', round.score >= round.target);
+    p.style.width = pct + '%';
+    p.classList.toggle('done', doneAll);
   }
 
+  const lvl = getActiveLevel();
+  if ($('lvlBadgeTxt')) {
+    $('lvlBadgeTxt').textContent = 'ETAPA ' + runState.stage + (lvl ? (' · NIVEL #' + lvl.id) : '');
+  }
   if ($('roundLbl')) {
-    $('roundLbl').textContent = 'Ronda ' + round.no + (round.used ? ' · última oportunidad ' + round.used : '');
+    if (lvl) {
+      $('roundLbl').textContent = lvl.name;
+    } else {
+      $('roundLbl').textContent = 'Etapa ' + runState.stage;
+    }
   }
 
-  const kind = SKILL_ORDER[(round.nextMs / 1000 - 1) % 3];
-  if ($('msTxt')) $('msTxt').textContent = 'Próximo hito ' + fmt(round.nextMs) + ' · ganas ' + SKILL_NAME[kind];
-  if ($('msBar')) $('msBar').style.width = ((round.score % 1000) / 10) + '%';
+  updateRunClockHud();
+  renderObjectivesHud();
+
+  const kind = SKILL_ORDER[(runState.nextMs / 1000 - 1) % 3];
+  if ($('msTxt')) $('msTxt').textContent = 'Próximo hito ' + fmt(runState.nextMs) + ' · ganas ' + SKILL_NAME[kind];
+  if ($('msBar')) $('msBar').style.width = ((totalSc % 1000) / 10) + '%';
 
   let hn = 0;
   if (board) {
@@ -1758,11 +2447,21 @@ function renderHud() {
     }
   }
 
-  if ($('loveTxt')) $('loveTxt').textContent = 'Corazones en juego: ' + hn + ' · junta 3 y explota TODO';
+  if ($('loveTxt')) $('loveTxt').textContent = 'Cartas en juego: ' + hn + ' · junta 3 y explota TODO';
   if ($('goalTxt')) {
-    $('goalTxt').textContent = round.score >= round.target
-      ? 'Meta superada: cada punto extra suma'
-      : 'Faltan ' + fmt(round.target - round.score) + ' puntos';
+    const collectObjs = (round.objectives || []).filter(function (o) { return o.type === 'collect'; });
+    if (doneAll) {
+      $('goalTxt').textContent = '¡Etapa superada! (100%)';
+    } else if (collectObjs.length > 0) {
+      let gotTotal = 0, reqTotal = 0;
+      collectObjs.forEach(function (o) {
+        gotTotal += Math.min(o.target, (round.collected && round.collected[o.figureId]) || 0);
+        reqTotal += o.target;
+      });
+      $('goalTxt').textContent = gotTotal + ' / ' + reqTotal + ' figuras (' + pct + '%)';
+    } else {
+      $('goalTxt').textContent = pct + '% · Faltan ' + fmt(Math.max(0, round.target - round.score)) + ' pts';
+    }
   }
 }
 
@@ -1804,6 +2503,7 @@ function dropIn(b) {
   for (let r = 0; r < N; r++) {
     for (let c = 0; c < N; c++) {
       const t = b[r][c];
+      if (!t) continue;
       t.y = r - N - 1 - c * 0.15;
       t.vy = 0;
       t.fall = true;
@@ -1811,25 +2511,118 @@ function dropIn(b) {
   }
 }
 
-async function startRound(first) {
+/**
+ * Inicia una Partida nueva (newRun = true) o avanza a la siguiente etapa sorteada
+ * por probabilidad (%) dentro de la misma Partida (newRun = false).
+ */
+async function startRound(first, forcedLevelId, continueRun) {
   busy = true;
   ended = false;
   sel = null;
   $('ov').hidden = true;
-  const tg = targetFor(levelOf(rp));
+
+  const isContinuing = Boolean(continueRun) && runState.active;
+  if (!isContinuing) {
+    // Nueva Partida desde Etapa 1
+    runState = {
+      active: true,
+      stage: 1,
+      stagesCleared: 0,
+      totalScore: 0,
+      totalTarget: 0,
+      bonusCoins: 0,
+      bonusElo: 0,
+      startTime: Date.now(),
+      nextMs: 1000,
+      playedLevels: new Set(),
+      defeatPct: 12,
+      pressure: 0,
+      activeWeights: null,
+      activeHeartRate: null,
+      activeMask: null
+    };
+    skills = { hammer: 1, bolt: 0, rainbow: 0 };
+  }
+
+  const rolled = rollLevelByProbability(runState.stage);
+  if (typeof forcedLevelId === 'number') {
+    curLevelId = Math.min(100, Math.max(0, forcedLevelId | 0));
+  } else if (rolled.level) {
+    curLevelId = rolled.level.id;
+  } else {
+    curLevelId = 0;
+  }
+  runState.playedLevels.add(curLevelId);
+  runState.pressure = rolled.pressure;
+
+  const lvl = getActiveLevel();
+  const blk = lvl ? lvl.block : 1;
+  const clearReward = DIFF_CLEAR_BONUS[blk] || DIFF_CLEAR_BONUS[1];
+
+  // Variación dinámica de figuras y distribución por partida:
+  // Permuta aleatoriamente las 6 figuras base (0..5) en cada etapa para que aunque toque
+  // un mismo bloque o nivel en otra partida, las figuras pedidas y el tablero cambien.
+  const figPerm = [0, 1, 2, 3, 4, 5];
+  for (let i = figPerm.length - 1; i > 0; i--) {
+    const j = (Math.random() * (i + 1)) | 0;
+    const tmp = figPerm[i]; figPerm[i] = figPerm[j]; figPerm[j] = tmp;
+  }
+
+  const stageMoves = lvl ? lvl.moves : MOVES;
+  const stageObjectives = (lvl && lvl.objectives ? lvl.objectives : []).map(function (o) {
+    if (o.type === 'collect' && o.figureId >= 0 && o.figureId < 6 && typeof forcedLevelId !== 'number') {
+      const newFid = figPerm[o.figureId];
+      const fMeta = window.GOMI_FIGURES && window.GOMI_FIGURES[newFid];
+      return {
+        type: 'collect',
+        figureId: newFid,
+        key: fMeta ? fMeta.key : o.key,
+        name: fMeta ? fMeta.name : o.name,
+        shortName: fMeta ? fMeta.shortName : o.shortName,
+        target: o.target
+      };
+    }
+    return Object.assign({}, o);
+  });
+
+  // Permutar también los pesos correspondientes a las figuras permutadas
+  const rawW = (lvl && Array.isArray(lvl.weights)) ? lvl.weights : [1, 1, 1, 1, 1, 1];
+  const permW = [1, 1, 1, 1, 1, 1];
+  for (let i = 0; i < 6; i++) {
+    permW[figPerm[i]] = rawW[i];
+  }
+  runState.activeWeights = typeof forcedLevelId === 'number' ? rawW.slice() : permW;
+  runState.activeHeartRate = lvl ? lvl.heartRate : 0.03;
+  runState.activeMask = lvl ? lvl.mask : null;
+
+  const scoreObj = stageObjectives.find(function (o) { return o.type === 'score'; });
+  const minScore = scoreObj ? scoreObj.target : 0;
+  const tg = minScore > 0 ? minScore : (lvl ? 1000 + lvl.id * 80 : 1200);
+
   round = {
+    levelId: lvl ? lvl.id : 0,
+    levelName: lvl ? lvl.name : ('Etapa ' + runState.stage),
+    difficulty: lvl ? lvl.difficulty : 'Medio',
+    block: blk,
+    clearBonusPts: clearReward.pts,
+    clearBonusCoins: clearReward.coins,
+    clearBonusElo: clearReward.elo,
+    rollPct: rolled.rollPct || 25,
     score: 0,
-    moves: MOVES,
+    moves: stageMoves,
+    minScore: minScore,
     target: tg,
     base: tg,
-    no: roundNo + 1,
+    no: runState.stage,
+    objectives: stageObjectives.length ? stageObjectives : [{ type: 'score', target: tg }],
+    collected: [0, 0, 0, 0, 0, 0, 0],
     reached: false,
     used: 0,
     lossMult: 1,
-    nextMs: 1000,
+    nextMs: runState.nextMs,
     startTime: Date.now()
   };
-  skills = { hammer: 1, bolt: 0, rainbow: 0 };
+
   skillMode = null;
   lc = null;
   $('lcCard').hidden = true;
@@ -2039,10 +2832,12 @@ function setSkillMode(k) {
 }
 
 function checkMilestones() {
-  while (round.score >= round.nextMs) {
-    const idx = round.nextMs / 1000, kind = SKILL_ORDER[(idx - 1) % 3];
+  const totalSc = (runState.totalScore || 0) + (round.score || 0);
+  while (totalSc >= runState.nextMs) {
+    const idx = runState.nextMs / 1000, kind = SKILL_ORDER[(idx - 1) % 3];
     skills[kind]++;
-    round.nextMs += 1000;
+    runState.nextMs += 1000;
+    round.nextMs = runState.nextMs;
     floats.push({ x: S / 2, y: S * 0.28, text: 'HITO ' + fmt(idx * 1000), col: '#7FDDFF', age: 0, size: 0.8, big: true });
     toast('Hito ' + fmt(idx * 1000) + ': ganaste ' + SKILL_NAME[kind]);
     sfx.milestone();
@@ -2054,6 +2849,7 @@ function checkMilestones() {
 
 async function trySwap(i, j) {
   if (busy || ended) return;
+  if (!cellOf(board, i) || !cellOf(board, j)) return;
   busy = true;
   sel = null;
   sfx.swap();
@@ -2078,13 +2874,15 @@ async function trySwap(i, j) {
 async function useSkill(i) {
   const k = skillMode;
   if (!k || busy || ended || skills[k] <= 0) return;
+  const tile = cellOf(board, i);
+  if (!tile) return;
   busy = true;
   sel = null;
   skillMode = null;
   skills[k]--;
   renderSkills();
 
-  const r = (i / N) | 0, c = i % N, set = new Set([i]), tile = cellOf(board, i);
+  const r = (i / N) | 0, c = i % N, set = new Set([i]);
   const cx = px(c), cy = px(r);
 
   if (k === 'hammer') {
@@ -2092,8 +2890,8 @@ async function useSkill(i) {
     sfx.hammerWind();
     await wait(270);
     for (let x = 0; x < N; x++) {
-      set.add(r * N + x);
-      set.add(x * N + c);
+      if (cellOf(board, r * N + x)) set.add(r * N + x);
+      if (cellOf(board, x * N + c)) set.add(x * N + c);
     }
     beams.push({ dir: 'h', pos: cy, life: 0.6, max: 0.6, k: 1.7 });
     beams.push({ dir: 'v', pos: cx, life: 0.6, max: 0.6, k: 1.7 });
@@ -2134,7 +2932,9 @@ async function useSkill(i) {
   } else if (k === 'bolt') {
     for (let d = -N; d <= N; d++) {
       [[r + d, c + d], [r + d, c - d]].forEach(function (q) {
-        if (q[0] >= 0 && q[0] < N && q[1] >= 0 && q[1] < N) set.add(q[0] * N + q[1]);
+        if (q[0] >= 0 && q[0] < N && q[1] >= 0 && q[1] < N && cellOf(board, q[0] * N + q[1])) {
+          set.add(q[0] * N + q[1]);
+        }
       });
     }
     beams.push({ dir: 'd1', x: cx, y: cy, life: 0.5, max: 0.5, k: 1.2 });
@@ -2170,6 +2970,9 @@ async function cascade(res) {
     let sx = 0, sy = 0, hitStripe = false, hitBomb = false;
 
     for (const t of res.removed) {
+      if (t && t.t >= 0 && t.t <= 6 && round.collected) {
+        round.collected[t.t] = (round.collected[t.t] || 0) + 1;
+      }
       ghosts.push({ t: t, born: now });
       popFx(t, combo);
       if (t.s === 1 || t.s === 2) { hitStripe = true; beamFx(t); }
@@ -2202,9 +3005,9 @@ async function cascade(res) {
     checkMilestones();
     renderHud();
 
-    if (!round.reached && round.score >= round.target) {
+    if (!round.reached && isLevelCompleted()) {
       round.reached = true;
-      toast('¡Meta superada! Sigue sumando puntos');
+      toast('¡Objetivos del nivel superados! Sigue sumando');
       sfx.goal();
       flashFx('255,209,102', 0.6);
       confettiBurst(S * 0.1, S, 40, 1100, -Math.PI / 2 + 0.45, 0.7);
@@ -2215,6 +3018,49 @@ async function cascade(res) {
     gravity(board);
     await settle();
     res = step(board, null);
+  }
+
+  // Si completó todos los objetivos de la etapa actual, gana el bono de puntos según la dificultad superada y pasa a la siguiente etapa
+  if (isLevelCompleted()) {
+    const blk = round.block || (getActiveLevel() ? getActiveLevel().block : 1);
+    const diffBonus = DIFF_CLEAR_BONUS[blk] || DIFF_CLEAR_BONUS[1];
+    const movesBonus = Math.max(0, round.moves) * 40;
+    const stageClearPts = diffBonus.pts + movesBonus;
+
+    round.score += stageClearPts;
+    runState.totalScore += round.score;
+    runState.totalTarget += round.target;
+    runState.bonusCoins = (runState.bonusCoins || 0) + diffBonus.coins;
+    runState.bonusElo = (runState.bonusElo || 0) + diffBonus.elo;
+    runState.stagesCleared++;
+    runState.stage++;
+    roundNo++;
+    checkMilestones();
+    renderHud();
+    save();
+
+    floats.push({
+      x: S / 2,
+      y: S * 0.44,
+      text: '¡' + diffBonus.label.toUpperCase() + ' SUPERADO!',
+      col: '#4FD58F',
+      age: 0,
+      size: 0.85,
+      big: true
+    });
+    floats.push({
+      x: S / 2,
+      y: S * 0.56,
+      text: '+' + fmt(stageClearPts) + ' PTS  (+' + diffBonus.coins + ' Oro · +' + diffBonus.elo + ' ELO)',
+      col: '#FFD066',
+      age: 0,
+      size: 0.52,
+      big: true
+    });
+    toast('¡Superaste ' + diffBonus.label + '! +' + fmt(stageClearPts) + ' pts · +' + diffBonus.coins + ' Oro · +' + diffBonus.elo + ' ELO');
+    await wait(950);
+    await startRound(false, undefined, true);
+    return;
   }
 
   while (!hasMove(board)) {
@@ -2234,21 +3080,21 @@ async function cascade(res) {
 }
 
 /* ============================================================================
-   10. SISTEMA DE ÚLTIMA OPORTUNIDAD Y CIERRE DE RONDA
+   10. FIN DE LA PARTIDA (AL MORIR) Y ENTREGA DE RECOMPENSAS (ORO Y ELO)
    ============================================================================ */
 function roundOver() {
-  if (round.score < round.target && round.used < 2) showLastChance();
-  else endRound();
+  // En modo Partida, al quedarse sin movimientos sin completar la etapa el jugador muere y cobra sus recompensas
+  endRound();
 }
 
 function showLastChance() {
   busy = true;
-  const nt = Math.round((round.target + round.base * 0.2) / 10) * 10;
+  const nt = round.minScore > 0 ? Math.round((round.target + round.base * 0.15) / 10) * 10 : round.target;
   const mult = 1 + 0.5 * (round.used + 1), extra = round.used === 0 ? 5 : 4;
   lc = { nt: nt, mult: mult, extra: extra };
-  $('lcText').textContent = 'Te quedaste en ' + fmt(round.score) + ' de ' + fmt(round.target) + '. Te doy movimientos extra, pero la meta sube.';
+  $('lcText').textContent = 'Aún faltan objetivos del Nivel ' + round.levelId + '. Te doy movimientos extra para completarlo.';
   $('lcMoves').textContent = '+' + extra;
-  $('lcTarget').textContent = fmt(nt);
+  $('lcTarget').textContent = round.minScore > 0 ? fmt(nt) : 'Completar';
   $('lcRisk').textContent = 'x' + String(mult).replace('.', ',');
   $('resCard').hidden = true;
   $('lcCard').hidden = false;
@@ -2265,6 +3111,11 @@ $('lcYes').addEventListener('click', function () {
   round.used++;
   round.moves += lc.extra;
   round.target = lc.nt;
+  if (round.objectives) {
+    round.objectives.forEach(function (o) {
+      if (o.type === 'score') o.target = lc.nt;
+    });
+  }
   round.lossMult = lc.mult;
   round.reached = false;
   $('ov').hidden = true;
@@ -2304,63 +3155,81 @@ document.addEventListener('keydown', function (e) {
 function endRound() {
   ended = true;
   busy = true;
-  const before = rp, L0 = levelOf(rp), win = round.score >= round.target;
-  streak = win ? streak + 1 : 0;
+  runState.active = false;
+
+  const totalRunScore = (runState.totalScore || 0) + (round.score || 0);
+  const totalRunTarget = Math.max(1000, (runState.totalTarget || 0) + (round.target || 1000));
+  const stagesCleared = runState.stagesCleared || 0;
+  const durationMs = runState.startTime ? (Date.now() - runState.startTime) : 60000;
+  const survivedGood = stagesCleared >= 1 || totalRunScore >= 1200;
+
+  const before = rp, L0 = levelOf(rp);
+  streak = survivedGood ? (streak + 1) : 0;
   roundNo++;
 
-  let delta = roundDelta(round.score, round.target, L0, streak);
-  if (delta < 0) delta = -Math.min(150, Math.round(-delta * round.lossMult));
-  else delta += 5 * round.used;
+  // Calcular y enviar recompensas de la Partida al morir (incluyendo el Oro y ELO ganados por cada dificultad superada)
+  const baseReward = window.enviarRecompensaGomi ? window.enviarRecompensaGomi({
+    score: totalRunScore,
+    target: totalRunTarget,
+    win: survivedGood,
+    streak: Math.max(streak, stagesCleared),
+    round: curLevelId + 1,
+    stagesCleared: stagesCleared,
+    bonusCoins: runState.bonusCoins || 0,
+    bonusElo: runState.bonusElo || 0,
+    durationMs: durationMs
+  }) : { earnedCoins: Math.max(1, (runState.bonusCoins || 0) + 1), lpAward: (runState.bonusElo || 0) };
 
-  rp = Math.max(0, rp + delta);
+  const earnedCoins = baseReward.earnedCoins;
+  const lpAward = baseReward.lpAward;
+
+  // Actualizar ELO / RP local sumando el bono acumulado por las dificultades superadas
+  const rpDelta = survivedGood
+    ? Math.max(4, lpAward)
+    : -Math.min(20, Math.max(4, 12 - Math.floor(totalRunScore / 200)));
+  rp = Math.max(0, rp + rpDelta);
+  peak = Math.max(peak, rp);
+  const L1 = levelOf(rp);
   const real = rp - before;
 
-  // Calibración horaria equivalente a Rompecabezas (~450-550 LP / hora):
-  // Rondas duran ~1.5 a 2.5 min.
-  // Rondas 1-5 (~2 min c/u): 10 - 18 LP · 3 - 5 monedas
-  // Rondas 10-20 (~2 min c/u): 25 - 45 LP · 6 - 9 monedas
-  // Rondas 30+ (~2.5 min c/u): 60 - 75 LP · 10 - 14 monedas
-  // Jugando 20 rondas en 1 hora = ~500 LP y ~110 monedas
-  // Rescate y envío desacoplado de monedas y LP (ver reward-config.js)
-  const { earnedCoins, lpAward } = window.enviarRecompensaGomi ? window.enviarRecompensaGomi({
-    score: round.score,
-    target: round.target,
-    win: win,
-    streak: streak,
-    round: roundNo,
-    durationMs: round.startTime ? (Date.now() - round.startTime) : 120000
-  }) : { earnedCoins: 1, lpAward: 0 };
+  hist.unshift({
+    no: roundNo,
+    score: totalRunScore,
+    target: totalRunTarget,
+    d: real
+  });
+  hist = hist.slice(0, 8);
 
-  let title;
-  if (!win && rp === 0 && before > 0) title = 'Meta no alcanzada';
-  else if (L1 > L0) title = '¡Ronda superada!';
-  else if (L1 < L0) title = 'Meta no alcanzada';
-  else title = win ? 'Ronda superada' : 'Meta no alcanzada';
+  const title = stagesCleared >= 4
+    ? '¡Partida Épica Finalizada!'
+    : stagesCleared >= 1
+      ? '¡Fin de la Partida!'
+      : '¡Has Caído en la Etapa 1!';
 
   $('ovTitle').textContent = title;
   const dl = $('ovDelta');
-  dl.textContent = (real > 0 ? '+' : real < 0 ? '−' : '') + Math.abs(real) + ' RP  •  +' + earnedCoins + ' monedas';
+  dl.textContent = '+' + earnedCoins + ' Oro  •  ' + (real >= 0 ? '+' : '−') + Math.abs(real) + ' ELO (LP)';
   dl.className = 'delta ' + (real >= 0 ? 'up' : 'down');
-  $('ovLine').textContent = fmt(round.score) + ' puntos de ' + fmt(round.target) + ' pedidos' + (win && streak > 1 ? ' · racha de ' + streak : '') + ' · +' + earnedCoins + ' monedas ganadas';
-  $('ovRank').textContent = (rp === 0 && !win && before > 0 ? 'Vuelves a ' : 'Ahora eres ') + rankOf(rp).name + ' con ' + fmt(rp) + ' puntos de rango';
-  if (round.used) $('ovLine').textContent += ' · última oportunidad x' + round.used;
-  $('nextBtn').textContent = 'Siguiente ronda';
+  $('ovLine').textContent =
+    'Sobreviviste ' + formatMMSS(durationMs) +
+    ' · ' + stagesCleared + (stagesCleared === 1 ? ' etapa superada' : ' etapas superadas') +
+    ' · ' + fmt(totalRunScore) + ' pts totales (caíste en B' + (getActiveLevel() ? getActiveLevel().block : 1) + ' · ' + round.difficulty + ')';
+  $('ovRank').textContent = 'Rango ELO: ' + rankOf(rp).name + ' (' + fmt(rp) + ' LP)';
+  $('nextBtn').textContent = 'Jugar nueva partida';
   $('resCard').hidden = false;
   $('lcCard').hidden = true;
   $('ov').hidden = false;
   save();
   renderRank();
 
-  if (win) {
+  if (survivedGood) {
     sfx.win(L1 > L0);
-    confettiRain(L1 > L0 ? 260 : 160);
-    confettiBurst(S * 0.08, S, 60, 1300, -Math.PI / 2 + 0.5, 0.8);
-    confettiBurst(S * 0.92, S, 60, 1300, -Math.PI / 2 - 0.5, 0.8);
-    flashFx('255,209,102', 0.7);
+    confettiRain(L1 > L0 ? 220 : 120);
+    flashFx('255,209,102', 0.65);
   } else {
     sfx.lose(rp === 0 && before > 0);
-    shake = Math.max(shake, rp === 0 && before > 0 ? 16 : 7);
-    flashFx('255,60,90', rp === 0 && before > 0 ? 0.8 : 0.45);
+    shake = Math.max(shake, 12);
+    flashFx('255,60,90', 0.6);
   }
 
   const bd = $('badge');
@@ -2384,7 +3253,9 @@ function pos(e) {
 
 function cellAt(p) {
   const c = Math.floor((p.x - pad) / cell), r = Math.floor((p.y - pad) / cell);
-  return (c < 0 || c >= N || r < 0 || r >= N) ? -1 : r * N + c;
+  if (c < 0 || c >= N || r < 0 || r >= N) return -1;
+  if (!isMaskOpen(r, c)) return -1;
+  return r * N + c;
 }
 
 function adjacent(a, b) {
@@ -2395,6 +3266,8 @@ function adjacent(a, b) {
 cv.addEventListener('pointerdown', function (e) {
   ac();
   if (busy || ended) return;
+  idleTime = 0;
+  hintIds = null;
   const p = pos(e), i = cellAt(p);
   if (i < 0) return;
   try { cv.setPointerCapture(e.pointerId); } catch (err) { }
@@ -2434,8 +3307,235 @@ cv.addEventListener('pointercancel', function () { drag = null; });
 $('nextBtn').addEventListener('click', function () {
   ac();
   sfx.click();
-  startRound(false);
+  startRound(false, undefined, false);
 });
+
+/* ============================================================================
+   11.B INTERFAZ DE ADMINISTRACIÓN Y VISUALIZACIÓN DE LOS 101 NIVELES
+   ============================================================================ */
+let adminSelectedLvl = 0, adminBlockFilter = 0, adminValidationCache = null;
+
+function drawLevelBoardPreview(level) {
+  const pcv = $('lvlPreviewCv');
+  if (!pcv || !level) return;
+  const size = 180, dpr0 = window.devicePixelRatio || 1;
+  pcv.width = size * dpr0;
+  pcv.height = size * dpr0;
+  pcv.style.width = size + 'px';
+  pcv.style.height = size + 'px';
+  const c = pcv.getContext('2d');
+  c.scale(dpr0, dpr0);
+
+  c.clearRect(0, 0, size, size);
+  rr(c, 0, 0, size, size, 12);
+  c.fillStyle = C.board || '#2B2044';
+  c.fill();
+
+  const pPad = 5, pCell = (size - pPad * 2) / N;
+  const sim = window.GOMI_VALIDATOR ? window.GOMI_VALIDATOR.simulateLevelBoard(level, level.id * 997 + 77) : null;
+  const simBoard = sim && sim.board;
+
+  for (let r = 0; r < N; r++) {
+    for (let col = 0; col < N; col++) {
+      const open = level.mask && level.mask[r] ? Boolean(level.mask[r][col]) : true;
+      const x = pPad + col * pCell, y = pPad + r * pCell;
+      if (!open) {
+        rr(c, x + 1.5, y + 1.5, pCell - 3, pCell - 3, 4);
+        c.fillStyle = 'rgba(8, 3, 18, 0.65)';
+        c.fill();
+        continue;
+      }
+      if ((r + col) % 2) {
+        rr(c, x + 1, y + 1, pCell - 2, pCell - 2, 4);
+        c.fillStyle = C.board2 || '#34274F';
+        c.fill();
+      }
+      const tile = simBoard && simBoard[r] && simBoard[r][col];
+      if (tile && tile.t >= 0) {
+        const fig = window.GOMI_FIGURES && window.GOMI_FIGURES[tile.t];
+        if (fig && typeof window[fig.dFn] === 'function') {
+          c.save();
+          c.translate(x + pCell / 2, y + pCell / 2);
+          c.scale(pCell * 0.42, pCell * 0.42);
+          window[fig.dFn](c, PAL[tile.t] || PAL[0], false);
+          c.restore();
+        }
+      }
+    }
+  }
+}
+
+function selectAdminLevel(id) {
+  if (!window.GOMI_LEVELS) return;
+  adminSelectedLvl = Math.min(100, Math.max(0, id | 0));
+  const lvl = window.GOMI_LEVELS[adminSelectedLvl];
+  if (!lvl) return;
+
+  const val = adminValidationCache && adminValidationCache.details
+    ? adminValidationCache.details[adminSelectedLvl]
+    : (window.GOMI_VALIDATOR ? window.GOMI_VALIDATOR.validateLevel(lvl) : { ok: true, activeCells: 64, initialValidMoves: 6 });
+
+  if ($('admLvlTitle')) $('admLvlTitle').textContent = 'Nivel ' + lvl.id + ' · ' + lvl.name;
+  if ($('admLvlSub')) $('admLvlSub').textContent = 'Bloque ' + lvl.block + ' · ' + lvl.difficulty + ' · Tablero: ' + lvl.layoutName + ' (' + val.activeCells + ' celdas)';
+  if ($('admLvlDesc')) $('admLvlDesc').textContent = lvl.description || '';
+  if ($('admLvlMoves')) $('admLvlMoves').textContent = lvl.moves + ' movimientos';
+  if ($('admLvlScore')) $('admLvlScore').textContent = lvl.minScore > 0 ? (fmt(lvl.minScore) + ' pts') : 'Sin mínimo fijo';
+  if ($('admLvlVal')) {
+    $('admLvlVal').textContent = val.ok ? ('✓ Válido (' + val.initialValidMoves + ' jugadas)') : ('⚠ ' + val.errors.join(', '));
+    $('admLvlVal').className = 'adm-val ' + (val.ok ? 'ok' : 'err');
+  }
+  if ($('playSelectedLvlBtn')) {
+    $('playSelectedLvlBtn').textContent = '▶ Jugar Nivel ' + lvl.id;
+  }
+
+  const figsWrap = $('admLvlFigs');
+  if (figsWrap) {
+    figsWrap.innerHTML = '';
+    if (!lvl.requiredFigures.length) {
+      const sp = document.createElement('span');
+      sp.className = 'adm-empty-fig';
+      sp.textContent = 'Objetivo libre de figuras (solo alcanzar la puntuación mínima)';
+      figsWrap.appendChild(sp);
+    } else {
+      lvl.requiredFigures.forEach(function (rf) {
+        const tag = document.createElement('div');
+        tag.className = 'adm-fig-tag';
+        const cvI = document.createElement('canvas');
+        drawMiniFigureIcon(cvI, rf.figureId);
+        const lb = document.createElement('span');
+        lb.textContent = rf.count + ' × ' + rf.name;
+        tag.append(cvI, lb);
+        figsWrap.appendChild(tag);
+      });
+    }
+  }
+
+  drawLevelBoardPreview(lvl);
+
+  const list = $('admLvlList');
+  if (list) {
+    list.querySelectorAll('.adm-row').forEach(function (el) {
+      const isAct = Number(el.dataset.id) === adminSelectedLvl;
+      el.classList.toggle('active', isAct);
+    });
+  }
+}
+
+function renderAdminModal() {
+  if (!window.GOMI_LEVELS) return;
+  if (!adminValidationCache && window.GOMI_VALIDATOR) {
+    adminValidationCache = window.GOMI_VALIDATOR.validateAllLevels();
+  }
+  if ($('admSummary') && adminValidationCache) {
+    $('admSummary').textContent = '✓ ' + adminValidationCache.passed + '/' + adminValidationCache.total + ' niveles validados · 10 bloques de dificultad · 7 figuras activas';
+  }
+
+  const filterWrap = $('admBlocks');
+  if (filterWrap && !filterWrap.children.length) {
+    const allBtn = document.createElement('button');
+    allBtn.type = 'button';
+    allBtn.className = 'adm-blk-btn on';
+    allBtn.dataset.blk = '0';
+    allBtn.textContent = 'Todos (0–100)';
+    filterWrap.appendChild(allBtn);
+
+    (window.GOMI_BLOCKS || []).forEach(function (b) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'adm-blk-btn';
+      btn.dataset.blk = String(b.block);
+      btn.title = 'Niveles ' + b.range[0] + ' al ' + b.range[1] + ' · ' + b.difficulty;
+      btn.textContent = 'B' + b.block + ' · ' + b.difficulty + ' (' + b.range[0] + '-' + b.range[1] + ')';
+      filterWrap.appendChild(btn);
+    });
+
+    filterWrap.addEventListener('click', function (e) {
+      const btn = e.target.closest('.adm-blk-btn');
+      if (!btn) return;
+      adminBlockFilter = Number(btn.dataset.blk) || 0;
+      filterWrap.querySelectorAll('.adm-blk-btn').forEach(function (el) {
+        el.classList.toggle('on', el === btn);
+      });
+      renderAdminList();
+    });
+  }
+
+  renderAdminList();
+  selectAdminLevel(curLevelId);
+  const activeRow = $('admLvlList') && $('admLvlList').querySelector('.adm-row.active');
+  if (activeRow) {
+    try { activeRow.scrollIntoView({ block: 'nearest' }); } catch (e) { }
+  }
+}
+
+function renderAdminList() {
+  const list = $('admLvlList');
+  if (!list || !window.GOMI_LEVELS) return;
+  list.innerHTML = '';
+
+  window.GOMI_LEVELS.forEach(function (lvl) {
+    if (adminBlockFilter > 0 && lvl.block !== adminBlockFilter) return;
+    const val = adminValidationCache && adminValidationCache.details ? adminValidationCache.details[lvl.id] : { ok: true };
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'adm-row' + (lvl.id === adminSelectedLvl ? ' active' : '');
+    row.dataset.id = String(lvl.id);
+
+    const num = document.createElement('span');
+    num.className = 'adm-no';
+    num.textContent = '#' + lvl.id;
+
+    const info = document.createElement('div');
+    info.className = 'adm-info';
+    const nm = document.createElement('b');
+    nm.textContent = lvl.name;
+    const meta = document.createElement('small');
+    const objSummary = lvl.objectives.map(function (o) {
+      return o.type === 'score' ? (fmt(o.target) + ' pts') : (o.target + ' ' + o.shortName);
+    }).join(' · ');
+    meta.textContent = lvl.difficulty + ' · ' + lvl.moves + ' movs · ' + objSummary;
+    info.append(nm, meta);
+
+    const st = document.createElement('span');
+    st.className = 'adm-st ' + (val.ok ? 'ok' : 'err');
+    st.textContent = val.ok ? '✓' : '!';
+
+    row.append(num, info, st);
+    row.addEventListener('click', function () {
+      selectAdminLevel(lvl.id);
+    });
+    list.appendChild(row);
+  });
+}
+
+function toggleLevelsModal(show) {
+  const m = $('lvlModal');
+  if (!m) return;
+  const next = typeof show === 'boolean' ? show : m.hidden;
+  m.hidden = !next;
+  if (next) renderAdminModal();
+}
+
+if ($('openLevelsBtn')) {
+  $('openLevelsBtn').addEventListener('click', function () {
+    ac();
+    sfx.click();
+    toggleLevelsModal(true);
+  });
+}
+if ($('closeLevelsBtn')) {
+  $('closeLevelsBtn').addEventListener('click', function () {
+    toggleLevelsModal(false);
+  });
+}
+if ($('playSelectedLvlBtn')) {
+  $('playSelectedLvlBtn').addEventListener('click', function () {
+    ac();
+    sfx.click();
+    toggleLevelsModal(false);
+    startRound(false, adminSelectedLvl);
+  });
+}
 
 function renderSnd() {
   const b = $('sndBtn');

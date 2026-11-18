@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>gomi · objetos nuevos</title>
+<style>
+  :root { --bg:#f6eef5; --card:#ffffff; --tile:#3a1f4d; --text:#3b1a3a; --muted:#7d5a7a; --accent:#e9588f;
+          box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#22102b; --card:#321845; --tile:#2a1038; --text:#f6dcef; --muted:#b995b5; } }
+  :root[data-theme="dark"] { --bg:#22102b; --card:#321845; --tile:#2a1038; --text:#f6dcef; --muted:#b995b5; }
+  html { color-scheme: light dark; scroll-padding-top:env(safe-area-inset-top,0px); }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,sans-serif; padding:24px 16px 40px; }
+  main { max-width:960px; margin:0 auto; }
+  h1 { font-size:1.4rem; margin:0 0 4px; }
+  .sub { color:var(--muted); margin:0 0 18px; font-size:.95rem; }
+  label.t { display:inline-flex; gap:8px; align-items:center; margin-bottom:18px; cursor:pointer; font-size:.95rem; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
+  .card { background:var(--card); border-radius:16px; padding:16px; text-align:center; }
+  .card h2 { font-size:1.05rem; margin:0 0 10px; }
+  .tile { background:var(--tile); border-radius:14px; padding:14px; display:flex; justify-content:center; }
+  .small { display:flex; justify-content:center; align-items:flex-end; gap:12px; margin-top:12px; background:var(--tile); border-radius:14px; padding:10px; }
+  code { font-size:.8rem; color:var(--muted); display:block; margin-top:10px; }
+  canvas { display:block; }
+</style>
+</head>
+<body>
+<main>
+  <h1>gomi · objetos nuevos</h1>
+  <p class="sub">Dibujados solo con Canvas 2D, usando <code style="display:inline">p…(c)</code> y <code style="display:inline">d…(c, p, deep)</code>.</p>
+  <label class="t"><input type="checkbox" id="deep"> deep (sombras más fuertes)</label>
+  <div class="grid" id="grid"></div>
+</main>
+<script>
+/* =====================================================================
+   Objetos nuevos para gomi: algodón de azúcar, anillo de boda y
+   anillo de compromiso. Solo primitivas de Canvas 2D (sin imágenes ni SVG).
+
+   Patrón (igual que pBear / dBear):
+     p<Nombre>(c)            -> construye la silueta (beginPath + trazados), no pinta.
+     d<Nombre>(c, p, deep)   -> detalles: relleno con degradado, brillos y sombras.
+
+   Coordenadas: el objeto queda centrado en (0,0) dentro de [-1, 1].
+   Internamente se dibuja sobre una rejilla de 256x256 que _u() mapea a [-1,1].
+   `p` se recibe para respetar la firma; los colores de estos objetos son fijos.
+   `deep` (true/false) intensifica las sombras y líneas oscuras.
+   ===================================================================== */
+
+// Rejilla 256x256 -> [-1, 1] centrada en (0,0)
+function _u(c) { c.translate(-1, -1); c.scale(1 / 128, 1 / 128); }
+
+// Anillo (corona circular): círculo exterior en un sentido, interior en el contrario
+function _ring(c, cx, cy, ro, ri) {
+  c.moveTo(cx + ro, cy); c.arc(cx, cy, ro, 0, Math.PI * 2, false);
+  c.moveTo(cx + ri, cy); c.arc(cx, cy, ri, 0, Math.PI * 2, true);
+}
+
+/* ============================ ALGODÓN DE AZÚCAR ===================== */
+const _ALGODON_PUFFS = [
+  [128, 41, 27], [110, 62, 29], [147, 64, 29],
+  [98, 94, 34], [158, 94, 34], [128, 86, 34],
+  [84, 132, 37], [172, 132, 37], [128, 128, 42],
+  [96, 168, 34], [160, 168, 34], [128, 170, 39],
+  [128, 192, 23]
+];
+
+function _algodonPalito(c) {
+  c.moveTo(122, 190); c.lineTo(134, 190); c.lineTo(139, 246);
+  c.quadraticCurveTo(139, 251, 134, 251); c.lineTo(126, 251);
+  c.quadraticCurveTo(121, 251, 121, 246); c.closePath();
+}
+
+function pAlgodon(c) {
+  c.save(); _u(c);
+  c.beginPath();
+  for (const [x, y, r] of _ALGODON_PUFFS) { c.moveTo(x + r, y); c.arc(x, y, r, 0, Math.PI * 2); }
+  _algodonPalito(c);
+  c.restore();
+}
+
+function dAlgodon(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _u(c);
+
+  // palito
+  let g = c.createLinearGradient(121, 0, 139, 0);
+  g.addColorStop(0, '#f0cf9a'); g.addColorStop(1, '#c8975a');
+  c.beginPath(); _algodonPalito(c); c.fillStyle = g; c.fill();
+
+  // contorno de las nubes
+  c.beginPath();
+  for (const [x, y, r] of _ALGODON_PUFFS) { c.moveTo(x + r, y); c.arc(x, y, r, 0, Math.PI * 2); }
+  c.lineWidth = 6; c.strokeStyle = '#e9588f'; c.stroke();
+
+  // cada nube con su propio degradado radial
+  for (const [x, y, r] of _ALGODON_PUFFS) {
+    const gx = x - 0.24 * r, gy = y - 0.4 * r;
+    g = c.createRadialGradient(gx, gy, 0, gx, gy, 1.6 * r);
+    g.addColorStop(0, '#ffd3e8'); g.addColorStop(0.5, '#ff9ccb'); g.addColorStop(1, '#f0629f');
+    c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fillStyle = g; c.fill();
+  }
+
+  c.lineCap = 'round';
+  // hebras claras
+  c.strokeStyle = '#ffe3f1'; c.lineWidth = 3; c.globalAlpha = 0.7;
+  c.beginPath(); c.moveTo(100, 60); c.quadraticCurveTo(122, 44, 144, 56);
+  c.moveTo(70, 112); c.quadraticCurveTo(100, 94, 130, 108); c.quadraticCurveTo(158, 120, 184, 102);
+  c.moveTo(66, 150); c.quadraticCurveTo(100, 134, 128, 150); c.quadraticCurveTo(160, 166, 188, 146);
+  c.moveTo(84, 184); c.quadraticCurveTo(114, 170, 146, 186); c.stroke();
+  // hebras oscuras
+  c.strokeStyle = '#e5508d'; c.lineWidth = 2.5; c.globalAlpha = 0.45 * k;
+  c.beginPath(); c.moveTo(92, 128); c.quadraticCurveTo(120, 118, 152, 132);
+  c.moveTo(104, 166); c.quadraticCurveTo(130, 156, 158, 168); c.stroke();
+
+  // brillos
+  c.fillStyle = '#fff';
+  c.globalAlpha = 0.85; c.beginPath(); c.ellipse(102, 74, 14, 7, -35 * Math.PI / 180, 0, Math.PI * 2); c.fill();
+  c.globalAlpha = 0.65; c.beginPath(); c.ellipse(74, 128, 7, 4, -50 * Math.PI / 180, 0, Math.PI * 2); c.fill();
+  c.globalAlpha = 0.9;  c.beginPath(); c.arc(116, 46, 3.5, 0, Math.PI * 2); c.fill();
+  c.restore();
+}
+
+/* ================== ANILLO DE BODA (dos argollas de plata) ========== */
+const _ARG_A = [98, 140], _ARG_B = [158, 116], _ARG_RO = 66, _ARG_RI = 40;
+
+function pAnilloBoda(c) {
+  c.save(); _u(c);
+  c.beginPath();
+  _ring(c, _ARG_A[0], _ARG_A[1], _ARG_RO, _ARG_RI);
+  _ring(c, _ARG_B[0], _ARG_B[1], _ARG_RO, _ARG_RI);
+  c.restore();
+}
+
+function _argolla(c, x, y, k) {
+  const ro = _ARG_RO, ri = _ARG_RI, mid = (ro + ri) / 2;
+  // borde oscuro (marca bien el contorno)
+  c.beginPath(); _ring(c, x, y, ro, ri); c.fillStyle = '#5b6a80'; c.fill();
+  // plata
+  const g = c.createLinearGradient(x - ro * 0.7, y - ro, x + ro * 0.7, y + ro);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, '#d6dfea'); g.addColorStop(1, '#8d9db3');
+  c.beginPath(); _ring(c, x, y, ro - 5, ri + 5); c.fillStyle = g; c.fill();
+  // línea clara central
+  c.beginPath(); c.arc(x, y, mid, 0, Math.PI * 2);
+  c.strokeStyle = '#fff'; c.lineWidth = 2.5; c.globalAlpha = 0.5; c.stroke();
+  // brillo y sombra
+  c.lineCap = 'round';
+  c.beginPath(); c.arc(x, y, mid, -2.7, -1.7);
+  c.strokeStyle = '#fff'; c.lineWidth = 6; c.globalAlpha = 0.95; c.stroke();
+  c.beginPath(); c.arc(x, y, mid, 0.5, 1.3);
+  c.strokeStyle = '#5b6a80'; c.lineWidth = 5; c.globalAlpha = 0.35 * k; c.stroke();
+  c.globalAlpha = 1;
+}
+
+function dAnilloBoda(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _u(c);
+  _argolla(c, _ARG_A[0], _ARG_A[1], k);
+  _argolla(c, _ARG_B[0], _ARG_B[1], k);
+  // entrelazado: la argolla A pasa por encima de B en el cruce inferior derecho
+  c.save(); c.beginPath(); c.arc(143.6, 167, 34, 0, Math.PI * 2); c.clip();
+  _argolla(c, _ARG_A[0], _ARG_A[1], k);
+  c.restore();
+  // destello
+  c.fillStyle = '#fff'; c.globalAlpha = 0.95;
+  c.beginPath(); c.moveTo(214, 52); c.lineTo(217, 61); c.lineTo(226, 64); c.lineTo(217, 67);
+  c.lineTo(214, 76); c.lineTo(211, 67); c.lineTo(202, 64); c.lineTo(211, 61); c.closePath(); c.fill();
+  c.restore();
+}
+
+/* ========================= ANILLO DE COMPROMISO ===================== */
+function _gema(c) {   // diamante (sentido horario)
+  c.moveTo(88, 62); c.lineTo(108, 30); c.lineTo(148, 30); c.lineTo(168, 62); c.lineTo(128, 118); c.closePath();
+}
+function _garras(c) {
+  c.moveTo(96, 84); c.lineTo(116, 108); c.lineTo(104, 112); c.closePath();
+  c.moveTo(160, 84); c.lineTo(152, 112); c.lineTo(140, 108); c.closePath();
+}
+
+function pAnilloCompromiso(c) {
+  c.save(); _u(c);
+  c.beginPath();
+  _ring(c, 128, 174, 76, 44);
+  _garras(c);
+  _gema(c);
+  c.restore();
+}
+
+function dAnilloCompromiso(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _u(c);
+
+  // banda: borde oscuro + oro
+  c.beginPath(); _ring(c, 128, 174, 76, 44); c.fillStyle = '#5b6a80'; c.fill();
+  let g = c.createLinearGradient(78.3, 103, 177.7, 245);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, '#d6dfea'); g.addColorStop(1, '#8d9db3');
+  c.beginPath(); _ring(c, 128, 174, 71, 39); c.fillStyle = g; c.fill();
+  // brillo de la banda
+  c.lineCap = 'round';
+  c.beginPath(); c.arc(128, 174, 61, -2.95, -2.1);
+  c.strokeStyle = '#fff'; c.lineWidth = 7; c.globalAlpha = 0.8; c.stroke();
+  c.globalAlpha = 1;
+
+  // garras
+  c.beginPath(); _garras(c);
+  c.fillStyle = '#c9d3df'; c.fill();
+  c.lineWidth = 2; c.lineJoin = 'round'; c.strokeStyle = '#6b7a8f'; c.stroke();
+
+  // diamante
+  g = c.createLinearGradient(88, 30, 168, 118);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, '#bfeaff'); g.addColorStop(1, '#6cc4ee');
+  c.beginPath(); _gema(c); c.fillStyle = g; c.fill();
+  c.lineWidth = 3; c.strokeStyle = '#4aa9d6'; c.stroke();
+  // facetas
+  c.lineWidth = 2; c.globalAlpha = 0.8;
+  c.beginPath();
+  c.moveTo(88, 62); c.lineTo(168, 62);
+  c.moveTo(108, 30); c.lineTo(118, 62); c.moveTo(148, 30); c.lineTo(138, 62);
+  c.moveTo(118, 62); c.lineTo(128, 118); c.moveTo(138, 62); c.lineTo(128, 118);
+  c.stroke();
+  // mesa brillante
+  c.globalAlpha = 0.55; c.fillStyle = '#fff';
+  c.beginPath(); c.moveTo(108, 30); c.lineTo(148, 30); c.lineTo(138, 62); c.lineTo(118, 62); c.closePath(); c.fill();
+  // destello
+  c.globalAlpha = 0.9; c.strokeStyle = '#fff'; c.lineWidth = 5;
+  c.beginPath(); c.moveTo(98, 56); c.lineTo(112, 38); c.stroke();
+  // estrellita
+  c.fillStyle = '#fff';
+  c.beginPath(); c.moveTo(176, 40); c.lineTo(180, 28); c.lineTo(184, 40); c.lineTo(196, 44);
+  c.lineTo(184, 48); c.lineTo(180, 60); c.lineTo(176, 48); c.lineTo(164, 44); c.closePath(); c.fill();
+  c.restore();
+}
+
+/* ============================ CARTA DE AMOR ========================= */
+// Sobre cerrado con sello de corazón (todavía sin abrir) y corazoncitos flotando.
+function _uCarta(c) { _u(c); c.translate(0, 10); }   // centra el conjunto en (0,0)
+
+function _rrect(c, x, y, w, h, r) {                   // rectángulo redondeado (horario)
+  c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.arcTo(x + w, y, x + w, y + r, r);
+  c.lineTo(x + w, y + h - r); c.arcTo(x + w, y + h, x + w - r, y + h, r);
+  c.lineTo(x + r, y + h); c.arcTo(x, y + h, x, y + h - r, r);
+  c.lineTo(x, y + r); c.arcTo(x, y, x + r, y, r); c.closePath();
+}
+
+function _corazon(c, cx, cy, s, rot) {                // corazón (horario), s = semiancho
+  c.save(); c.translate(cx, cy); c.rotate(rot || 0); c.scale(s, s);
+  c.moveTo(0, -0.35);
+  c.bezierCurveTo(0, -0.9, 1, -0.9, 1, -0.3);
+  c.bezierCurveTo(1, 0.2, 0.4, 0.55, 0, 1);
+  c.bezierCurveTo(-0.4, 0.55, -1, 0.2, -1, -0.3);
+  c.bezierCurveTo(-1, -0.9, 0, -0.9, 0, -0.35);
+  c.closePath(); c.restore();
+}
+
+function pCarta(c) {
+  c.save(); _uCarta(c);
+  c.beginPath();
+  _rrect(c, 28, 74, 200, 126, 14);
+  _corazon(c, 128, 150, 24, 0);
+  _corazon(c, 204, 56, 13, 0.24);
+  _corazon(c, 172, 40, 8, -0.2);
+  c.restore();
+}
+
+function dCarta(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _uCarta(c);
+  c.lineJoin = 'round'; c.lineCap = 'round';
+
+  // papel
+  let g = c.createLinearGradient(0, 74, 0, 200);
+  g.addColorStop(0, '#fff8f0'); g.addColorStop(1, '#ffc9d8');
+  c.beginPath(); _rrect(c, 28, 74, 200, 126, 14); c.fillStyle = g; c.fill();
+
+  // pliegues y solapa (recortados al sobre)
+  c.save(); c.clip();
+  c.fillStyle = '#ff9db9'; c.globalAlpha = 0.28;
+  c.beginPath(); c.moveTo(28, 74); c.lineTo(128, 146); c.lineTo(28, 200); c.closePath(); c.fill();
+  c.beginPath(); c.moveTo(228, 74); c.lineTo(128, 146); c.lineTo(228, 200); c.closePath(); c.fill();
+  c.globalAlpha = 0.35;
+  c.beginPath(); c.moveTo(28, 200); c.lineTo(128, 146); c.lineTo(228, 200); c.closePath(); c.fill();
+  c.globalAlpha = 0.6; c.strokeStyle = '#d4577a'; c.lineWidth = 3;
+  c.beginPath(); c.moveTo(28, 200); c.lineTo(128, 146); c.lineTo(228, 200); c.stroke();
+  // sombra de la solapa
+  c.globalAlpha = 0.22 * k; c.fillStyle = '#9a2a4f';
+  c.beginPath(); c.moveTo(28, 80); c.lineTo(228, 80); c.lineTo(128, 152); c.closePath(); c.fill();
+  // solapa
+  c.globalAlpha = 1;
+  g = c.createLinearGradient(0, 74, 0, 146);
+  g.addColorStop(0, '#fffdf9'); g.addColorStop(1, '#ffdbe6');
+  c.fillStyle = g;
+  c.beginPath(); c.moveTo(28, 74); c.lineTo(228, 74); c.lineTo(128, 146); c.closePath(); c.fill();
+  c.restore();
+
+  // contornos
+  c.strokeStyle = '#d4577a'; c.lineWidth = 5;
+  c.beginPath(); _rrect(c, 28, 74, 200, 126, 14); c.stroke();
+  c.lineWidth = 4;
+  c.save(); c.beginPath(); _rrect(c, 28, 74, 200, 126, 14); c.clip();
+  c.beginPath(); c.moveTo(28, 74); c.lineTo(128, 146); c.lineTo(228, 74); c.stroke();
+  c.restore();
+  // brillo de la solapa
+  c.strokeStyle = '#fff'; c.lineWidth = 3; c.globalAlpha = 0.7;
+  c.beginPath(); c.moveTo(40, 84); c.lineTo(118, 140); c.stroke();
+  c.globalAlpha = 1;
+
+  // sello de corazón: sombra, contorno, cuerpo, relieve y brillo
+  c.fillStyle = '#7a1236'; c.globalAlpha = 0.3 * k;
+  c.beginPath(); _corazon(c, 128, 154, 24, 0); c.fill();
+  c.globalAlpha = 1;
+  c.strokeStyle = '#a3173d'; c.lineWidth = 6;
+  c.beginPath(); _corazon(c, 128, 150, 24, 0); c.stroke();
+  g = c.createRadialGradient(118, 140, 2, 128, 152, 36);
+  g.addColorStop(0, '#ff8aa3'); g.addColorStop(0.5, '#e8325f'); g.addColorStop(1, '#b81f48');
+  c.fillStyle = g; c.beginPath(); _corazon(c, 128, 150, 24, 0); c.fill();
+  c.strokeStyle = '#ff9fb4'; c.lineWidth = 2.5; c.globalAlpha = 0.55;
+  c.beginPath(); _corazon(c, 128, 152, 14, 0); c.stroke();
+  c.globalAlpha = 0.85; c.fillStyle = '#fff';
+  c.beginPath(); c.ellipse(112, 138, 7, 4, -40 * Math.PI / 180, 0, Math.PI * 2); c.fill();
+  c.globalAlpha = 1;
+
+  // corazoncitos flotando
+  [[204, 56, 13, 0.24], [172, 40, 8, -0.2]].forEach(([x, y, s, r]) => {
+    c.strokeStyle = '#c9335f'; c.lineWidth = 3;
+    c.beginPath(); _corazon(c, x, y, s, r); c.stroke();
+    c.fillStyle = '#ff6f95'; c.beginPath(); _corazon(c, x, y, s, r); c.fill();
+    c.fillStyle = '#fff'; c.globalAlpha = 0.85;
+    c.beginPath(); c.arc(x - s * 0.45, y - s * 0.35, s * 0.18, 0, Math.PI * 2); c.fill();
+    c.globalAlpha = 1;
+  });
+  c.restore();
+}
+
+/* ============================ GUSANO ÁCIDO ========================== */
+// Tira de gomita arcoíris en forma de S, cubierta de azúcar ácida, con carita tierna.
+const _GS_H = 24;   // mitad del ancho de la tira
+
+function _gsPunto(t) {                                  // punto, tangente y normal de la curva central
+  const a = t * Math.PI * 2;
+  const x = 128 + 46 * Math.sin(a), y = 28 + 200 * t;
+  const dx = 46 * Math.PI * 2 * Math.cos(a), dy = 200, l = Math.hypot(dx, dy);
+  const tx = dx / l, ty = dy / l;
+  return { x, y, tx, ty, nx: -ty, ny: tx };
+}
+
+function _gsContorno(c) {                               // silueta cerrada: lado, tapa, lado y tapa
+  const N = 48, h = _GS_H, M = 10;
+  const P0 = _gsPunto(0), P1 = _gsPunto(1);
+  c.moveTo(P0.x + P0.nx * h, P0.y + P0.ny * h);
+  for (let i = 1; i <= N; i++) { const q = _gsPunto(i / N); c.lineTo(q.x + q.nx * h, q.y + q.ny * h); }
+  for (let i = 1; i <= M; i++) {                        // tapa redonda final
+    const a = Math.PI * i / M;
+    c.lineTo(P1.x + h * (Math.cos(a) * P1.nx + Math.sin(a) * P1.tx), P1.y + h * (Math.cos(a) * P1.ny + Math.sin(a) * P1.ty));
+  }
+  for (let i = N - 1; i >= 0; i--) { const q = _gsPunto(i / N); c.lineTo(q.x - q.nx * h, q.y - q.ny * h); }
+  for (let i = 1; i < M; i++) {                         // tapa redonda inicial
+    const a = Math.PI * i / M;
+    c.lineTo(P0.x + h * (-Math.cos(a) * P0.nx - Math.sin(a) * P0.tx), P0.y + h * (-Math.cos(a) * P0.ny - Math.sin(a) * P0.ty));
+  }
+  c.closePath();
+}
+
+function pGusano(c) {
+  c.save(); _u(c);
+  c.beginPath(); _gsContorno(c);
+  c.restore();
+}
+
+function _gsLinea(c, off, t0, t1) {                     // línea paralela a la curva central
+  c.beginPath();
+  for (let i = 0; i <= 40; i++) {
+    const q = _gsPunto(t0 + (t1 - t0) * i / 40);
+    const x = q.x + q.nx * off, y = q.y + q.ny * off;
+    i ? c.lineTo(x, y) : c.moveTo(x, y);
+  }
+}
+
+function dGusano(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _u(c);
+  c.lineJoin = 'round'; c.lineCap = 'round';
+
+  // contorno en tonos más oscuros del arcoíris
+  let g = c.createLinearGradient(0, 14, 0, 242);
+  g.addColorStop(0, '#d63a6c'); g.addColorStop(0.28, '#e08a1c'); g.addColorStop(0.5, '#e0c022');
+  g.addColorStop(0.72, '#2f9f3a'); g.addColorStop(1, '#1488b8');
+  c.beginPath(); _gsContorno(c); c.strokeStyle = g; c.lineWidth = 6; c.stroke();
+
+  // cuerpo arcoíris
+  g = c.createLinearGradient(0, 14, 0, 242);
+  g.addColorStop(0, '#ff6f9c'); g.addColorStop(0.28, '#ffb340'); g.addColorStop(0.5, '#ffe94d');
+  g.addColorStop(0.72, '#66d65f'); g.addColorStop(1, '#3cc0ee');
+  c.beginPath(); _gsContorno(c); c.fillStyle = g; c.fill();
+
+  // volumen: brillo a un lado y sombra al otro
+  c.strokeStyle = '#fff'; c.lineWidth = 6; c.globalAlpha = 0.5;
+  _gsLinea(c, -_GS_H * 0.55, 0.04, 0.96); c.stroke();
+  c.strokeStyle = '#6a2a5a'; c.lineWidth = 7; c.globalAlpha = 0.16 * k;
+  _gsLinea(c, _GS_H * 0.6, 0.04, 0.96); c.stroke();
+  c.globalAlpha = 1;
+
+  // azúcar ácida: muchos cristalitos (posiciones fijas, siempre iguales)
+  let s = 12345; const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  for (let i = 0; i < 190; i++) {
+    const q = _gsPunto(0.02 + 0.96 * rnd()), off = (rnd() * 2 - 1) * _GS_H * 0.9;
+    const x = q.x + q.nx * off, y = q.y + q.ny * off, r = 0.8 + rnd() * 1.4, al = 0.55 + rnd() * 0.4;
+    if (Math.abs(x - 128) < 34 && y > 108 && y < 150) continue;    // deja libre la carita
+    c.globalAlpha = 0.18 * k; c.fillStyle = '#5a2a6a';
+    c.beginPath(); c.arc(x + 0.9, y + 0.9, r, 0, Math.PI * 2); c.fill();
+    c.globalAlpha = al; c.fillStyle = '#fff';
+    c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+  }
+  c.globalAlpha = 1;
+
+  // carita ácida y tierna: ojitos apretados, mejillas y boquita fruncida
+  c.strokeStyle = '#5a2a3a'; c.lineWidth = 4.5;
+  c.beginPath(); c.moveTo(110, 118); c.lineTo(121, 124); c.lineTo(110, 130);
+  c.moveTo(146, 118); c.lineTo(135, 124); c.lineTo(146, 130); c.stroke();
+  c.fillStyle = '#ff5f8a'; c.globalAlpha = 0.45;
+  c.beginPath(); c.ellipse(104, 136, 7, 4.5, 0, 0, Math.PI * 2); c.fill();
+  c.beginPath(); c.ellipse(152, 136, 7, 4.5, 0, 0, Math.PI * 2); c.fill();
+  c.globalAlpha = 1; c.fillStyle = '#5a2a3a';
+  c.beginPath(); c.ellipse(128, 138, 5, 6, 0, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#ff7a9a';
+  c.beginPath(); c.ellipse(128, 141, 3, 2.4, 0, 0, Math.PI * 2); c.fill();
+
+  // destellos de azúcar
+  c.fillStyle = '#fff';
+  [[66, 62, 10], [190, 196, 10], [214, 124, 6]].forEach(([x, y, r]) => {
+    c.beginPath(); c.moveTo(x, y - r); c.lineTo(x + r * 0.28, y - r * 0.28); c.lineTo(x + r, y);
+    c.lineTo(x + r * 0.28, y + r * 0.28); c.lineTo(x, y + r); c.lineTo(x - r * 0.28, y + r * 0.28);
+    c.lineTo(x - r, y); c.lineTo(x - r * 0.28, y - r * 0.28); c.closePath(); c.fill();
+  });
+  c.restore();
+}
+
+/* ======================= HELADO DE CONO BAÑADO ====================== */
+// Cono de barquillo con baño de chocolate que gotea y helado de chocolate en espiral.
+const _HEL_TIERS = [[128, 108, 66, 26], [128, 78, 52, 24], [128, 52, 36, 20]];
+const _HEL_GOTAS = [[84, 34], [112, 26], [138, 44], [164, 30], [184, 22]];   // [x, largo]
+
+function _helCono(c) {
+  c.moveTo(66, 118); c.lineTo(190, 118); c.lineTo(134, 236);
+  c.quadraticCurveTo(128, 248, 122, 236); c.closePath();
+}
+function _helPunta(c) {
+  c.moveTo(106, 42); c.bezierCurveTo(104, 26, 124, 22, 138, 6);
+  c.bezierCurveTo(140, 18, 150, 28, 150, 42); c.closePath();
+}
+
+function pHelado(c) {
+  c.save(); _u(c);
+  c.beginPath();
+  _helCono(c);
+  for (const [x, y, rx, ry] of _HEL_TIERS) { c.moveTo(x + rx, y); c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); }
+  _helPunta(c);
+  c.restore();
+}
+
+function dHelado(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _u(c);
+  c.lineJoin = 'round'; c.lineCap = 'round';
+
+  // cono de barquillo
+  let g = c.createLinearGradient(66, 0, 190, 0);
+  g.addColorStop(0, '#e8b46a'); g.addColorStop(0.45, '#f6cf8c'); g.addColorStop(1, '#c98f4a');
+  c.beginPath(); _helCono(c); c.fillStyle = g; c.fill();
+  c.save(); c.clip();
+  // rejilla del barquillo
+  c.strokeStyle = '#b9803f'; c.lineWidth = 2.5; c.globalAlpha = 0.7;
+  c.beginPath();
+  for (let x = -60; x <= 260; x += 24) { c.moveTo(x, 110); c.lineTo(x + 130, 250); c.moveTo(x, 110); c.lineTo(x - 130, 250); }
+  c.stroke();
+  c.globalAlpha = 1;
+  // baño de chocolate con gotas
+  g = c.createLinearGradient(0, 118, 0, 165);
+  g.addColorStop(0, '#6b3a20'); g.addColorStop(1, '#3f1d0e');
+  c.fillStyle = g; c.beginPath();
+  _rrect(c, 56, 112, 150, 28, 4);
+  for (const [x, l] of _HEL_GOTAS) _rrect(c, x - 8, 118, 16, l + 14, 8);
+  c.fill();
+  c.strokeStyle = '#d9a070'; c.lineWidth = 2.5; c.globalAlpha = 0.4; c.beginPath();
+  for (const [x, l] of _HEL_GOTAS) { c.moveTo(x - 3, 128); c.lineTo(x - 3, 118 + l - 4); }
+  c.stroke(); c.globalAlpha = 1;
+  c.restore();
+  // contorno del cono
+  c.beginPath(); _helCono(c); c.strokeStyle = '#a8692c'; c.lineWidth = 4; c.stroke();
+
+  // helado de chocolate: de abajo hacia arriba
+  for (const [x, y, rx, ry] of _HEL_TIERS) {
+    c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+    c.strokeStyle = '#3d1c0e'; c.lineWidth = 5; c.stroke();
+    g = c.createRadialGradient(x - rx * 0.3, y - ry * 0.5, 2, x, y, rx * 1.1);
+    g.addColorStop(0, '#b87848'); g.addColorStop(0.5, '#7a4326'); g.addColorStop(1, '#4a2412');
+    c.fillStyle = g; c.fill();
+    // ranura de la espiral
+    c.strokeStyle = '#3d1c0e'; c.lineWidth = 3; c.globalAlpha = 0.35 * k;
+    c.beginPath(); c.moveTo(x - rx * 0.8, y + ry * 0.2); c.quadraticCurveTo(x, y + ry * 1.1, x + rx * 0.8, y - ry * 0.25); c.stroke();
+    // sombra inferior y brillo superior
+    c.lineWidth = 5; c.globalAlpha = 0.3 * k;
+    c.beginPath(); c.ellipse(x, y, rx - 6, ry - 4, 0, 0.15 * Math.PI, 0.85 * Math.PI); c.stroke();
+    c.strokeStyle = '#f1c79a'; c.lineWidth = 4; c.globalAlpha = 0.7;
+    c.beginPath(); c.ellipse(x, y, rx - 8, ry - 6, 0, 1.05 * Math.PI, 1.5 * Math.PI); c.stroke();
+    c.globalAlpha = 1;
+  }
+  // punta rizada
+  c.beginPath(); _helPunta(c); c.strokeStyle = '#3d1c0e'; c.lineWidth = 5; c.stroke();
+  g = c.createLinearGradient(106, 6, 150, 42);
+  g.addColorStop(0, '#b87848'); g.addColorStop(1, '#6b3a20');
+  c.fillStyle = g; c.fill();
+  c.strokeStyle = '#f1c79a'; c.lineWidth = 3; c.globalAlpha = 0.7;
+  c.beginPath(); c.moveTo(114, 36); c.quadraticCurveTo(116, 26, 130, 16); c.stroke();
+  c.globalAlpha = 1;
+
+  // destello
+  c.fillStyle = '#fff'; c.globalAlpha = 0.9;
+  c.beginPath(); c.moveTo(196, 56); c.lineTo(199, 65); c.lineTo(208, 68); c.lineTo(199, 71);
+  c.lineTo(196, 80); c.lineTo(193, 71); c.lineTo(184, 68); c.lineTo(193, 65); c.closePath(); c.fill();
+  c.restore();
+}
+
+/* ===================== SUSHI FRITO (un trozo de rollo) ============== */
+// Un trozo de rollo frito visto de frente: borde empanizado dorado y crujiente, arroz,
+// alga nori y relleno de pollo con palta. 
+const _SF = { x: 128, y: 120, r: 84, d: 10 };                  // centro, radio y grosor del trozo
+
+function _uSushi(c) { _u(c); }
+
+// contorno irregular (empanizado): círculo con ondulaciones suaves
+function _sfBorde(c, cx, cy, r) {
+  const N = 72;
+  for (let i = 0; i <= N; i++) {
+    const a = (i / N) * Math.PI * 2;
+    const rr = r + 1.1 * Math.sin(a * 9 + 1) + 0.8 * Math.sin(a * 15 + 2) + 0.6 * Math.sin(a * 23);
+    const px = cx + Math.cos(a) * rr, py = cy + Math.sin(a) * rr;
+    if (i) c.lineTo(px, py); else c.moveTo(px, py);
+  }
+  c.closePath();
+}
+
+function pSushi(c) {
+  c.save(); _uSushi(c);
+  c.beginPath();
+  c.moveTo(_SF.x + _SF.r + 4, _SF.y); c.arc(_SF.x, _SF.y, _SF.r + 4, 0, Math.PI * 2);
+  c.moveTo(_SF.x + _SF.r + 4, _SF.y + _SF.d); c.arc(_SF.x, _SF.y + _SF.d, _SF.r + 4, 0, Math.PI * 2);
+  c.restore();
+}
+
+function dSushi(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  const { x, y, r, d } = _SF;
+  c.save(); _uSushi(c);
+  c.lineJoin = 'round'; c.lineCap = 'round';
+  let s = 77; const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  const migas = (rmin, rmax, n, cy) => {
+    for (let i = 0; i < n; i++) {
+      const a = rnd() * 6.283, rr = rmin + rnd() * (rmax - rmin), mr = 1.5 + rnd() * 2, mx = x + Math.cos(a) * rr, my = cy + Math.sin(a) * rr;
+      c.globalAlpha = 0.5; c.fillStyle = '#9a4f10'; c.beginPath(); c.arc(mx + 0.8, my + 1, mr, 0, 6.283); c.fill();
+      c.globalAlpha = 1; c.fillStyle = rnd() < 0.5 ? '#fff3c0' : '#ffe08a'; c.beginPath(); c.arc(mx, my, mr * 0.78, 0, 6.283); c.fill();
+    }
+  };
+
+  // sombra en el suelo
+  c.globalAlpha = 0.25 * k; c.fillStyle = '#000';
+  c.beginPath(); c.ellipse(x, y + d + r * 0.92, r * 0.8, 9, 0, 0, 6.283); c.fill(); c.globalAlpha = 1;
+
+  // grosor del trozo (borde de abajo, más oscuro)
+  let g = c.createLinearGradient(0, y, 0, y + d + r);
+  g.addColorStop(0, '#d98f2c'); g.addColorStop(1, '#a8601a');
+  c.beginPath(); _sfBorde(c, x, y + d, r + 2); c.fillStyle = g; c.fill();
+  c.strokeStyle = '#6e3a0c'; c.lineWidth = 5; c.stroke();
+
+  // cara: empanizado dorado
+  g = c.createRadialGradient(x - 24, y - 30, 6, x, y, r * 1.3);
+  g.addColorStop(0, '#ffeeb0'); g.addColorStop(0.5, '#f8c85a'); g.addColorStop(1, '#e19b2c');
+  c.beginPath(); _sfBorde(c, x, y, r + 2); c.fillStyle = g; c.fill();
+  c.strokeStyle = '#8f4d12'; c.lineWidth = 5; c.stroke();
+  migas(r - 14, r - 2, 46, y);
+
+  // arroz
+  g = c.createLinearGradient(0, y - 60, 0, y + 60); g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#dde3ee');
+  c.beginPath(); c.arc(x, y, 58, 0, 6.283); c.fillStyle = g; c.fill();
+  c.strokeStyle = '#aab6cc'; c.lineWidth = 2.5; c.stroke();
+  c.fillStyle = '#c3cde0';
+  for (const rad of [51, 44]) for (let a = rnd() * 0.3; a < 6.283; a += 0.34 + rnd() * 0.08) {
+    c.beginPath(); c.ellipse(x + Math.cos(a) * rad, y + Math.sin(a) * rad, 5, 2.2, a + Math.PI / 2, 0, 6.283); c.fill();
+  }
+
+  // alga nori
+  c.beginPath(); c.arc(x, y, 38, 0, 6.283); c.fillStyle = '#14241b'; c.fill();
+  c.strokeStyle = '#6a9c7a'; c.lineWidth = 3; c.globalAlpha = 0.6;
+  c.beginPath(); c.arc(x, y, 34.5, -2.8, -1.5); c.stroke(); c.globalAlpha = 1;
+  c.beginPath(); c.arc(x, y, 31, 0, 6.283); c.fillStyle = '#f7f9fc'; c.fill();
+
+  // relleno: pollo y palta
+  c.save(); c.translate(x, y); c.scale(1.05, 1.05);
+  c.beginPath(); c.arc(0, 0, 29, 0, 6.283); c.clip();
+  g = c.createLinearGradient(-24, -14, 8, 20); g.addColorStop(0, '#fff7ea'); g.addColorStop(1, '#ebcfa6');
+  c.beginPath(); c.moveTo(-26, 2); c.bezierCurveTo(-26, -11, -12, -15, -2, -10);
+  c.bezierCurveTo(8, -5, 9, 8, 2, 16); c.bezierCurveTo(-7, 25, -26, 19, -26, 2); c.closePath();
+  c.fillStyle = g; c.fill(); c.strokeStyle = '#c9a87a'; c.lineWidth = 2.5; c.stroke();
+  c.strokeStyle = '#dcc093'; c.lineWidth = 1.8;
+  c.beginPath(); c.moveTo(-19, -2); c.quadraticCurveTo(-10, -5, -3, 0); c.moveTo(-18, 9); c.quadraticCurveTo(-9, 6, -2, 10); c.stroke();
+  const gajo = (pts, fill, hi, hx, hy) => {
+    c.beginPath(); c.moveTo(...pts[0]);
+    for (let i = 1; i < pts.length; i += 3) c.bezierCurveTo(...pts[i], ...pts[i + 1], ...pts[i + 2]);
+    c.closePath(); c.fillStyle = fill; c.fill(); c.strokeStyle = '#4f8a22'; c.lineWidth = 2.5; c.stroke();
+    c.beginPath(); c.ellipse(hx, hy, 5, 3.4, -0.5, 0, 6.283); c.fillStyle = hi; c.fill();
+  };
+  gajo([[5, -22], [16, -27], [27, -17], [23, -5], [21, 0], [8, -2], [5, -9], [3, -13], [3, -18], [5, -22]], '#b8e06c', '#e6f7ae', 13, -13);
+  gajo([[8, 6], [19, 2], [28, 8], [23, 17], [19, 25], [6, 23], [6, 14], [6, 10], [6, 8], [8, 6]], '#9cd24a', '#d6ef8e', 14, 13);
+  c.restore();
+
+  // brillo de la cara
+  c.strokeStyle = '#fff'; c.lineWidth = 6; c.globalAlpha = 0.55;
+  c.beginPath(); c.arc(x, y, r - 4, -2.7, -2.05); c.stroke(); c.globalAlpha = 1;
+
+  // destellos
+  c.fillStyle = '#fff'; c.globalAlpha = 0.9;
+  const star = (sx, sy, z) => { c.beginPath(); c.moveTo(sx, sy - 12 * z); c.lineTo(sx + 3 * z, sy - 3 * z); c.lineTo(sx + 12 * z, sy);
+    c.lineTo(sx + 3 * z, sy + 3 * z); c.lineTo(sx, sy + 12 * z); c.lineTo(sx - 3 * z, sy + 3 * z); c.lineTo(sx - 12 * z, sy);
+    c.lineTo(sx - 3 * z, sy - 3 * z); c.closePath(); c.fill(); };
+  star(226, 30, 1); star(30, 196, 0.6);
+  c.restore();
+}
+
+</script>
+<script>
+const OBJ = [
+  { n:'Algodon', t:'Algodón de azúcar' },
+  { n:'AnilloBoda', t:'Anillo de boda' },
+  { n:'AnilloCompromiso', t:'Anillo de compromiso' },
+  { n:'Carta', t:'Carta de amor' },
+  { n:'Gusano', t:'Gusano ácido' },
+  { n:'Helado', t:'Helado de cono' },
+  { n:'Sushi', t:'Sushi frito' }
+];
+function draw(cv, n, size, deep) {
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = size * dpr; cv.height = size * dpr;
+  cv.style.width = size + 'px'; cv.style.height = size + 'px';
+  const c = cv.getContext('2d');
+  c.scale(dpr, dpr); c.translate(size / 2, size / 2); c.scale(size / 2.1, size / 2.1);
+  window['p' + n](c);
+  window['d' + n](c, {}, deep);
+}
+const grid = document.getElementById('grid'), cards = [];
+OBJ.forEach(o => {
+  const el = document.createElement('div'); el.className = 'card';
+  el.innerHTML = '<h2>' + o.t + '</h2><div class="tile"><canvas data-s="200"></canvas></div>' +
+    '<div class="small"><canvas data-s="96"></canvas><canvas data-s="64"></canvas><canvas data-s="40"></canvas></div>' +
+    '<code>p' + o.n + '(c) · d' + o.n + '(c, p, deep)</code>';
+  grid.appendChild(el); cards.push([o, el]);
+});
+function render() {
+  const deep = document.getElementById('deep').checked;
+  cards.forEach(([o, el]) => el.querySelectorAll('canvas').forEach(cv => draw(cv, o.n, +cv.dataset.s, deep)));
+}
+document.getElementById('deep').addEventListener('change', render);
+render();
+</script>
+</body>
+</html>

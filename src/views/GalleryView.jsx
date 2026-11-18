@@ -126,7 +126,7 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
               } else {
                 setImages([]);
               }
-              
+
               const fetchedCursor = imgData.nextCursor || null;
               setNextCursor(fetchedCursor);
               if (setGlobalNextCursor) setGlobalNextCursor(fetchedCursor);
@@ -208,12 +208,12 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
   const [currentAudioIndex, setCurrentAudioIndex] = useState(0);
 
   const playlist = React.useMemo(() => {
-    let audios = userData?.customAudios?.length > 0 
-      ? [...userData.customAudios] 
+    let audios = userData?.customAudios?.length > 0
+      ? [...userData.customAudios]
       : (userData?.customAudioUrl ? [{ url: userData.customAudioUrl, name: 'Canción' }] : []);
-      
+
     if (userData?.spotifyUrl && !audios.some(a => a.isSpotify || (a.url && a.url.includes('spotify')))) {
-       audios.push({ url: userData.spotifyUrl, name: 'Spotify Legacy', isSpotify: true });
+      audios.push({ url: userData.spotifyUrl, name: 'Spotify Legacy', isSpotify: true });
     }
     return audios;
   }, [userData?.customAudios, userData?.customAudioUrl, userData?.spotifyUrl]);
@@ -287,16 +287,16 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
     } else {
       if (window.spotifyController) {
         try {
-          Promise.resolve(window.spotifyController.pause()).catch(() => {});
-        } catch (e) {}
+          Promise.resolve(window.spotifyController.pause()).catch(() => { });
+        } catch (e) { }
       }
-      
+
       if (!customAudioRef.current) {
         customAudioRef.current = new Audio(currentTrack.url);
       } else if (customAudioRef.current.src !== currentTrack.url) {
         customAudioRef.current.src = currentTrack.url;
       }
-      
+
       const onPlay = () => setIsAudioPlaying(true);
       const onPause = () => setIsAudioPlaying(false);
       const handleEnded = () => {
@@ -440,7 +440,7 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
       {/* Reproductor de Audio Flotante (Burbuja Compacta) */}
       {(userData?.customAudios?.length > 0 || userData?.customAudioUrl) && (
         <div className={`fixed bottom-4 left-4 z-[100] transition-all duration-700 ${musicActive ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'}`}>
-          <button 
+          <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
@@ -455,15 +455,14 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
                 try {
                   window.spotifyController.togglePlay();
                   setIsAudioPlaying(prev => !prev);
-                } catch (err) {}
+                } catch (err) { }
               }
             }}
             title={isAudioPlaying ? `Pausar: ${userData?.customAudios?.[currentAudioIndex]?.name || 'Música'}` : `Reproducir: ${userData?.customAudios?.[currentAudioIndex]?.name || 'Música'}`}
-            className={`group relative w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md cursor-pointer border ${
-              isAudioPlaying 
-                ? 'bg-gradient-to-tr from-purple-700/80 via-pink-600/80 to-rose-500/80 border-pink-400/60 shadow-[0_0_20px_rgba(236,72,153,0.5)] hover:scale-105' 
-                : 'bg-black/60 border-purple-500/30 text-white/50 hover:text-white hover:border-pink-500/50 hover:bg-black/80'
-            }`}
+            className={`group relative w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md cursor-pointer border ${isAudioPlaying
+              ? 'bg-gradient-to-tr from-purple-700/80 via-pink-600/80 to-rose-500/80 border-pink-400/60 shadow-[0_0_20px_rgba(236,72,153,0.5)] hover:scale-105'
+              : 'bg-black/60 border-purple-500/30 text-white/50 hover:text-white hover:border-pink-500/50 hover:bg-black/80'
+              }`}
           >
             {/* Anillo de pulso sutil cuando está reproduciendo */}
             {isAudioPlaying && (
@@ -652,11 +651,11 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
               <p className="text-gray-300 max-w-md">No tienes fotos guardadas aún. Ve a "Configurar" y luego a "Fotos" para empezar a poblar tu universo con recuerdos invaluables.</p>
             </div>
           )}
-          <CanvasGallery 
-            items={images} 
-            toggleView={toggleView} 
-            hasFlightMode={userData?.hasFlightMode} 
-            onLoadMore={loadMoreImages} 
+          <CanvasGallery
+            items={images}
+            toggleView={toggleView}
+            hasFlightMode={userData?.hasFlightMode}
+            onLoadMore={loadMoreImages}
           />
         </div>
       )}

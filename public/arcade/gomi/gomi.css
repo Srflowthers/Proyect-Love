@@ -164,7 +164,7 @@ header p {
 }
 
 /* --------------------------------------------------------------------------
-   4. MARCADORES SUPERIORES (STATS) Y METAS
+   4. MARCADORES SUPERIORES (STATS), NIVEL Y METAS
    -------------------------------------------------------------------------- */
 .label {
   font-size: 9px !important;
@@ -174,29 +174,141 @@ header p {
   color: var(--muted);
 }
 
+.hud-column {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.level-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  padding: 4px 9px;
+  width: 100%;
+}
+
+.level-banner-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.level-badge {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.level-title {
+  font: 800 12.5px/1.15 var(--body);
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.level-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.run-risk-pill {
+  font: 800 10px/1 var(--body);
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: rgba(79, 213, 143, 0.16);
+  color: var(--good);
+  border: 1px solid rgba(79, 213, 143, 0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.run-risk-pill.easy {
+  background: rgba(79, 213, 143, 0.16);
+  color: var(--good);
+  border-color: rgba(79, 213, 143, 0.45);
+}
+
+.run-risk-pill.mid {
+  background: rgba(255, 194, 71, 0.18);
+  color: var(--gold);
+  border-color: rgba(255, 194, 71, 0.5);
+}
+
+.run-risk-pill.hard {
+  background: rgba(242, 102, 208, 0.2);
+  color: var(--accent);
+  border-color: rgba(242, 102, 208, 0.55);
+}
+
+.run-risk-pill.danger {
+  background: rgba(255, 112, 131, 0.22);
+  color: var(--bad);
+  border-color: rgba(255, 112, 131, 0.6);
+}
+
 .stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px !important;
+  gap: 4px !important;
   width: 100%;
 }
 
 .stat {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 5px 10px !important;
+  border-radius: 10px;
+  padding: 3px 6px !important;
   text-align: center;
+}
+
+.stat-moves {
+  border-color: rgba(242, 102, 208, 0.45);
+  background: linear-gradient(180deg, rgba(242, 102, 208, 0.1), var(--panel));
 }
 
 .stat b {
   display: block;
-  font: 800 17px/1.1 var(--body) !important;
+  font: 800 14px/1.1 var(--body) !important;
   font-variant-numeric: tabular-nums;
 }
 
+.goal-box {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 4px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+}
+
+.goal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  font-size: 9.5px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
 .goal {
-  height: 6px !important;
+  height: 5px !important;
   width: 100%;
   border-radius: 99px;
   background: var(--track);
@@ -207,7 +319,7 @@ header p {
   display: block;
   height: 100%;
   width: 0;
-  background: var(--accent);
+  background: linear-gradient(90deg, var(--accent), #ff92e0);
   border-radius: 99px;
   transition: width .35s ease;
 }
@@ -216,14 +328,501 @@ header p {
   background: var(--good);
 }
 
-.goalrow {
+/* Tarjeta de Misión: Objetivos de figuras del nivel */
+.mission-box {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 4px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+}
+
+.mission-head {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+}
+
+.obj-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 4px;
   width: 100%;
-  gap: 10px;
-  font-size: 11px !important;
+}
+
+.obj-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 2px 6px 2px 4px;
+  font: 800 11px/1 var(--body);
+  font-variant-numeric: tabular-nums;
+}
+
+.obj-chip .obj-name {
+  font-size: 10px;
+  font-weight: 700;
   color: var(--muted);
-  margin-top: -2px !important;
+}
+
+.obj-chip .obj-cnt {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.obj-chip.done {
+  border-color: var(--good);
+  background: rgba(79, 213, 143, 0.14);
+  color: var(--good);
+}
+
+.obj-chip.done .obj-name,
+.obj-chip.done .obj-cnt {
+  color: var(--good);
+}
+
+.skills-title {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: -2px;
+}
+
+/* --------------------------------------------------------------------------
+   4.B MODAL DE ADMINISTRACIÓN Y VISUALIZACIÓN DE 101 NIVELES (UX PC & MÓVIL)
+   -------------------------------------------------------------------------- */
+.adm-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(10, 5, 22, 0.86);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Margen superior de 54px para no chocar con 'Catálogo' ni '0 LP' de la barra superior */
+  padding: 54px 18px 16px;
+}
+
+.adm-dialog {
+  background: var(--panel);
+  border: 1px solid rgba(242, 102, 208, 0.28);
+  border-radius: 20px;
+  width: min(940px, 96vw);
+  max-height: calc(100vh - 72px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+
+.adm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
+
+.adm-header h2 {
+  font: 400 20px/1.15 var(--display);
+  margin: 0;
+  color: var(--ink);
+}
+
+.adm-header p {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: var(--good);
+  font-weight: 700;
+}
+
+.adm-close-btn {
+  flex-shrink: 0;
+  border-radius: 10px;
+  padding: 6px 12px !important;
+}
+
+/* Filtros de bloque en píldoras flex-wrap (CERO barra de scroll horizontal) */
+.adm-blocks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.adm-blk-btn {
+  background: var(--bg);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 4px 9px;
+  font: 700 11px/1.2 var(--body);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.adm-blk-btn:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.adm-blk-btn.on {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+  font-weight: 800;
+}
+
+.adm-body {
+  display: grid;
+  grid-template-columns: 310px minmax(0, 1fr);
+  gap: 14px;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Scrollbar estilizada y discreta en PC */
+.adm-list,
+.adm-detail {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(242, 102, 208, 0.4) rgba(0, 0, 0, 0.18);
+}
+
+.adm-list::-webkit-scrollbar,
+.adm-detail::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.adm-list::-webkit-scrollbar-track,
+.adm-detail::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 99px;
+}
+
+.adm-list::-webkit-scrollbar-thumb,
+.adm-detail::-webkit-scrollbar-thumb {
+  background: rgba(242, 102, 208, 0.45);
+  border-radius: 99px;
+}
+
+.adm-list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-right: 6px;
+}
+
+.adm-row {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  background: var(--bg);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 11px;
+  padding: 7px 10px;
+  color: var(--ink);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.adm-row:hover {
+  border-color: rgba(242, 102, 208, 0.4);
+}
+
+.adm-row.active {
+  border-color: var(--accent);
+  background: rgba(242, 102, 208, 0.16);
+}
+
+.adm-no {
+  font: 800 11.5px var(--body);
+  color: var(--accent);
+}
+
+.adm-info b {
+  display: block;
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.adm-info small {
+  display: block;
+  font-size: 10.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.adm-st.ok {
+  color: var(--good);
+  font-weight: 800;
+  text-align: center;
+}
+
+.adm-detail {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.adm-detail-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+}
+
+.adm-detail-head {
+  min-width: 0;
+  flex: 1;
+}
+
+.adm-sub {
+  font-size: 10.5px;
+  color: var(--accent);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.adm-detail-head h3 {
+  margin: 2px 0 0;
+  font: 800 17px/1.2 var(--body);
+  color: var(--ink);
+}
+
+.adm-desc {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.adm-play-btn {
+  flex-shrink: 0;
+  padding: 10px 16px !important;
+  font-size: 13.5px !important;
+  border-radius: 12px !important;
+  box-shadow: 0 6px 18px rgba(242, 102, 208, 0.35);
+}
+
+.adm-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.adm-stat-box {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 7px 10px;
+}
+
+.adm-stat-box b {
+  display: block;
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.adm-val.ok {
+  color: var(--good);
+}
+
+.adm-preview-row {
+  display: grid;
+  grid-template-columns: 196px minmax(0, 1fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.adm-canvas-wrap {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.adm-canvas-wrap small {
+  font-size: 10.5px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.adm-figs-box {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.adm-figs-help {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.adm-figs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.adm-fig-tag {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 5px 9px 5px 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+/* --------------------------------------------------------------------------
+   4.C DISEÑO DE ESCRITORIO (PC >= 720px): TABLERO GIGANTE + HUD COMPACTO
+   -------------------------------------------------------------------------- */
+@media (min-width: 720px) {
+  .wrap {
+    padding: 8px 16px !important;
+  }
+
+  .game {
+    max-width: 1280px !important;
+  }
+
+  .stage {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 16px !important;
+  }
+
+  /* Columna HUD lateral muy compacta (205px) para darle todo el protagonismo al tablero */
+  .hud-column {
+    width: 205px;
+    flex-shrink: 0;
+    gap: 6px;
+  }
+
+  .level-banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 5px;
+    padding: 8px 10px;
+  }
+
+  .level-title {
+    font-size: 13.5px;
+    white-space: normal;
+  }
+
+  .lvl-open-btn {
+    justify-content: center;
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+
+  .stat {
+    padding: 5px 4px !important;
+  }
+
+  .stat b {
+    font-size: 14.5px !important;
+  }
+
+  .mission-box {
+    padding: 6px 8px;
+  }
+
+  .obj-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .obj-chip {
+    justify-content: space-between;
+    padding: 3px 7px;
+  }
+
+  .obj-chip-left {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .board-with-skills {
+    width: auto !important;
+    gap: 10px !important;
+  }
+
+  /* Tablero 8x8 GIGANTE en PC: ocupa hasta el 90% del alto de la pantalla */
+  .boardwrap {
+    width: min(90vh, calc(100vw - 290px), 780px) !important;
+    max-width: min(90vh, calc(100vw - 290px), 780px) !important;
+  }
+}
+
+@media (max-width: 719px) {
+  .adm-modal {
+    padding: 44px 8px 8px;
+  }
+  .adm-body {
+    grid-template-columns: 1fr;
+  }
+  .adm-list {
+    max-height: 24vh;
+  }
+  .adm-preview-row {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -320,7 +919,7 @@ header p {
 .boardwrap {
   position: relative;
   width: 100%;
-  max-width: min(calc(100vw - 64px), 64vh);
+  max-width: min(calc(100vw - 56px), 74vh);
   margin-inline: auto;
   aspect-ratio: 1;
   display: flex;
@@ -516,8 +1115,21 @@ canvas.aim {
   display: none !important;
 }
 
-#rankCard, #histCard, #ovDelta, #ovRank {
+#rankCard, #histCard {
   display: none !important;
+}
+
+#ovDelta {
+  font: 800 22px/1.2 var(--body) !important;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+}
+
+#ovRank {
+  font-size: 13px;
+  color: var(--gold);
 }
 
 /* --------------------------------------------------------------------------

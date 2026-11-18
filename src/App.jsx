@@ -14,12 +14,30 @@ import { logout } from '@/services/authService';
 
 function App() {
   const { user, userRole, loading } = useAuth();
-  // Los clientes ven la galería por defecto. El admin ve el panel.
-  const [view, setView] = React.useState(null); 
+  // Los clientes ven la galería por defecto, pero se conserva la vista activa al recargar la página.
+  const [view, setView] = React.useState(() => {
+    try {
+      return window.history.state?.view || sessionStorage.getItem('love_active_view') || null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [showPricing, setShowPricing] = React.useState(false);
   const [targetAfterLogin, setTargetAfterLogin] = React.useState(null);
-  const [settingsTab, setSettingsTab] = React.useState('profile');
-  const [adminTab, setAdminTab] = React.useState('clients');
+  const [settingsTab, setSettingsTab] = React.useState(() => {
+    try {
+      return sessionStorage.getItem('love_settings_tab') || 'profile';
+    } catch (e) {
+      return 'profile';
+    }
+  });
+  const [adminTab, setAdminTab] = React.useState(() => {
+    try {
+      return sessionStorage.getItem('love_admin_tab') || 'clients';
+    } catch (e) {
+      return 'clients';
+    }
+  });
   const [isMobile, setIsMobile] = React.useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const [hideDock, setHideDock] = React.useState(false);
   const [gamesMenuOpen, setGamesMenuOpen] = React.useState(false);
@@ -72,29 +90,55 @@ function App() {
   }, []);
 
   React.useEffect(() => {
-    if (userRole === 'admin' && !view) {
-      setView('admin');
-      window.history.replaceState({ view: 'admin' }, '');
-    }
-    if (userRole === 'client' && !view) {
+    try {
+      if (settingsTab) sessionStorage.setItem('love_settings_tab', settingsTab);
+    } catch (e) {}
+  }, [settingsTab]);
+
+  React.useEffect(() => {
+    try {
+      if (adminTab) sessionStorage.setItem('love_admin_tab', adminTab);
+    } catch (e) {}
+  }, [adminTab]);
+
+  React.useEffect(() => {
+    if (!userRole) return;
+    if (userRole === 'admin') {
+      const savedView = view || window.history.state?.view || sessionStorage.getItem('love_active_view');
+      const validAdminViews = ['admin', 'gallery', 'settings', 'games'];
+      const nextView = validAdminViews.includes(savedView) ? savedView : 'admin';
+      if (view !== nextView) setView(nextView);
+      try {
+        sessionStorage.setItem('love_active_view', nextView);
+        window.history.replaceState({ view: nextView }, '');
+      } catch (e) {}
+    } else if (userRole === 'client') {
       if (targetAfterLogin === 'games') {
         handleSetView('games');
         setTargetAfterLogin(null);
-      } else {
-        handleSetView('gallery');
-        window.history.replaceState({ view: 'gallery' }, '');
+        return;
       }
+      const savedView = view || window.history.state?.view || sessionStorage.getItem('love_active_view');
+      const validClientViews = ['gallery', 'games', 'settings'];
+      const nextView = validClientViews.includes(savedView) ? savedView : 'gallery';
+      if (view !== nextView) setView(nextView);
+      try {
+        sessionStorage.setItem('love_active_view', nextView);
+        window.history.replaceState({ view: nextView }, '');
+      } catch (e) {}
     }
-  }, [userRole, view, targetAfterLogin]);
+  }, [userRole, targetAfterLogin]);
 
   // Manejar el botón de "Atrás" del navegador
   React.useEffect(() => {
     const handlePopState = (event) => {
       if (event.state && event.state.view) {
         setView(event.state.view);
+        try { sessionStorage.setItem('love_active_view', event.state.view); } catch (e) {}
       } else {
-        // Fallback si no hay estado: volver a la galería o panel principal
-        setView(userRole === 'admin' ? 'admin' : 'gallery');
+        const fallback = userRole === 'admin' ? 'admin' : 'gallery';
+        setView(fallback);
+        try { sessionStorage.setItem('love_active_view', fallback); } catch (e) {}
       }
     };
     
@@ -102,10 +146,13 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [userRole]);
 
-  // Wrapper para cambiar la vista y añadir historial
+  // Wrapper para cambiar la vista, persistir en sesión y añadir historial
   const handleSetView = (newView) => {
     setView(newView);
-    window.history.pushState({ view: newView }, '');
+    try {
+      sessionStorage.setItem('love_active_view', newView);
+      window.history.pushState({ view: newView }, '');
+    } catch (e) {}
   };
 
   if (loading) {

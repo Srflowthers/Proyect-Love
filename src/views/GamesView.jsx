@@ -123,11 +123,52 @@ export default function GamesView({
   setGlobalNextCursor
 }) {
   const [userData, setUserData] = useState(globalUserData || null);
-  // Inicia en null para mostrar el catálogo centrado al entrar a la vista
-  const [activeGame, setActiveGame] = useState(null);
-  // Vista: 'catalog' | 'profile' (pantalla completa 6. Ligas y puntos sin lag)
-  const [currentSection, setCurrentSection] = useState('catalog');
-  const [activeParams, setActiveParams] = useState('');
+  // Persiste el juego o sección activa en sessionStorage para no perder la vista al recargar (F5)
+  const [activeGame, setActiveGame] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('love_active_game');
+      // Restaurar juegos individuales al recargar; los multijugador en vivo vuelven al catálogo
+      return (saved && ['gomi', 'sudoku', 'puzzle', 'test'].includes(saved)) ? saved : null;
+    } catch (e) {
+      return null;
+    }
+  });
+  // Vista: 'catalog' | 'profile' | 'puzzle_hub'
+  const [currentSection, setCurrentSection] = useState(() => {
+    try {
+      const savedSec = sessionStorage.getItem('love_games_section');
+      return (savedSec && ['catalog', 'profile', 'puzzle_hub'].includes(savedSec)) ? savedSec : 'catalog';
+    } catch (e) {
+      return 'catalog';
+    }
+  });
+  const [activeParams, setActiveParams] = useState(() => {
+    try {
+      return sessionStorage.getItem('love_active_game_params') || '';
+    } catch (e) {
+      return '';
+    }
+  });
+
+  useEffect(() => {
+    try {
+      if (activeGame) sessionStorage.setItem('love_active_game', activeGame);
+      else sessionStorage.removeItem('love_active_game');
+    } catch (e) {}
+  }, [activeGame]);
+
+  useEffect(() => {
+    try {
+      if (currentSection) sessionStorage.setItem('love_games_section', currentSection);
+    } catch (e) {}
+  }, [currentSection]);
+
+  useEffect(() => {
+    try {
+      if (activeParams) sessionStorage.setItem('love_active_game_params', activeParams);
+      else sessionStorage.removeItem('love_active_game_params');
+    } catch (e) {}
+  }, [activeParams]);
   const [sudokuModalOpen, setSudokuModalOpen] = useState(false);
   const [puzzleModalOpen, setPuzzleModalOpen] = useState(false);
   const [puzzleSelectedPhoto, setPuzzleSelectedPhoto] = useState(null); // Foto elegida para jugar
@@ -2259,7 +2300,7 @@ export default function GamesView({
       {/* Modal interactivo de selección de dificultad para Sudoku */}
       {sudokuModalOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
           onClick={() => setSudokuModalOpen(false)}
         >
           <div 
@@ -2328,7 +2369,7 @@ export default function GamesView({
       {/* Modal interactivo de selección de piezas/dificultad y Galería de Rompecabezas */}
       {puzzleModalOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
           onClick={() => {
             setPuzzleModalOpen(false);
             setPuzzleSelectedPhoto(null);
@@ -2754,11 +2795,11 @@ export default function GamesView({
       {/* Modal interactivo de selección de modo para Tetris */}
       {tetrisModalOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
           onClick={() => setTetrisModalOpen(false)}
         >
           <div 
-            className="relative w-full max-w-[350px] max-h-[calc(100vh-24px)] overflow-y-auto rounded-3xl px-5 py-4 bg-gradient-to-b from-[#1c1427] to-[#0c0915] border border-pink-500/30 shadow-[0_0_50px_rgba(236,72,153,0.3)] flex flex-col items-center text-center animate-in zoom-in-95 duration-200"
+            className="relative w-full max-w-[395px] sm:max-w-[420px] max-h-[calc(100vh-32px)] overflow-y-auto rounded-3xl px-5 py-5 sm:px-6 sm:py-6 bg-gradient-to-b from-[#1c1427] to-[#0c0915] border border-pink-500/35 shadow-[0_20px_60px_rgba(236,72,153,0.35)] flex flex-col items-center text-center animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Botón cerrar */}
@@ -2767,40 +2808,41 @@ export default function GamesView({
                 cancelTetrisQueue();
                 setTetrisModalOpen(false);
               }}
-              className="absolute top-3 right-3 w-7 h-7 rounded-full bg-white/5 hover:bg-white/15 text-gray-400 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+              className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+              aria-label="Cerrar modal"
             >
               ✕
             </button>
 
             {/* Icono decorativo */}
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-pink-500/20 to-sky-500/20 border border-pink-400/30 flex items-center justify-center text-xl shadow-inner mb-2">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-pink-500/20 to-sky-500/20 border border-pink-400/30 flex items-center justify-center text-xl shadow-inner mb-2.5">
               ⚔️
             </div>
 
-            <h3 className="text-lg font-serif italic font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-300 via-sky-200 to-indigo-200">
+            <h3 className="text-xl font-serif italic font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-300 via-sky-200 to-indigo-200">
               Tetris Pareja
             </h3>
-            <p className="text-xs text-gray-400 mt-0.5 mb-3.5">
+            <p className="text-xs text-gray-400 mt-1 mb-4">
               Elige el modo para comenzar a jugar:
             </p>
 
-            <div className="w-full flex flex-col gap-2">
+            <div className="w-full flex flex-col gap-2.5">
               <button
                 onClick={() => {
                   setTetrisModalOpen(false);
                   setActiveParams('mode=solo');
                   setActiveGame('tetris');
                 }}
-                className="w-full py-2.5 px-4 rounded-2xl font-bold text-sm tracking-wide flex items-center justify-between border border-pink-500/40 bg-pink-500/10 hover:bg-pink-500/25 text-pink-200 hover:text-white shadow-[0_0_15px_rgba(236,72,153,0.15)] transition-all active:scale-95 cursor-pointer group"
+                className="w-full py-3 px-4 rounded-2xl font-bold text-sm tracking-wide flex items-center justify-between gap-3 border border-pink-500/40 bg-pink-500/10 hover:bg-pink-500/25 text-pink-200 hover:text-white shadow-[0_0_15px_rgba(236,72,153,0.15)] transition-all active:scale-95 cursor-pointer group"
               >
-                <div className="flex items-center gap-2.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-pink-400 group-hover:scale-125 transition-transform shadow-[0_0_8px_#f472b6]" />
-                  <div className="text-left">
-                    <span className="text-sm font-semibold block">1 Jugador (Clásico)</span>
-                    <span className="text-[10px] text-gray-400 font-normal">Individual / Cooperativo</span>
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="w-2.5 h-2.5 rounded-full bg-pink-400 group-hover:scale-125 transition-transform shadow-[0_0_8px_#f472b6] shrink-0" />
+                  <div className="text-left min-w-0">
+                    <span className="text-sm font-semibold block truncate">1 Jugador (Clásico)</span>
+                    <span className="text-[11px] text-gray-400 font-normal block">Individual / Cooperativo</span>
                   </div>
                 </div>
-                <span className="text-xs text-pink-400/80 group-hover:text-pink-200">Jugar →</span>
+                <span className="text-xs font-semibold text-pink-300 group-hover:text-white whitespace-nowrap shrink-0">Jugar →</span>
               </button>
 
               <button
@@ -2809,21 +2851,21 @@ export default function GamesView({
                   setActiveParams('mode=1v1');
                   setActiveGame('tetris');
                 }}
-                className="w-full py-2.5 px-4 rounded-2xl font-bold text-sm tracking-wide flex items-center justify-between border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/25 text-sky-200 hover:text-white shadow-[0_0_15px_rgba(14,165,233,0.2)] transition-all active:scale-95 cursor-pointer group"
+                className="w-full py-3 px-4 rounded-2xl font-bold text-sm tracking-wide flex items-center justify-between gap-3 border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/25 text-sky-200 hover:text-white shadow-[0_0_15px_rgba(14,165,233,0.2)] transition-all active:scale-95 cursor-pointer group"
               >
-                <div className="flex items-center gap-2.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-sky-400 group-hover:scale-125 transition-transform shadow-[0_0_8px_#38bdf8]" />
-                  <div className="text-left">
-                    <span className="text-sm font-semibold block">1v1 Local (2 Tableros)</span>
-                    <span className="text-[10px] text-gray-400 font-normal">P1: WASD vs P2: Flechas</span>
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="w-2.5 h-2.5 rounded-full bg-sky-400 group-hover:scale-125 transition-transform shadow-[0_0_8px_#38bdf8] shrink-0" />
+                  <div className="text-left min-w-0">
+                    <span className="text-sm font-semibold block truncate">1v1 Local (2 Tableros)</span>
+                    <span className="text-[11px] text-gray-400 font-normal block">P1: WASD vs P2: Flechas</span>
                   </div>
                 </div>
-                <span className="text-xs text-sky-400/80 group-hover:text-sky-200">Duelo →</span>
+                <span className="text-xs font-semibold text-sky-300 group-hover:text-white whitespace-nowrap shrink-0">Duelo →</span>
               </button>
 
               {/* Opción 3: 1v1 Online */}
               {tetrisQueueState === 'searching' ? (
-                <div className="w-full py-2.5 px-3.5 rounded-2xl border border-purple-500/50 bg-gradient-to-r from-purple-950/70 via-pink-950/40 to-purple-950/70 flex flex-col items-center justify-center gap-1.5 shadow-[0_0_20px_rgba(168,85,247,0.2)] animate-in fade-in duration-200">
+                <div className="w-full py-3 px-4 rounded-2xl border border-purple-500/50 bg-gradient-to-r from-purple-950/70 via-pink-950/40 to-purple-950/70 flex flex-col items-center justify-center gap-1.5 shadow-[0_0_20px_rgba(168,85,247,0.2)] animate-in fade-in duration-200">
                   <div className="flex items-center gap-2">
                     <span className="w-3.5 h-3.5 rounded-full border-2 border-purple-400 border-t-transparent animate-spin shrink-0" />
                     <span className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-200 to-pink-200">
@@ -2835,14 +2877,14 @@ export default function GamesView({
                   </span>
                   <button
                     onClick={cancelTetrisQueue}
-                    className="mt-0.5 px-4 py-1 rounded-full bg-red-500/20 hover:bg-red-500/35 border border-red-500/50 text-[11px] font-bold text-red-200 hover:text-white transition-all cursor-pointer active:scale-95 shadow-sm flex items-center gap-1"
+                    className="mt-1 px-4 py-1 rounded-full bg-red-500/20 hover:bg-red-500/35 border border-red-500/50 text-[11px] font-bold text-red-200 hover:text-white transition-all cursor-pointer active:scale-95 shadow-sm flex items-center gap-1"
                   >
                     <span>✕</span>
                     <span>Cancelar Búsqueda</span>
                   </button>
                 </div>
               ) : tetrisQueueState === 'matched' ? (
-                <div className="w-full py-3 px-3.5 rounded-2xl border border-emerald-500/50 bg-emerald-950/60 flex flex-col items-center justify-center gap-1 animate-in zoom-in-95 duration-200 shadow-[0_0_25px_rgba(16,185,129,0.3)]">
+                <div className="w-full py-3 px-4 rounded-2xl border border-emerald-500/50 bg-emerald-950/60 flex flex-col items-center justify-center gap-1 animate-in zoom-in-95 duration-200 shadow-[0_0_25px_rgba(16,185,129,0.3)]">
                   <span className="text-xl animate-bounce">⚡</span>
                   <span className="text-xs font-bold text-emerald-300">¡Rival Encontrado!</span>
                   <span className="text-[10px] text-emerald-200/80">Iniciando partida en tiempo real...</span>
@@ -2850,19 +2892,22 @@ export default function GamesView({
               ) : (
                 <button
                   onClick={startTetrisOnlineQueue}
-                  className="w-full py-2.5 px-4 rounded-2xl font-bold text-sm tracking-wide flex items-center justify-between border border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/25 text-purple-200 hover:text-white shadow-[0_0_15px_rgba(168,85,247,0.2)] transition-all active:scale-95 cursor-pointer group"
+                  className="w-full py-3 px-4 rounded-2xl font-bold text-sm tracking-wide flex items-center justify-between gap-3 border border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/25 text-purple-200 hover:text-white shadow-[0_0_15px_rgba(168,85,247,0.2)] transition-all active:scale-95 cursor-pointer group"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-purple-400 group-hover:scale-125 transition-transform shadow-[0_0_8px_#c084fc] animate-pulse" />
-                    <div className="text-left">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-semibold block">1v1 Online (Duelo en Red)</span>
-                        <span className="text-[8px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-md bg-purple-500/40 text-purple-200 border border-purple-400/40">Multiplayer</span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="w-2.5 h-2.5 rounded-full bg-purple-400 group-hover:scale-125 transition-transform shadow-[0_0_8px_#c084fc] animate-pulse shrink-0" />
+                    <div className="text-left min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold">1v1 Online (Duelo en Red)</span>
+                        <span className="text-[9px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-md bg-purple-500/40 text-purple-200 border border-purple-400/40 whitespace-nowrap">Multiplayer</span>
                       </div>
-                      <span className="text-[10px] text-gray-400 font-normal">Buscar partida rápida en red</span>
+                      <span className="text-[11px] text-gray-400 font-normal block mt-0.5">Buscar partida rápida en red</span>
                     </div>
                   </div>
-                  <span className="text-xs text-purple-400/80 group-hover:text-purple-200">Buscar 🔍</span>
+                  <span className="text-xs font-semibold text-purple-300 group-hover:text-white whitespace-nowrap shrink-0 flex items-center gap-1">
+                    <span>Buscar</span>
+                    <span>🔍</span>
+                  </span>
                 </button>
               )}
             </div>

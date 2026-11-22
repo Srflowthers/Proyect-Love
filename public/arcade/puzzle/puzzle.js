@@ -544,7 +544,16 @@
     }
   };
 
-  $('lpChange').onclick = backToIntro;
+  $('lpChange').onclick = () => {
+    try {
+      if (window.parent && window.parent !== window) {
+        stopTimer();
+        window.parent.postMessage({ type: 'EXIT_TO_CATALOG' }, '*');
+        return;
+      }
+    } catch (_) {}
+    backToIntro();
+  };
   window.addEventListener('pagehide', revoke);
 
   function backToIntro() {
@@ -791,18 +800,21 @@
       }
     } catch (_) {}
 
-    const W = el.stage.clientWidth || (window.innerWidth - 24) || 640;
+    const isDesktop = window.innerWidth >= 1025 && window.innerHeight >= 561;
+    const W = el.stage.clientWidth || (window.innerWidth - (isDesktop ? 48 : 24)) || 640;
     const stageRect = el.stage.getBoundingClientRect();
-    const topOffset = (stageRect.top > 18 && stageRect.top < window.innerHeight - 120) ? stageRect.top : 50;
-    const bottomPad = window.innerHeight <= 540 ? 8 : 14;
-    const availH = Math.max(220, Math.floor(window.innerHeight - topOffset - bottomPad));
+    const topOffset = (stageRect.top > 18 && stageRect.top < window.innerHeight - 120) ? stageRect.top : (isDesktop ? 68 : 44);
+    const bottomPad = isDesktop ? 22 : (window.innerHeight <= 540 ? 8 : 14);
+    const rawAvailH = Math.max(220, Math.floor(window.innerHeight - topOffset - bottomPad));
+    const availH = isDesktop ? Math.min(rawAvailH, 800) : rawAvailH;
     const wide = W >= 460;
     let pl = null;
 
     if (wide) {
-      const maxBW = Math.min(Math.floor(W * 0.56), 920);
-      const maxBH = Math.floor(availH - 14);
-      const cwMax = Math.max(10, Math.floor(Math.min(105, maxBW / COLS, (maxBH / ROWS) * (G.cwS / G.chS))));
+      const maxBW = Math.min(Math.floor(W * (isDesktop ? 0.50 : 0.54)), isDesktop ? 760 : 920);
+      const maxBH = Math.floor(availH - (isDesktop ? 28 : 14));
+      const maxCellPx = isDesktop ? 74 : 105;
+      const cwMax = Math.max(10, Math.floor(Math.min(maxCellPx, maxBW / COLS, (maxBH / ROWS) * (G.cwS / G.chS))));
       const minComfortCW = Math.max(10, Math.floor(cwMax * (N >= 500 ? 0.72 : N >= 240 ? 0.78 : 0.84)));
 
       for (let cw = cwMax; cw >= minComfortCW && !pl; cw--) {
@@ -851,17 +863,22 @@
     if (wide) {
       const neededInWings = Math.max(0, N - slots.length);
       const perWing = Math.max(1, Math.ceil(neededInWings / 2));
-      let wingA = Math.max(1, a);
-      let wingSr = Math.max(1, sr);
+      // Calcular una cuadrícula simétrica (wingA x wingSr) ajustada a la cantidad real de piezas por ala
+      const targetWingH = Math.min(sideH, Math.max(bh, Math.round(availH * 0.88)));
+      const targetWingW = Math.min(usableWingW, Math.max(boxW, Math.round(targetWingH * 0.75)));
+      let wingA = 1;
+      let wingSr = 1;
       while (wingA * wingSr < perWing) {
-        if ((wingA / Math.max(1, usableWingW)) <= (wingSr / Math.max(1, sideH))) {
+        if ((wingA / Math.max(1, targetWingW)) <= (wingSr / Math.max(1, targetWingH))) {
           wingA++;
         } else {
           wingSr++;
         }
       }
-      const wingPx = wingA > 1 ? Math.min(px, Math.max(4, (usableWingW - boxW) / (wingA - 1))) : px;
-      const wingPy = wingSr > 1 ? Math.min(py, Math.max(4, (sideH - boxH) / (wingSr - 1))) : py;
+      const maxSpanW = Math.min(usableWingW, isDesktop ? Math.max(targetWingW, Math.round(bw * 0.55)) : usableWingW);
+      const maxSpanH = Math.min(sideH, isDesktop ? Math.max(bh, Math.round(availH * 0.86)) : sideH);
+      const wingPx = wingA > 1 ? Math.min(px * 1.08, Math.max(4, (maxSpanW - boxW) / (wingA - 1))) : px;
+      const wingPy = wingSr > 1 ? Math.min(py * 1.08, Math.max(4, (maxSpanH - boxH) / (wingSr - 1))) : py;
       const wingTotalH = (wingSr - 1) * wingPy + boxH;
       const wingStartY = Math.max(P, Math.round((availH - wingTotalH) / 2));
 

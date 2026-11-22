@@ -31,6 +31,8 @@ const DIFF_CLEAR_BONUS = {
   10: { pts: 11000, coins: 28, elo: 75, label: 'Imposible' }
 };
 
+const MS_STEP = 350;  // Puntos de combinaciones necesarios para cargar +1 Poder (0% a 100%)
+
 // Estado de la Partida continua (Run)
 let runState = {
   active: false,
@@ -41,7 +43,8 @@ let runState = {
   bonusCoins: 0,
   bonusElo: 0,
   startTime: 0,
-  nextMs: 1000,
+  powerPts: 0,
+  nextMs: MS_STEP,
   playedLevels: new Set(),
   defeatPct: 12,
   pressure: 0,
@@ -845,20 +848,26 @@ function save() {
    ============================================================================ */
 const cv = $('cv'), ctx = cv.getContext('2d');
 const fx = $('fx'), fctx = fx.getContext('2d'), bwEl = $('bw');
-let S = 480, dpr = 1, cell = 50, pad = 8;
+let S = 480, SW = 480, SH = 480, dpr = 1, cell = 50, cellX = 50, cellY = 50, pad = 8;
 
 function resize() {
-  const w = Math.max(200, Math.floor($('bw').clientWidth));
-  dpr = Math.min(window.devicePixelRatio || 1, 1.25);
-  S = w;
+  const rect = $('bw').getBoundingClientRect();
+  const w = Math.max(200, Math.floor(rect.width || $('bw').clientWidth));
+  const h = Math.max(200, Math.floor(rect.height || $('bw').clientHeight || w));
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  SW = w;
+  SH = h;
+  S = Math.min(w, h);
   cv.width = Math.round(w * dpr);
-  cv.height = Math.round(w * dpr);
-  cv.style.width = w + 'px';
-  cv.style.height = w + 'px';
+  cv.height = Math.round(h * dpr);
+  cv.style.width = '100%';
+  cv.style.height = '100%';
   fx.width = cv.width;
   fx.height = cv.height;
-  pad = Math.max(6, w * 0.018);
-  cell = (S - 2 * pad) / N;
+  pad = Math.max(6, S * 0.018);
+  cellX = (SW - 2 * pad) / N;
+  cellY = (SH - 2 * pad) / N;
+  cell = Math.min(cellX, cellY);
   buildSprites();
 }
 
@@ -1853,7 +1862,11 @@ function drawTile(t, pxx, pyy, scale, alpha, selected, now) {
 }
 
 function px(x) {
-  return pad + (x + 0.5) * cell;
+  return pad + (x + 0.5) * cellX;
+}
+
+function py(y) {
+  return pad + (y + 0.5) * cellY;
 }
 
 /* ============================================================================
@@ -1976,34 +1989,34 @@ function update(dt, now) {
 
 function draw(now) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, S, S);
-  rr(ctx, 0, 0, S, S, S * 0.045);
+  ctx.clearRect(0, 0, SW, SH);
+  rr(ctx, 0, 0, SW, SH, S * 0.042);
   ctx.fillStyle = C.board;
   ctx.fill();
 
-  const bg = ctx.createLinearGradient(0, 0, 0, S);
+  const bg = ctx.createLinearGradient(0, 0, 0, SH);
   bg.addColorStop(0, 'rgba(255,255,255,.09)');
   bg.addColorStop(0.5, 'rgba(255,255,255,0)');
   bg.addColorStop(1, 'rgba(0,0,0,.18)');
-  rr(ctx, 0, 0, S, S, S * 0.045);
+  rr(ctx, 0, 0, SW, SH, S * 0.042);
   ctx.fillStyle = bg;
   ctx.fill();
 
   ctx.save();
-  rr(ctx, 0, 0, S, S, S * 0.045);
+  rr(ctx, 0, 0, SW, SH, S * 0.042);
   ctx.clip();
 
   for (let r = 0; r < N; r++) {
     for (let c = 0; c < N; c++) {
       if (!isMaskOpen(r, c)) {
-        rr(ctx, pad + c * cell + 2, pad + r * cell + 2, cell - 4, cell - 4, cell * 0.22);
+        rr(ctx, pad + c * cellX + 2, pad + r * cellY + 2, cellX - 4, cellY - 4, cell * 0.22);
         ctx.fillStyle = 'rgba(10, 4, 22, 0.55)';
         ctx.fill();
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
         ctx.lineWidth = 1;
         ctx.stroke();
       } else if ((r + c) % 2) {
-        rr(ctx, pad + c * cell + 1, pad + r * cell + 1, cell - 2, cell - 2, cell * 0.2);
+        rr(ctx, pad + c * cellX + 1.5, pad + r * cellY + 1.5, cellX - 3, cellY - 3, cell * 0.2);
         ctx.fillStyle = C.board2;
         ctx.fill();
       }
@@ -2014,14 +2027,14 @@ function draw(now) {
     for (let r = 0; r < N; r++) {
       for (let c = 0; c < N; c++) {
         const t = board[r][c];
-        if (t) drawTile(t, px(t.x), px(t.y), 1, 1, sel === r * N + c, now);
+        if (t) drawTile(t, px(t.x), py(t.y), 1, 1, sel === r * N + c, now);
       }
     }
   }
 
   for (const gl of glints) {
     const q = Math.sin(gl.age / 0.55 * Math.PI), s = cell * 0.2 * q;
-    const gx = px(gl.t.x) - cell * 0.17, gy = px(gl.t.y) - cell * 0.2;
+    const gx = px(gl.t.x) - cell * 0.17, gy = py(gl.t.y) - cell * 0.2;
     ctx.globalAlpha = q;
     ctx.fillStyle = '#FFFFFF';
     ctx.beginPath();
@@ -2035,7 +2048,7 @@ function draw(now) {
 
   ctx.globalAlpha = 1;
   for (const g of ghosts) {
-    const p = Math.min(1, (now - g.born) / 230), gx = px(g.t.x), gy = px(g.t.y);
+    const p = Math.min(1, (now - g.born) / 230), gx = px(g.t.x), gy = py(g.t.y);
     const glow = ctx.createRadialGradient(gx, gy, 0, gx, gy, cell * (0.35 + p * 0.9));
     glow.addColorStop(0, 'rgba(255,255,255,' + (0.85 * (1 - p)) + ')');
     glow.addColorStop(1, 'rgba(255,255,255,0)');
@@ -2059,7 +2072,7 @@ function draw(now) {
       dg.addColorStop(0.5, 'rgba(255,255,255,1)');
       dg.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = dg;
-      ctx.fillRect(-S * 1.5, -th / 2, S * 3, th);
+      ctx.fillRect(-SW * 1.5, -th / 2, SW * 3, th);
       ctx.restore();
     } else {
       const horiz = b.dir === 'h';
@@ -2068,8 +2081,8 @@ function draw(now) {
       g.addColorStop(0.5, 'rgba(255,255,255,1)');
       g.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = g;
-      if (horiz) ctx.fillRect(0, b.pos - th / 2, S, th);
-      else ctx.fillRect(b.pos - th / 2, 0, th, S);
+      if (horiz) ctx.fillRect(0, b.pos - th / 2, SW, th);
+      else ctx.fillRect(b.pos - th / 2, 0, th, SH);
     }
   }
 
@@ -2155,7 +2168,7 @@ function draw(now) {
   ctx.globalAlpha = 1;
   if (flash > 0.01) {
     ctx.fillStyle = 'rgba(' + flashCol + ',' + (flash * 0.6).toFixed(3) + ')';
-    ctx.fillRect(0, 0, S, S);
+    ctx.fillRect(0, 0, SW, SH);
   }
 
   ctx.textAlign = 'center';
@@ -2201,7 +2214,7 @@ function drawFx() {
   }
   fxDirty = true;
   fctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  fctx.clearRect(0, 0, S, S);
+  fctx.clearRect(0, 0, SW, SH);
   for (const c of confetti) {
     fctx.save();
     fctx.translate(c.x, c.y);
@@ -2317,7 +2330,7 @@ function getLevelProgressPct() {
 /** Dibuja un icono pequeño de figura en un canvas 2D */
 function drawMiniFigureIcon(canvasEl, figId) {
   if (!canvasEl) return;
-  const size = 22, dpr0 = window.devicePixelRatio || 1;
+  const size = 28, dpr0 = Math.min(window.devicePixelRatio || 1, 2);
   canvasEl.width = size * dpr0;
   canvasEl.height = size * dpr0;
   canvasEl.style.width = size + 'px';
@@ -2345,9 +2358,10 @@ function renderObjectivesHud() {
   if (box) box.hidden = false;
   bar.hidden = false;
 
-  // Reconstruir chips si cambió el nivel
-  if (bar.dataset.lvl !== String(round.levelId)) {
-    bar.dataset.lvl = String(round.levelId);
+  // Reconstruir chips siempre que cambie la etapa, el nivel o las figuras requeridas
+  const sig = String(round.no) + '_' + String(round.levelId) + '_' + collectObjs.map(function (o) { return o.figureId + ':' + o.target; }).join(',');
+  if (bar.dataset.lvl !== sig) {
+    bar.dataset.lvl = sig;
     bar.innerHTML = '';
     collectObjs.forEach(function (o) {
       const chip = document.createElement('div');
@@ -2406,9 +2420,6 @@ function updateRunClockHud() {
 function renderHud() {
   const totalSc = (runState.totalScore || 0) + (round.score || 0);
   if ($('score')) $('score').textContent = fmt(totalSc);
-  if ($('target')) {
-    $('target').textContent = fmt(runState.nextMs || 1000);
-  }
   if ($('moves')) $('moves').textContent = round.moves;
 
   const doneAll = isLevelCompleted();
@@ -2434,9 +2445,10 @@ function renderHud() {
   updateRunClockHud();
   renderObjectivesHud();
 
-  const kind = SKILL_ORDER[(runState.nextMs / 1000 - 1) % 3];
-  if ($('msTxt')) $('msTxt').textContent = 'Próximo hito ' + fmt(runState.nextMs) + ' · ganas ' + SKILL_NAME[kind];
-  if ($('msBar')) $('msBar').style.width = ((totalSc % 1000) / 10) + '%';
+  const pPts = runState.powerPts || 0;
+  const chargePct = Math.min(99, Math.max(0, Math.floor(((pPts % MS_STEP) / MS_STEP) * 100)));
+  if ($('msTxt')) $('msTxt').textContent = chargePct + '%';
+  if ($('msBar')) $('msBar').style.width = chargePct + '%';
 
   let hn = 0;
   if (board) {
@@ -2533,7 +2545,8 @@ async function startRound(first, forcedLevelId, continueRun) {
       bonusCoins: 0,
       bonusElo: 0,
       startTime: Date.now(),
-      nextMs: 1000,
+      powerPts: 0,
+      nextMs: MS_STEP,
       playedLevels: new Set(),
       defeatPct: 12,
       pressure: 0,
@@ -2650,7 +2663,7 @@ function swapCells(i, j) {
 }
 
 function popFx(t, combo) {
-  const x = px(t.x), y = px(t.y), pal = PAL[Math.max(0, t.t)];
+  const x = px(t.x), y = py(t.y), pal = PAL[Math.max(0, t.t)];
   const col = t.s === 3 ? '#FFFFFF' : pal[1], lt = t.s === 3 ? '#FFFFFF' : pal[0];
   rings.push({
     x: x,
@@ -2686,14 +2699,14 @@ function beamFx(t) {
   const horiz = t.s === 1;
   beams.push({
     dir: horiz ? 'h' : 'v',
-    pos: horiz ? px(t.ty) : px(t.tx),
+    pos: horiz ? py(t.ty) : px(t.tx),
     life: 0.4,
     max: 0.4
   });
 }
 
 function bombFx(t) {
-  const x = px(t.x), y = px(t.y);
+  const x = px(t.x), y = py(t.y);
   [0.45, 0.65, 0.85].forEach(function (l, k) {
     rings.push({
       x: x,
@@ -2727,7 +2740,7 @@ function bombFx(t) {
 }
 
 function sparkFx(t) {
-  const x = px(t.x), y = px(t.y);
+  const x = px(t.x), y = py(t.y);
   rings.push({
     x: x,
     y: y,
@@ -2823,7 +2836,7 @@ function renderSkills() {
 function setSkillMode(k) {
   if (busy || ended) return;
   if (skills[k] <= 0) {
-    toast('No tienes ' + SKILL_NAME[k] + '. Se gana en los hitos de 1.000 puntos');
+    toast('No tienes ' + SKILL_NAME[k] + '. Carga la barra al 100% combinando piezas');
     return;
   }
   skillMode = (skillMode === k) ? null : k;
@@ -2832,14 +2845,14 @@ function setSkillMode(k) {
 }
 
 function checkMilestones() {
-  const totalSc = (runState.totalScore || 0) + (round.score || 0);
-  while (totalSc >= runState.nextMs) {
-    const idx = runState.nextMs / 1000, kind = SKILL_ORDER[(idx - 1) % 3];
+  const pPts = runState.powerPts || 0;
+  while (pPts >= runState.nextMs) {
+    const idx = Math.round(runState.nextMs / MS_STEP), kind = SKILL_ORDER[(idx - 1) % 3];
     skills[kind]++;
-    runState.nextMs += 1000;
+    runState.nextMs += MS_STEP;
     round.nextMs = runState.nextMs;
-    floats.push({ x: S / 2, y: S * 0.28, text: 'HITO ' + fmt(idx * 1000), col: '#7FDDFF', age: 0, size: 0.8, big: true });
-    toast('Hito ' + fmt(idx * 1000) + ': ganaste ' + SKILL_NAME[kind]);
+    floats.push({ x: S / 2, y: S * 0.28, text: '+1 ' + SKILL_NAME[kind].toUpperCase(), col: '#7FDDFF', age: 0, size: 0.8, big: true });
+    toast('¡Carga al 100%! Ganaste +1 ' + SKILL_NAME[kind]);
     sfx.milestone();
     flashFx('127,221,255', 0.45);
     confettiBurst(S / 2, S * 0.35, 36, 800, -Math.PI / 2, 2.4);
@@ -2883,7 +2896,7 @@ async function useSkill(i) {
   renderSkills();
 
   const r = (i / N) | 0, c = i % N, set = new Set([i]);
-  const cx = px(c), cy = px(r);
+  const cx = px(c), cy = py(r);
 
   if (k === 'hammer') {
     hammers.push({ x: cx, y: cy, age: 0 });
@@ -2966,6 +2979,7 @@ async function cascade(res) {
     const mult = 1 + 0.6 * (combo - 1);
     const gain = Math.round((res.count * 10 + res.bonus) * mult);
     round.score += gain;
+    runState.powerPts = (runState.powerPts || 0) + gain;
     const now = performance.now();
     let sx = 0, sy = 0, hitStripe = false, hitBomb = false;
 
@@ -2978,7 +2992,7 @@ async function cascade(res) {
       if (t.s === 1 || t.s === 2) { hitStripe = true; beamFx(t); }
       if (t.s === 3) { hitBomb = true; bombFx(t); }
       sx += px(t.x);
-      sy += px(t.y);
+      sy += py(t.y);
     }
 
     for (const s of res.specials) {
@@ -3005,13 +3019,15 @@ async function cascade(res) {
     checkMilestones();
     renderHud();
 
-    if (!round.reached && isLevelCompleted()) {
+    // Si en esta combinación ya completó todas las figuras de la misión, cortar cascada e ir directo a la recompensa y siguiente etapa
+    if (isLevelCompleted()) {
       round.reached = true;
-      toast('¡Objetivos del nivel superados! Sigue sumando');
       sfx.goal();
       flashFx('255,209,102', 0.6);
       confettiBurst(S * 0.1, S, 40, 1100, -Math.PI / 2 + 0.45, 0.7);
       confettiBurst(S * 0.9, S, 40, 1100, -Math.PI / 2 - 0.45, 0.7);
+      await wait(180);
+      break;
     }
 
     await wait(210);
@@ -3020,24 +3036,44 @@ async function cascade(res) {
     res = step(board, null);
   }
 
-  // Si completó todos los objetivos de la etapa actual, gana el bono de puntos según la dificultad superada y pasa a la siguiente etapa
+  // Si completó todos los objetivos de la misión actual, otorga de inmediato la recompensa (Puntos, Oro y ELO) y pasa a la siguiente misión
   if (isLevelCompleted()) {
     const blk = round.block || (getActiveLevel() ? getActiveLevel().block : 1);
     const diffBonus = DIFF_CLEAR_BONUS[blk] || DIFF_CLEAR_BONUS[1];
     const movesBonus = Math.max(0, round.moves) * 40;
     const stageClearPts = diffBonus.pts + movesBonus;
 
-    round.score += stageClearPts;
-    runState.totalScore += round.score;
+    const stageEarnedScore = round.score + stageClearPts;
+    round.score = stageEarnedScore;
+    runState.totalScore += stageEarnedScore;
+    round.score = 0;
     runState.totalTarget += round.target;
     runState.bonusCoins = (runState.bonusCoins || 0) + diffBonus.coins;
     runState.bonusElo = (runState.bonusElo || 0) + diffBonus.elo;
     runState.stagesCleared++;
     runState.stage++;
     roundNo++;
+    rp = Math.max(0, rp + diffBonus.elo);
+    peak = Math.max(peak, rp);
     checkMilestones();
     renderHud();
+    renderRank();
     save();
+
+    // Otorgar recompensa de Puntos (+puntaje de la etapa), Oro y ELO inmediatamente al superar la misión
+    if (window.enviarRecompensaGomi) {
+      window.enviarRecompensaGomi({
+        score: stageEarnedScore,
+        scoreDelta: stageEarnedScore,
+        target: runState.totalTarget,
+        win: true,
+        streak: runState.stagesCleared,
+        stagesCleared: runState.stagesCleared,
+        directCoins: diffBonus.coins,
+        directElo: diffBonus.elo,
+        stageClear: true
+      });
+    }
 
     floats.push({
       x: S / 2,
@@ -3057,8 +3093,8 @@ async function cascade(res) {
       size: 0.52,
       big: true
     });
-    toast('¡Superaste ' + diffBonus.label + '! +' + fmt(stageClearPts) + ' pts · +' + diffBonus.coins + ' Oro · +' + diffBonus.elo + ' ELO');
-    await wait(950);
+    toast('¡Misión superada (' + diffBonus.label + ')! +' + fmt(stageClearPts) + ' pts · +' + diffBonus.coins + ' Oro · +' + diffBonus.elo + ' ELO');
+    await wait(700);
     await startRound(false, undefined, true);
     return;
   }
@@ -3167,30 +3203,19 @@ function endRound() {
   streak = survivedGood ? (streak + 1) : 0;
   roundNo++;
 
-  // Calcular y enviar recompensas de la Partida al morir (incluyendo el Oro y ELO ganados por cada dificultad superada)
-  const baseReward = window.enviarRecompensaGomi ? window.enviarRecompensaGomi({
-    score: totalRunScore,
-    target: totalRunTarget,
-    win: survivedGood,
-    streak: Math.max(streak, stagesCleared),
-    round: curLevelId + 1,
-    stagesCleared: stagesCleared,
-    bonusCoins: runState.bonusCoins || 0,
-    bonusElo: runState.bonusElo || 0,
-    durationMs: durationMs
-  }) : { earnedCoins: Math.max(1, (runState.bonusCoins || 0) + 1), lpAward: (runState.bonusElo || 0) };
+  // Solo se registran puntos y recompensas al superar una etapa; si cae en la Etapa 1 sin completarla no suma puntaje
+  let earnedCoins = runState.bonusCoins || 0;
+  let real = runState.bonusElo || 0;
+  let L1 = levelOf(rp);
 
-  const earnedCoins = baseReward.earnedCoins;
-  const lpAward = baseReward.lpAward;
-
-  // Actualizar ELO / RP local sumando el bono acumulado por las dificultades superadas
-  const rpDelta = survivedGood
-    ? Math.max(4, lpAward)
-    : -Math.min(20, Math.max(4, 12 - Math.floor(totalRunScore / 200)));
-  rp = Math.max(0, rp + rpDelta);
-  peak = Math.max(peak, rp);
-  const L1 = levelOf(rp);
-  const real = rp - before;
+  if (stagesCleared === 0) {
+    earnedCoins = 0;
+    const rpDelta = -Math.min(20, Math.max(4, 12 - Math.floor(totalRunScore / 200)));
+    rp = Math.max(0, rp + rpDelta);
+    peak = Math.max(peak, rp);
+    L1 = levelOf(rp);
+    real = rp - before;
+  }
 
   hist.unshift({
     no: roundNo,
@@ -3246,13 +3271,13 @@ function endRound() {
 function pos(e) {
   const r = cv.getBoundingClientRect();
   return {
-    x: (e.clientX - r.left) * (S / r.width),
-    y: (e.clientY - r.top) * (S / r.height)
+    x: (e.clientX - r.left) * (SW / r.width),
+    y: (e.clientY - r.top) * (SH / r.height)
   };
 }
 
 function cellAt(p) {
-  const c = Math.floor((p.x - pad) / cell), r = Math.floor((p.y - pad) / cell);
+  const c = Math.floor((p.x - pad) / cellX), r = Math.floor((p.y - pad) / cellY);
   if (c < 0 || c >= N || r < 0 || r >= N) return -1;
   if (!isMaskOpen(r, c)) return -1;
   return r * N + c;

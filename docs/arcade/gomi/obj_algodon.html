@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Objeto Gomi · Algodón de Azúcar</title>
+<style>
+  :root { --bg: #1c0e25; --card: #2c163a; --tile: #3c1e50; --text: #fbebf7; --muted: #bda2bf; --accent: #f472b6; --code-bg: #15091c; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; padding: 20px 16px 50px; display: flex; justify-content: center; }
+  main { width: 100%; max-width: 860px; }
+  .nav-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .nav-bar a { color: var(--muted); text-decoration: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 20px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s; }
+  .nav-bar a:hover { color: #fff; background: rgba(255,255,255,0.15); }
+  .nav-bar a.active { color: #fff; background: var(--accent); border-color: var(--accent); font-weight: bold; }
+  .header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  h1 { font-size: 1.5rem; margin: 0; display: flex; align-items: center; gap: 8px; }
+  .sub { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+  .preview-card { background: var(--card); border-radius: 20px; padding: 24px; box-shadow: 0 16px 36px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); margin-bottom: 24px; }
+  .controls-bar { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-bottom: 20px; background: rgba(0,0,0,0.25); padding: 10px 16px; border-radius: 12px; font-size: 0.85rem; }
+  .controls-bar label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .stage-row { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; align-items: center; }
+  .canvas-box { background: var(--tile); border-radius: 18px; padding: 20px; display: flex; flex-direction: column; align-items: center; box-shadow: inset 0 2px 8px rgba(0,0,0,0.3); }
+  .canvas-box.bg-check { background-image: linear-gradient(45deg, #261334 25%, transparent 25%), linear-gradient(-45deg, #261334 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #261334 75%), linear-gradient(-45deg, transparent 75%, #261334 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0px; }
+  .scales-box { display: flex; flex-direction: column; gap: 12px; justify-content: center; }
+  .scales-row { display: flex; align-items: flex-end; gap: 14px; background: var(--tile); padding: 14px 18px; border-radius: 14px; }
+  .scale-item { text-align: center; }
+  .scale-item span { display: block; font-size: 0.72rem; color: var(--muted); margin-top: 6px; font-family: monospace; }
+  .code-card { background: var(--code-bg); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.08); }
+  .code-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .code-title { font-size: 0.9rem; font-weight: bold; color: var(--accent); font-family: monospace; }
+  .btn-copy { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .btn-copy:hover { background: var(--accent); border-color: var(--accent); }
+  pre { margin: 0; overflow-x: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.82rem; line-height: 1.5; color: #e2d3e6; }
+</style>
+</head>
+<body>
+<main>
+  <nav class="nav-bar">
+    <a href="Objetos_gomi.html">📂 Catálogo Completo</a>
+    <a href="obj_helado.html">🍦 Helado</a>
+    <a href="obj_anillo_boda.html">💍 Anillo Boda</a>
+    <a href="obj_anillo_compromiso.html">💎 Anillo Compromiso</a>
+    <a href="obj_algodon.html" class="active">🍡 Algodón</a>
+    <a href="obj_carta.html">💌 Carta</a>
+    <a href="obj_gusano.html">🐛 Gusano</a>
+    <a href="obj_sushi.html">🍣 Sushi</a>
+  </nav>
+
+  <div class="header">
+    <div>
+      <h1>🍡 Algodón de Azúcar Esponjoso</h1>
+      <div class="sub">Nubes suaves en tonos rosa pastel sobre palito de madera, hebras de caramelo y destellos.</div>
+    </div>
+  </div>
+
+  <div class="preview-card">
+    <div class="controls-bar">
+      <label><input type="checkbox" id="deep" checked> Sombras intensas (deep)</label>
+      <label><input type="checkbox" id="checker"> Fondo cuadrícula</label>
+      <label>
+        Zoom:
+        <select id="zoomSel" style="background:#1a0c24;color:#fff;border:1px solid #5a3068;border-radius:6px;padding:2px 6px;">
+          <option value="250">250px</option>
+          <option value="200" selected>200px</option>
+          <option value="160">160px</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="stage-row">
+      <div class="canvas-box" id="mainBox">
+        <canvas id="cvMain" width="200" height="200"></canvas>
+      </div>
+
+      <div class="scales-box">
+        <div style="font-size:0.8rem; font-weight:bold; color:var(--muted); text-transform:uppercase;">Tamaños en Juego:</div>
+        <div class="scales-row">
+          <div class="scale-item"><canvas id="cv128" width="128" height="128"></canvas><span>128px</span></div>
+          <div class="scale-item"><canvas id="cv96" width="96" height="96"></canvas><span>96px</span></div>
+          <div class="scale-item"><canvas id="cv64" width="64" height="64"></canvas><span>64px</span></div>
+          <div class="scale-item"><canvas id="cv40" width="40" height="40"></canvas><span>40px</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-title">pAlgodon(c) &amp; dAlgodon(c, p, deep)</span>
+      <button class="btn-copy" onclick="copyCode()">Copiar Código</button>
+    </div>
+    <pre><code id="codeBlock">/* ============================ ALGODÓN DE AZÚCAR ===================== */
+const _ALGODON_PUFFS = [
+  [128, 41, 27], [110, 62, 29], [147, 64, 29],
+  [98, 94, 34], [158, 94, 34], [128, 86, 34],
+  [84, 132, 37], [172, 132, 37], [128, 128, 42],
+  [96, 168, 34], [160, 168, 34], [128, 170, 39],
+  [128, 192, 23]
+];
+
+function _u(c) { c.translate(-1, -1); c.scale(1 / 128, 1 / 128); }
+function _algodonPalito(c) {
+  c.moveTo(122, 190); c.lineTo(134, 190); c.lineTo(139, 246);
+  c.quadraticCurveTo(139, 251, 134, 251); c.lineTo(126, 251);
+  c.quadraticCurveTo(121, 251, 121, 246); c.closePath();
+}
+
+export function pAlgodon(c) {
+  c.save(); _u(c);
+  c.beginPath();
+  for (const [x, y, r] of _ALGODON_PUFFS) { c.moveTo(x + r, y); c.arc(x, y, r, 0, Math.PI * 2); }
+  _algodonPalito(c);
+  c.restore();
+}
+
+export function dAlgodon(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _u(c);
+
+  // Palito de madera
+  let g = c.createLinearGradient(121, 0, 139, 0);
+  g.addColorStop(0, '#f0cf9a'); g.addColorStop(1, '#c8975a');
+  c.beginPath(); _algodonPalito(c); c.fillStyle = g; c.fill();
+
+  // Contorno de las nubes
+  c.beginPath();
+  for (const [x, y, r] of _ALGODON_PUFFS) { c.moveTo(x + r, y); c.arc(x, y, r, 0, Math.PI * 2); }
+  c.lineWidth = 6; c.strokeStyle = '#e9588f'; c.stroke();
+
+  // Nubes con degradado radial
+  for (const [x, y, r] of _ALGODON_PUFFS) {
+    const gx = x - 0.24 * r, gy = y - 0.4 * r;
+    g = c.createRadialGradient(gx, gy, 0, gx, gy, 1.6 * r);
+    g.addColorStop(0, '#ffd3e8'); g.addColorStop(0.5, '#ff9ccb'); g.addColorStop(1, '#f0629f');
+    c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fillStyle = g; c.fill();
+  }
+
+  c.lineCap = 'round';
+  // Hebras claras
+  c.strokeStyle = '#ffe3f1'; c.lineWidth = 3; c.globalAlpha = 0.7;
+  c.beginPath(); c.moveTo(100, 60); c.quadraticCurveTo(122, 44, 144, 56);
+  c.moveTo(70, 112); c.quadraticCurveTo(100, 94, 130, 108); c.quadraticCurveTo(158, 120, 184, 102);
+  c.moveTo(66, 150); c.quadraticCurveTo(100, 134, 128, 150); c.quadraticCurveTo(160, 166, 188, 146);
+  c.moveTo(84, 184); c.quadraticCurveTo(114, 170, 146, 186); c.stroke();
+
+  // Hebras oscuras
+  c.strokeStyle = '#e5508d'; c.lineWidth = 2.5; c.globalAlpha = 0.45 * k;
+  c.beginPath(); c.moveTo(92, 128); c.quadraticCurveTo(120, 118, 152, 132);
+  c.moveTo(104, 166); c.quadraticCurveTo(130, 156, 158, 168); c.stroke();
+
+  // Brillos
+  c.fillStyle = '#fff';
+  c.globalAlpha = 0.85; c.beginPath(); c.ellipse(102, 74, 14, 7, -35 * Math.PI / 180, 0, Math.PI * 2); c.fill();
+  c.globalAlpha = 0.65; c.beginPath(); c.ellipse(74, 128, 7, 4, -50 * Math.PI / 180, 0, Math.PI * 2); c.fill();
+  c.globalAlpha = 0.9;  c.beginPath(); c.arc(116, 46, 3.5, 0, Math.PI * 2); c.fill();
+  c.restore();
+}</code></pre>
+  </div>
+</main>
+
+<script>
+const _ALGODON_PUFFS = [
+  [128, 41, 27], [110, 62, 29], [147, 64, 29],
+  [98, 94, 34], [158, 94, 34], [128, 86, 34],
+  [84, 132, 37], [172, 132, 37], [128, 128, 42],
+  [96, 168, 34], [160, 168, 34], [128, 170, 39],
+  [128, 192, 23]
+];
+
+function _u(c) { c.translate(-1, -1); c.scale(1 / 128, 1 / 128); }
+function _algodonPalito(c) {
+  c.moveTo(122, 190); c.lineTo(134, 190); c.lineTo(139, 246);
+  c.quadraticCurveTo(139, 251, 134, 251); c.lineTo(126, 251);
+  c.quadraticCurveTo(121, 251, 121, 246); c.closePath();
+}
+
+function pAlgodon(c) {
+  c.save(); _u(c);
+  c.beginPath();
+  for (const [x, y, r] of _ALGODON_PUFFS) { c.moveTo(x + r, y); c.arc(x, y, r, 0, Math.PI * 2); }
+  _algodonPalito(c);
+  c.restore();
+}
+
+function dAlgodon(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _u(c);
+
+  let g = c.createLinearGradient(121, 0, 139, 0);
+  g.addColorStop(0, '#f0cf9a'); g.addColorStop(1, '#c8975a');
+  c.beginPath(); _algodonPalito(c); c.fillStyle = g; c.fill();
+
+  c.beginPath();
+  for (const [x, y, r] of _ALGODON_PUFFS) { c.moveTo(x + r, y); c.arc(x, y, r, 0, Math.PI * 2); }
+  c.lineWidth = 6; c.strokeStyle = '#e9588f'; c.stroke();
+
+  for (const [x, y, r] of _ALGODON_PUFFS) {
+    const gx = x - 0.24 * r, gy = y - 0.4 * r;
+    g = c.createRadialGradient(gx, gy, 0, gx, gy, 1.6 * r);
+    g.addColorStop(0, '#ffd3e8'); g.addColorStop(0.5, '#ff9ccb'); g.addColorStop(1, '#f0629f');
+    c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fillStyle = g; c.fill();
+  }
+
+  c.lineCap = 'round';
+  c.strokeStyle = '#ffe3f1'; c.lineWidth = 3; c.globalAlpha = 0.7;
+  c.beginPath(); c.moveTo(100, 60); c.quadraticCurveTo(122, 44, 144, 56);
+  c.moveTo(70, 112); c.quadraticCurveTo(100, 94, 130, 108); c.quadraticCurveTo(158, 120, 184, 102);
+  c.moveTo(66, 150); c.quadraticCurveTo(100, 134, 128, 150); c.quadraticCurveTo(160, 166, 188, 146);
+  c.moveTo(84, 184); c.quadraticCurveTo(114, 170, 146, 186); c.stroke();
+
+  c.strokeStyle = '#e5508d'; c.lineWidth = 2.5; c.globalAlpha = 0.45 * k;
+  c.beginPath(); c.moveTo(92, 128); c.quadraticCurveTo(120, 118, 152, 132);
+  c.moveTo(104, 166); c.quadraticCurveTo(130, 156, 158, 168); c.stroke();
+
+  c.fillStyle = '#fff';
+  c.globalAlpha = 0.85; c.beginPath(); c.ellipse(102, 74, 14, 7, -35 * Math.PI / 180, 0, Math.PI * 2); c.fill();
+  c.globalAlpha = 0.65; c.beginPath(); c.ellipse(74, 128, 7, 4, -50 * Math.PI / 180, 0, Math.PI * 2); c.fill();
+  c.globalAlpha = 0.9;  c.beginPath(); c.arc(116, 46, 3.5, 0, Math.PI * 2); c.fill();
+  c.restore();
+}
+
+function drawToCanvas(cv, size, deep) {
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = size * dpr; cv.height = size * dpr;
+  cv.style.width = size + 'px'; cv.style.height = size + 'px';
+  const c = cv.getContext('2d');
+  c.scale(dpr, dpr); c.translate(size / 2, size / 2); c.scale(size / 2.1, size / 2.1);
+  pAlgodon(c);
+  dAlgodon(c, {}, deep);
+}
+
+function renderAll() {
+  const deep = document.getElementById('deep').checked;
+  const mainSize = Number(document.getElementById('zoomSel').value) || 200;
+  drawToCanvas(document.getElementById('cvMain'), mainSize, deep);
+  drawToCanvas(document.getElementById('cv128'), 128, deep);
+  drawToCanvas(document.getElementById('cv96'), 96, deep);
+  drawToCanvas(document.getElementById('cv64'), 64, deep);
+  drawToCanvas(document.getElementById('cv40'), 40, deep);
+}
+
+document.getElementById('deep').addEventListener('change', renderAll);
+document.getElementById('zoomSel').addEventListener('change', renderAll);
+document.getElementById('checker').addEventListener('change', (e) => {
+  document.getElementById('mainBox').classList.toggle('bg-check', e.target.checked);
+});
+
+function copyCode() {
+  const code = document.getElementById('codeBlock').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.querySelector('.btn-copy');
+    btn.innerText = '✓ ¡Copiado!';
+    setTimeout(() => { btn.innerText = 'Copiar Código'; }, 2000);
+  });
+}
+
+renderAll();
+</script>
+</body>
+</html>

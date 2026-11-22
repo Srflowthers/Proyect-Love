@@ -365,13 +365,14 @@ canvas {
    -------------------------------------------------------------------------- */
 .lp-hud-bar {
   width: 100%;
+  min-height: 36px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  /* Margen izquierdo y derecho seguro para no solapar con <- Catálogo ni LP/Monedas */
-  padding: 2px 186px 4px 118px;
-  margin: 0 auto 4px;
+  justify-content: center;
+  gap: 14px;
+  /* Margen derecho seguro para LP/Monedas */
+  padding: 2px 190px 2px 12px;
+  margin: 2px auto 8px;
   box-sizing: border-box;
   flex-shrink: 0;
 }
@@ -380,7 +381,7 @@ canvas {
 .lp-hud-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-shrink: 0;
 }
 
@@ -389,10 +390,10 @@ canvas {
 }
 
 .lp-stats {
-  flex: 1 1 160px;
-  min-width: 120px;
-  max-width: 300px !important;
-  margin: 0 auto !important;
+  flex: 0 1 240px;
+  min-width: 140px;
+  max-width: 260px !important;
+  margin: 0 8px !important;
 }
 
 .lp-meta {
@@ -789,43 +790,103 @@ canvas {
   }
 }
 
-/* Ajustes para pantallas horizontales compactas (teléfonos y tablets pequeñas) */
-@media screen and (max-width: 1100px) {
+/* Diseño equilibrado para Computadora (PC / Laptop de escritorio) */
+@media screen and (min-width: 1025px) and (min-height: 561px) {
+  .lp-root {
+    padding: 10px 24px 16px !important;
+  }
+  #lpGame {
+    max-width: 1380px !important;
+    height: calc(100dvh - 26px);
+    margin: 0 auto !important;
+  }
   .lp-hud-bar {
-    padding: 2px 172px 3px 110px;
-    gap: 6px;
+    width: auto;
+    max-width: min(1060px, calc(100vw - 230px));
+    min-height: 44px;
+    margin: 0 auto 10px;
+    padding: 6px 18px;
+    justify-content: center;
+    gap: 16px;
+    background: rgba(51, 25, 36, 0.65);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  }
+  .lp-hud-left,
+  .lp-hud-actions {
+    gap: 8px;
   }
   .lp-hud-bar .lp-btn {
-    font-size: 0.74rem !important;
-    padding: 0.34em 0.75em !important;
+    font-size: 0.84rem !important;
+    padding: 0.44em 1.05em !important;
+  }
+  .lp-stats {
+    flex: 0 1 230px;
+    min-width: 180px;
+    max-width: 250px !important;
+    margin: 0 6px !important;
+  }
+  .lp-meta {
+    font-size: 0.82rem;
+    margin-bottom: 4px;
+  }
+  .lp-bar {
+    height: 7px;
+  }
+  .lp-stage {
+    max-width: 1360px !important;
+    border-radius: 24px;
+  }
+}
+
+/* Ajustes para pantallas horizontales compactas (teléfonos y tablets pequeñas — INTACTO) */
+@media screen and (max-width: 1024px), screen and (max-height: 560px) {
+  .lp-hud-bar {
+    min-height: 30px;
+    padding: 0 176px 0 2px;
+    margin: 0 auto 4px;
+    gap: 6px;
+    justify-content: space-between;
+  }
+  .lp-hud-left,
+  .lp-hud-actions {
+    gap: 5px;
+  }
+  .lp-hud-bar .lp-btn {
+    font-size: clamp(0.64rem, 1.1vw, 0.78rem) !important;
+    padding: 0.32em 0.68em !important;
   }
   .lp-hud-bar .lp-ico {
     width: 13px;
     height: 13px;
   }
   .lp-stats {
-    min-width: 100px;
-    max-width: 210px !important;
+    flex: 1 1 110px;
+    min-width: 85px;
+    max-width: 175px !important;
+    margin: 0 4px !important;
   }
   .lp-meta {
-    font-size: 0.73rem;
-    margin-bottom: 3px;
+    font-size: clamp(0.62rem, 1.05vw, 0.74rem);
+    gap: 6px;
+    margin-bottom: 2px;
   }
   .lp-bar {
     height: 5px;
   }
 }
 
-@media screen and (max-width: 780px) {
+@media screen and (max-width: 760px) {
   .lp-hud-bar {
-    padding: 2px 158px 3px 104px;
+    padding: 0 176px 3px 2px;
     flex-wrap: wrap;
-    justify-content: center;
+    justify-content: space-between;
     gap: 4px;
   }
   .lp-hud-bar .lp-btn {
-    font-size: 0.7rem !important;
-    padding: 0.28em 0.62em !important;
+    font-size: 0.64rem !important;
+    padding: 0.28em 0.56em !important;
   }
 }
 

@@ -54,7 +54,10 @@ window.enviarRecompensaPool = function (data) {
     lpAward = cfg.calcLp(win, minutes);
   }
 
-  // 3. Enviar a GamesView -> Firebase
+  // 3. Actualizar Oro disponible en la tienda local de Pool y enviar a GamesView -> Firebase
+  if (earnedCoins > 0 && typeof window.addPoolShopCoins === 'function') {
+    window.addPoolShopCoins(earnedCoins);
+  }
   try {
     if (window.parent && window.parent !== window) {
       window.parent.postMessage({

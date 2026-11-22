@@ -1,21 +1,19 @@
 /**
  * ============================================================================
- * TETRIS DE PAREJA - MODO 1v1 LOCAL (MOTOR IDÉNTICO AL TETRIS ANTERIOR/CLÁSICO)
+ * TETRIS DE PAREJA - MODO 1v1 LOCAL (ALTA COMPETICIÓN Y MÁXIMO RENDIMIENTO 60 FPS)
  * ============================================================================
  * Carpeta: modes/versus-1v1.js
  * 
  * Corre 2 tableros en paralelo con el MISMO MOTOR del juego clásico:
- * - Remolinos gravitatorios con giro de bloques rígidos (spinEvent / comps)
- * - Super remolino con giro de 900° e inversión de gravedad (mundo al revés)
- * - Perspectiva 3D y tambaleo con perspectiva en el contenedor (tilt / perspective)
- * - Efecto de caída animada de bloques flotantes con easing cuadrático (fall / canim)
- * - Reventón por coincidencia de color (sameGroup) con ondas y chispas
- * - Cadenas de caída libre (chain / contactGroups)
- * - Colapso masivo (collapse: "¡Todo cae!")
- * - Habilidad de última salvación (fireSave / useSave con rayo dorado y salvavidas 🛟)
- * - Partículas de polvo al aterrizar (dust) y explosiones radiales (burst)
- * - Música chiptune y síntesis en tiempo real con Web Audio API
- * - Traspaso de filas grises basura (garbage) al rival al hacer combos y líneas
+ * - Meta de Victoria: Primer jugador en completar 30 LÍNEAS (o por top-out del rival)
+ * - Watchdog Anti-Freeze: Garantía contra estados colgados (busy) en remolinos y drop 30
+ * - Optimización 60 FPS: Memoización de DOM, cero recolección de basura (GC) en partículas,
+ *   y unificación de llamadas por frame en Canvas 2D
+ * - Overlay Unificado Centrado: Pantalla de victoria que abarca ambos tableros con
+ *   ganador, estadísticas de líneas/puntos, duración y reparto de LP y monedas oficiales
+ * - Remolinos gravitatorios y super remolino con inversión de gravedad
+ * - Habilidad de salvación (🛟) independiente para cada jugador
+ * - Traspaso de filas grises basura al rival
  * 
  * Controles simultáneos:
  * - P1 (Ella - Rosa): A/D (mover), S (bajar suave), W (rotar), Espacio (caída de golpe), E (salvación)
@@ -49,6 +47,9 @@
 
     remolinoCada: 3,
     megaCada: 10,
+
+    // META OFICIAL: Primero en llegar a 30 líneas gana la partida
+    lineasMeta: 30,
 
     puntosLinea: [0, 150, 450, 750, 1200],
     puntosReventon: 15,
@@ -84,7 +85,7 @@
       this.AC = null;
       this.mute = false;
       this.NB = null;
-      this.mt = 0;
+      this.mt = null;
       this.ms = 0;
       this.PR = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]];
     }
@@ -150,6 +151,13 @@
       } catch (e) {}
     }
 
+    victoryFanfare() {
+      this.snd(523, 0.22, 'triangle', 0.2, 659);
+      setTimeout(() => this.snd(659, 0.22, 'triangle', 0.2, 784), 160);
+      setTimeout(() => this.snd(784, 0.28, 'triangle', 0.25, 1046), 320);
+      setTimeout(() => this.snd(1046, 0.65, 'sawtooth', 0.25, 1046), 480);
+    }
+
     musicStart(isActive) {
       clearTimeout(this.mt);
       this.ms = 0;
@@ -180,9 +188,9 @@
 
   const audio = new SharedVersusAudio();
 
-  // --- MOTOR CLÁSICO DE TETRIS COMPLETO (IDENTICO A TETRIS.JS) ---
+  // --- MOTOR CLÁSICO DE TETRIS (OPTIMIZADO PARA 60 FPS) ---
   class ClassicTetrisEngine {
-    constructor(canvasId, playerIdx, scoreElId, linesElId, skfId, sktId, audioRef) {
+    constructor(canvasId, playerIdx, scoreElId, linesElId, skfId, sktId, audioRef, managerRef) {
       this.cv = document.getElementById(canvasId);
       this.x = this.cv ? this.cv.getContext('2d') : null;
       this.w = this.cv ? this.cv.parentNode : null; // .boardwrap
@@ -193,11 +201,22 @@
       this.skfEl = document.getElementById(skfId);
       this.sktEl = document.getElementById(sktId);
       this.audio = audioRef;
+      this.manager = managerRef;
       this.rival = null;
       this.pendingGarbage = 0;
       this.onGameOver = null;
 
-      // Estado interno del motor (idéntico a tetris.js)
+      // Watchdog de seguridad anti-congelamiento
+      this._busyWatchdog = null;
+
+      // Caché de renderizado DOM (evita layout thrashing)
+      this._lastRenderedSc = -1;
+      this._lastRenderedLn = -1;
+      this._lastRenderedCh = -1;
+      this._lastRenderedReady = null;
+      this._lastRenderedSkSc = -1;
+
+      // Estado interno del motor
       this.g = null;
       this.gi = null;
       this.p = null;
@@ -233,7 +252,7 @@
       this.lineFx = null;
       this.mega = false;
       this.epic = false;
-      this.curDur = 900;
+      this.curDur = 340;
       this.canim = null;
       this.canimT = 0;
       this.rb0 = 0;
@@ -248,8 +267,46 @@
       this.GA = 1;
       this.shk = 0;
       this.lastHitSnd = 0;
-      this.ANIM = 2400;
+      this.ANIM = 1400;
       this.lc = 0;
+    }
+
+    /**
+     * Controlador seguro de estado ocupado con watchdog automático
+     */
+    setBusy(isBusy) {
+      this.busy = isBusy;
+      if (this._busyWatchdog) {
+        clearTimeout(this._busyWatchdog);
+        this._busyWatchdog = null;
+      }
+      if (isBusy) {
+        // Si el estado busy dura más de 3.2s sin resolverse (por colisiones de giro o drop 30),
+        // el watchdog interviene y desbloquea el tablero inmediatamente
+        this._busyWatchdog = setTimeout(() => {
+          if (this.busy && this.run && !this.over) {
+            console.warn(`[Tetris1v1] Watchdog activado para ${this.name}: recuperando control de forma segura.`);
+            this.busy = false;
+            this.anim = null;
+            this.canim = null;
+            this.lineFx = null;
+            this.saveFx = null;
+            if (this.w) {
+              this.w.classList.remove('warn');
+              this.w.style.transform = '';
+            }
+            if (this.cv) this.cv.style.transform = '';
+            this.finish();
+          }
+        }, 3200);
+      }
+    }
+
+    clearWatchdog() {
+      if (this._busyWatchdog) {
+        clearTimeout(this._busyWatchdog);
+        this._busyWatchdog = null;
+      }
     }
 
     fits(m, px, py) {
@@ -277,6 +334,7 @@
     }
 
     reset() {
+      this.clearWatchdog();
       if (this.w) {
         this.w.classList.remove('warn');
         this.w.style.transform = '';
@@ -291,9 +349,9 @@
       this.lineFx = null;
       this.aS = this.aE = 0;
       this.orient = 0;
-      this.parts = [];
-      this.rings = [];
-      this.marked = new Set();
+      this.parts.length = 0;
+      this.rings.length = 0;
+      this.marked.clear();
       this.lc = 0;
       this.epic = false;
       this.mega = false;
@@ -308,8 +366,15 @@
       this.ln = 0;
       this.turn = this.playerIdx;
       this.over = false;
-      this.busy = false;
+      this.setBusy(false);
       this.pendingGarbage = 0;
+
+      this._lastRenderedSc = -1;
+      this._lastRenderedLn = -1;
+      this._lastRenderedCh = -1;
+      this._lastRenderedReady = null;
+      this._lastRenderedSkSc = -1;
+
       this.initGray();
       this.spawn();
       this.ui();
@@ -334,18 +399,35 @@
     }
 
     ui() {
-      if (this.scoreEl) this.scoreEl.textContent = this.sc.toLocaleString('es');
-      if (this.linesEl) this.linesEl.textContent = this.ln + ' líneas';
+      // 60 FPS: Actualización estricta por memoización para evitar layout thrashing
+      if (this.scoreEl && this.sc !== this._lastRenderedSc) {
+        this._lastRenderedSc = this.sc;
+        this.scoreEl.textContent = this.sc.toLocaleString('es');
+      }
+
+      if (this.linesEl && this.ln !== this._lastRenderedLn) {
+        this._lastRenderedLn = this.ln;
+        const reached = this.ln >= CFG.lineasMeta;
+        this.linesEl.innerHTML = `<span style="font-weight:800;color:${reached ? '#4ade80' : 'inherit'};">${this.ln}</span> / ${CFG.lineasMeta} <span style="font-size:0.75rem;opacity:0.8;">líneas</span>`;
+      }
+
       const ch = Math.min(1, Math.max(0, (this.sc - this.skBase) / this.skCost));
-      if (this.skfEl) this.skfEl.style.width = (ch * 100) + '%';
-      if (this.sktEl) {
-        const keyName = this.playerIdx === 0 ? 'E' : 'Shift';
+      if (this.skfEl && Math.abs(ch - this._lastRenderedCh) > 0.005) {
+        this._lastRenderedCh = ch;
+        this.skfEl.style.width = (ch * 100) + '%';
+      }
+
+      if (this.sktEl && (this.skReady !== this._lastRenderedReady || this.sc !== this._lastRenderedSkSc)) {
+        this._lastRenderedReady = this.skReady;
+        this._lastRenderedSkSc = this.sc;
+        const keyName = this.playerIdx === 0 ? 'E' : 'Shift / L';
         this.sktEl.textContent = ch >= 1 ? `🛟 ¡LISTA! (${keyName})` : `🛟 ${Math.max(0, this.sc - this.skBase)} / ${this.skCost} pts`;
       }
+
       if (ch >= 1 && !this.skReady) {
         this.skReady = true;
         if (this.run) {
-          const keyName = this.playerIdx === 0 ? 'E' : 'Shift';
+          const keyName = this.playerIdx === 0 ? 'E' : 'Shift / L';
           this.toast(`🛟 ¡Salvación lista! Pulsa ${keyName}`, '#facc15');
           this.audio.snd(880, 0.2, 'triangle', 0.12, 1320);
         }
@@ -360,6 +442,7 @@
       if (this.over) return;
       this.over = true;
       this.run = false;
+      this.clearWatchdog();
       this.audio.snd(180, 0.8, 'sawtooth', 0.25, 40);
       this.toast('💀 ¡Fin del juego!', '#ef4444');
       if (this.onGameOver) this.onGameOver(this);
@@ -371,7 +454,8 @@
         let r = this.p.m.length - 1;
         while (r >= 0 && !this.p.m[r][c]) r--;
         if (r < 0) return;
-        for (let i = 0; i < 4 * S; i++) {
+        const count = Math.min(8, Math.round(4 * S));
+        for (let i = 0; i < count; i++) {
           this.parts.push({
             x: (this.p.x + c + 0.5) * C + (Math.random() - 0.5) * C,
             y: (this.p.y + r + 1) * C,
@@ -385,7 +469,8 @@
     }
 
     burst(px, py, col, n, v) {
-      for (let i = 0; i < n; i++) {
+      const count = Math.min(25, n);
+      for (let i = 0; i < count; i++) {
         const an = Math.random() * 6.283;
         const sp = v * 0.25 + Math.random() * v;
         this.parts.push({
@@ -407,7 +492,7 @@
 
     land() {
       if (this.busy) return;
-      this.busy = true;
+      this.setBusy(true);
       this.p.f = 0;
       this.p.vx = this.p.x;
       this.lc++;
@@ -482,22 +567,22 @@
       const step = () => {
         if (i >= grp.length) {
           this.marked.clear();
-          setTimeout(() => this.settle(true), 220);
+          setTimeout(() => this.settle(true), 180);
           return;
         }
         const r = grp[i][0], c = grp[i][1];
         this.g[r][c] = null;
         this.gi[r][c] = null;
         this.marked.delete(r * W + c);
-        this.burst((c + 0.5) * C, (r + 0.5) * C, PAL[this.p.col], 16, 200);
+        this.burst((c + 0.5) * C, (r + 0.5) * C, PAL[this.p.col], 14, 200);
         this.rings.push({ x: (c + 0.5) * C, y: (r + 0.5) * C, l: 1, c: PAL[this.p.col] });
-        this.audio.snd(420 + Math.min(i, 14) * 55, 0.14, 'triangle', 0.22, 90);
+        this.audio.snd(420 + Math.min(i, 14) * 55, 0.12, 'triangle', 0.2, 90);
         this.sc += CFG.puntosReventon;
         i++;
         this.ui();
-        setTimeout(step, Math.max(55, 140 - i * 4));
+        setTimeout(step, Math.max(45, 120 - i * 4));
       };
-      setTimeout(step, 380);
+      setTimeout(step, 300);
     }
 
     clearAnim(cb) {
@@ -515,6 +600,17 @@
       if (gray) this.audio.snd(180, 0.3, 'square', 0.1, 60);
       this.lineFx = { rows, t: this.now };
 
+      // =========================================================================
+      // CONDICIÓN PRINCIPAL DE VICTORIA: PRIMER JUGADOR A 30 LÍNEAS
+      // =========================================================================
+      if (this.ln >= CFG.lineasMeta) {
+        this.ui();
+        if (this.manager && this.manager.active) {
+          this.manager.handlePlayerVictory(this, this.rival, 'lines');
+          return;
+        }
+      }
+
       // Enviar filas basura al rival: 2 líneas -> 1 basura, 3 -> 2, 4 -> 4
       if (this.rival && n >= 2) {
         const toSend = n === 4 ? 4 : (n - 1);
@@ -524,10 +620,10 @@
         this.toast(gray ? '🧹 ¡Fila completa! Se borran ' + gray + ' bloques grises' : '✨ ¡Fila completa!', gray ? '#cbd5e1' : '#fde047');
       }
 
-      rows.forEach(r => this.g[r].forEach((v, c) => this.burst((c + 0.5) * C, (r + 0.5) * C, PAL[v >> 1], (v >> 1) === 5 ? 5 : 9, 200)));
+      rows.forEach(r => this.g[r].forEach((v, c) => this.burst((c + 0.5) * C, (r + 0.5) * C, PAL[v >> 1], (v >> 1) === 5 ? 5 : 8, 200)));
 
       setTimeout(() => {
-        rows.forEach(r => this.g[r].forEach((v, c) => this.burst((c + 0.5) * C, (r + 0.5) * C, '#fff', 3, 320)));
+        rows.forEach(r => this.g[r].forEach((v, c) => this.burst((c + 0.5) * C, (r + 0.5) * C, '#fff', 3, 300)));
         const mv = [];
         for (let r = 0; r < H; r++) {
           if (rows.includes(r)) continue;
@@ -547,14 +643,14 @@
         this.shk = Math.max(this.shk, 8);
         this.canim = mv;
         this.canimT = this.now;
-        this.canimDur = 380;
+        this.canimDur = 340;
         this.audio.snd(110, 0.3, 'sine', 0.4, 45);
         setTimeout(() => {
           this.canim = null;
           this.lineFx = null;
           cb();
-        }, 400);
-      }, 650);
+        }, 360);
+      }, 500);
     }
 
     fall(cb) {
@@ -577,13 +673,13 @@
       if (!moved.size) { cb(moved); return; }
       this.canim = mv;
       this.canimT = this.now;
-      this.canimDur = 900;
-      this.audio.snd(120, 0.35, 'sine', 0.3, 50);
+      this.canimDur = 650;
+      this.audio.snd(120, 0.3, 'sine', 0.3, 50);
       setTimeout(() => {
         this.canim = null;
         this.shk = Math.max(this.shk, 6);
         cb(moved);
-      }, 950);
+      }, 700);
     }
 
     contactGroups(moved) {
@@ -636,22 +732,22 @@
       const step = () => {
         if (i >= list.length) {
           this.marked.clear();
-          setTimeout(() => this.fall(m2 => this.chain(m2, n + 1, done)), 160);
+          setTimeout(() => this.fall(m2 => this.chain(m2, n + 1, done)), 150);
           return;
         }
         const o = list[i];
         this.g[o.r][o.c] = null;
         this.gi[o.r][o.c] = null;
         this.marked.delete(o.r * W + o.c);
-        this.burst((o.c + 0.5) * C, (o.r + 0.5) * C, PAL[o.col], 16, 200);
+        this.burst((o.c + 0.5) * C, (o.r + 0.5) * C, PAL[o.col], 14, 200);
         this.rings.push({ x: (o.c + 0.5) * C, y: (o.r + 0.5) * C, l: 1, c: PAL[o.col] });
-        this.audio.snd(420 + Math.min(i, 14) * 55 + n * 40, 0.14, 'triangle', 0.22, 90);
+        this.audio.snd(420 + Math.min(i, 14) * 55 + n * 40, 0.12, 'triangle', 0.2, 90);
         this.sc += CFG.puntosReventon * (n + 2);
         i++;
         this.ui();
-        setTimeout(step, Math.max(45, 120 - i * 4));
+        setTimeout(step, Math.max(40, 100 - i * 4));
       };
-      setTimeout(step, 300);
+      setTimeout(step, 250);
     }
 
     settle(popped) {
@@ -702,7 +798,7 @@
       if (br < 0) return false;
 
       this.saving = true;
-      this.busy = true;
+      this.setBusy(true);
       if (auto && this.p) this.p.done = true;
 
       this.skBase = this.sc;
@@ -711,9 +807,9 @@
       this.skReady = false;
 
       if (this.skfEl) {
-        this.skfEl.style.transition = 'width 1.3s ease-in';
+        this.skfEl.style.transition = 'width 1.1s ease-in';
         this.ui();
-        setTimeout(() => { if (this.skfEl) this.skfEl.style.transition = ''; }, 1400);
+        setTimeout(() => { if (this.skfEl) this.skfEl.style.transition = ''; }, 1200);
       }
 
       this.saveFx = { r: br, t: this.now, auto };
@@ -736,18 +832,18 @@
         this.audio.snd(70, 0.8, 'sine', 0.55, 28);
         this.audio.nz(0.6, 3000, 150, 0.45);
         [84, 88, 91, 96].forEach((n, i) => setTimeout(() => this.audio.snd(this.audio.mf(n), 0.7, 'triangle', 0.09), i * 90));
-      }, 650);
+      }, 550);
 
       setTimeout(() => {
         this.saveFx = null;
         this.saving = false;
-        this.busy = false;
+        this.setBusy(false);
         if (!auto && this.p && !this.p.done) {
           while (!this.fits(this.p.m, this.p.x, this.p.y) && this.p.y > -4) this.p.y--;
         }
         this.ui();
         if (cb) cb();
-      }, 1500);
+      }, 1200);
 
       return true;
     }
@@ -777,19 +873,19 @@
 
       this.canim = mv;
       this.canimT = this.now;
-      this.canimDur = 900;
+      this.canimDur = 650;
       this.audio.snd(60, 0.9, 'sine', 0.4, 30);
       this.audio.nz(0.9, 2500, 200, 0.3);
       this.toast('⬇️ ¡Todo cae!', '#ef4444');
 
       setTimeout(() => {
         this.canim = null;
-        this.shk = 14;
+        this.shk = 12;
         this.audio.snd(55, 1, 'sine', 0.6, 22);
         this.audio.nz(0.8, 2000, 90, 0.5);
-        this.burst(150, 560, '#fff', 60, 380);
+        this.burst(150, 560, '#fff', 35, 340);
         this.clearAnim(() => this.finish());
-      }, 1100);
+      }, 700);
       return true;
     }
 
@@ -903,38 +999,39 @@
           o,
           n,
           dl: 0.22 * (1 - n[1] / H),
-          sp: this.mega ? 5 : heavy ? 3 : 2,
+          sp: this.mega ? 4 : heavy ? 3 : 2,
           fell: n[1] - o[1] > 0.4,
           hh: (Math.max(...G.final.map(z => z[0])) - Math.min(...G.final.map(z => z[0])) + 1) / 2,
           off: G.cells.map(([r, c]) => [c + 0.5 - o[0], r + 0.5 - o[1]])
         };
       });
 
-      this.ANIM = this.mega ? 3000 : 2400;
+      // Animaciones dinámicas y ágiles en 1v1 (evita sensación de atasco)
+      this.ANIM = this.mega ? 1600 : 1200;
       this.animT = this.now;
       if (this.mega) {
         this.rb0 = this.orient * 180;
         this.orient ^= 1;
         this.flipMsg = true;
       }
-      this.burst(150, 300, '#fff', this.mega ? 90 : 50, this.mega ? 420 : 320);
-      this.toast(this.mega ? '🌪️ ¡SUPER REMOLINO!' : heavy ? '⚠️ ¡Giro doble y se pone peor!' : '↻ ¡Todo gira a la derecha!', heavy ? '#ef4444' : '#f59e0b');
+      this.burst(150, 300, '#fff', this.mega ? 40 : 25, this.mega ? 360 : 260);
+      this.toast(this.mega ? '🌪️ ¡SUPER REMOLINO!' : heavy ? '⚠️ ¡Giro doble!' : '↻ ¡Todo gira!', heavy ? '#ef4444' : '#f59e0b');
 
-      const L = this.mega ? 3 : 1.4;
+      const L = this.mega ? 1.6 : 1.1;
       this.audio.snd(80, L, 'sawtooth', 0.1, this.mega ? 1100 : 700);
       this.audio.snd(300, L, 'square', 0.04, 1800);
-      this.audio.nz(L + 0.1, 200, this.mega ? 7000 : 5000, 0.35);
-      this.audio.snd(50, L + 0.6, 'sine', 0.35, 35);
+      this.audio.nz(L + 0.1, 200, this.mega ? 7000 : 5000, 0.3);
+      this.audio.snd(50, L + 0.4, 'sine', 0.35, 35);
 
       setTimeout(() => {
         this.anim = null;
-        this.audio.snd(70, 1, 'sine', 0.55, 25);
-        this.audio.nz(0.9, 3000, 120, 0.5);
+        this.audio.snd(70, 0.8, 'sine', 0.55, 25);
+        this.audio.nz(0.7, 3000, 120, 0.4);
         this.toast('💥 ¡BOOM!', '#f59e0b');
-        this.shk = 9;
+        this.shk = 8;
         if (this.mega && this.collapse()) return;
         this.clearAnim(() => this.finish());
-      }, this.ANIM + 200);
+      }, this.ANIM + 120);
 
       return true;
     }
@@ -953,7 +1050,7 @@
 
     finish() {
       this.sc += 10;
-      this.busy = false;
+      this.setBusy(false);
 
       let addedGarbage = false;
       while (this.pendingGarbage > 0) {
@@ -1116,54 +1213,62 @@
       const sh = (sp ? (1 - q) * 2.5 : 0) + this.shk;
 
       x.translate((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh);
-      x.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-      x.lineWidth = 1;
 
+      // Optimización 60 FPS: Reducir llamadas de trazado de rejilla a 1 solo stroke()
+      x.strokeStyle = 'rgba(255, 255, 255, 0.10)';
+      x.lineWidth = 1;
+      x.beginPath();
       for (let i = 1; i < W; i++) {
-        x.beginPath();
         x.moveTo(i * C, 0);
         x.lineTo(i * C, 600);
-        x.stroke();
       }
       for (let i = 1; i < H; i++) {
-        x.beginPath();
         x.moveTo(0, i * C);
         x.lineTo(300, i * C);
-        x.stroke();
       }
+      x.stroke();
 
       if (this.canim) {
         const u = (this.now - this.canimT) / this.canimDur;
-        this.canim.forEach(m => {
+        for (let i = 0; i < this.canim.length; i++) {
+          const m = this.canim[i];
           const tt = Math.min(1, Math.max(0, (u - m.d) / (1 - m.d)));
           this.cellAt(m.c, m.r0 + (m.r1 - m.r0) * tt * tt, PAL[m.v >> 1], m.v & 1);
-        });
+        }
       } else if (this.anim) {
         const t = (this.now - this.animT) / this.ANIM;
         for (let gh = 2; gh >= 0; gh--) {
           this.GA = gh ? 0.14 / gh : 1;
           const tt = t - gh * 0.022;
-          this.anim.forEach(G => this.drawG(G, tt));
+          for (let i = 0; i < this.anim.length; i++) {
+            this.drawG(this.anim[i], tt);
+          }
         }
         this.GA = 1;
       } else {
-        this.g.forEach((row, r) => row.forEach((v, c) => {
-          if (v !== null) {
-            const w = this.shk > 0.3 ? Math.sin(this.now / 38 - Math.hypot(c + 0.5 - this.spinC[0], r + 0.5 - this.spinC[1]) * 1.1) * this.shk * 0.45 / C : 0;
-            this.cellAt(c, r + w, PAL[v >> 1], v & 1);
+        for (let r = 0; r < H; r++) {
+          const row = this.g[r];
+          for (let c = 0; c < W; c++) {
+            const v = row[c];
+            if (v !== null) {
+              const w = this.shk > 0.3 ? Math.sin(this.now / 38 - Math.hypot(c + 0.5 - this.spinC[0], r + 0.5 - this.spinC[1]) * 1.1) * this.shk * 0.45 / C : 0;
+              this.cellAt(c, r + w, PAL[v >> 1], v & 1);
+            }
           }
-        }));
+        }
       }
 
-      this.marked.forEach(id => {
-        const r = id / W | 0, c = id % W;
+      if (this.marked.size > 0) {
         x.save();
         x.globalAlpha = 0.5 + 0.5 * Math.sin(this.now / 45);
         x.strokeStyle = '#fff';
         x.lineWidth = 3;
-        x.strokeRect(c * C + 3, r * C + 3, C - 6, C - 6);
+        this.marked.forEach(id => {
+          const r = id / W | 0, c = id % W;
+          x.strokeRect(c * C + 3, r * C + 3, C - 6, C - 6);
+        });
         x.restore();
-      });
+      }
 
       if (this.p && !this.over && !this.marked.size && !this.anim && !this.busy) {
         const tl2 = Math.min(5, (this.p.v || 0) * 0.07);
@@ -1195,7 +1300,7 @@
       }
 
       if (this.lineFx && !this.canim) {
-        const t = Math.min(1, (this.now - this.lineFx.t) / 650);
+        const t = Math.min(1, (this.now - this.lineFx.t) / 500);
         this.lineFx.rows.forEach(r => {
           x.save();
           x.globalAlpha = 0.35 + 0.45 * Math.abs(Math.sin(this.now / 45));
@@ -1210,14 +1315,14 @@
       }
 
       if (this.saveFx) {
-        const t = Math.min(1, (this.now - this.saveFx.t) / 1500);
+        const t = Math.min(1, (this.now - this.saveFx.t) / 1200);
         const y0 = this.saveFx.r * C, bp = Math.min(1, t / 0.4), fd = t < 0.6 ? 1 : Math.max(0, 1 - (t - 0.6) / 0.4);
         x.save();
         x.globalAlpha = fd;
         x.fillStyle = 'rgba(250,204,21,.35)';
         x.fillRect(0, y0 - 6, bp * 300, C + 12);
         x.shadowColor = '#facc15';
-        x.shadowBlur = 26;
+        x.shadowBlur = 24;
         x.fillStyle = '#fff';
         x.fillRect(0, y0 + C / 2 - 2, bp * 300, 4);
         if (t < 0.43) {
@@ -1237,22 +1342,24 @@
         x.restore();
       }
 
-      this.rings.forEach(o => {
+      for (let i = 0; i < this.rings.length; i++) {
+        const o = this.rings[i];
         x.globalAlpha = o.l;
         x.strokeStyle = o.c;
         x.lineWidth = 3 * o.l;
         x.beginPath();
         x.arc(o.x, o.y, (1 - o.l) * 50 + 6, 0, 6.283);
         x.stroke();
-      });
+      }
 
-      this.parts.forEach(o => {
+      for (let i = 0; i < this.parts.length; i++) {
+        const o = this.parts[i];
         x.globalAlpha = Math.max(0, o.l);
         x.fillStyle = o.c;
         x.beginPath();
         x.arc(o.x, o.y, 2 + 3 * o.l, 0, 6.283);
         x.fill();
-      });
+      }
       x.globalAlpha = 1;
 
       x.setTransform(1, 0, 0, 1, 0, 0);
@@ -1260,40 +1367,10 @@
       if (this.anim) {
         const t = (this.now - this.animT) / this.ANIM;
         if (t < 0.25) {
-          x.globalAlpha = 0.4 * (1 - t / 0.25);
+          x.globalAlpha = 0.35 * (1 - t / 0.25);
           x.fillStyle = '#fff';
           x.fillRect(0, 0, 300, 600);
           x.globalAlpha = 1;
-        }
-      }
-
-      if (this.saveFx) {
-        const t = Math.min(1, (this.now - this.saveFx.t) / 1500);
-        if (t < 0.85) {
-          x.save();
-          if (this.orient) { x.translate(300, 600); x.rotate(Math.PI); }
-          const a = t < 0.1 ? t / 0.1 : t > 0.7 ? (0.85 - t) / 0.15 : 1;
-          const sz = 22 + 5 * Math.sin(Math.min(1, t / 0.3) * Math.PI / 2);
-          x.globalAlpha = Math.max(0, a);
-          x.textAlign = 'center';
-          x.lineWidth = 6;
-          x.strokeStyle = '#92400e';
-          x.shadowColor = '#facc15';
-          x.shadowBlur = 24;
-          x.font = '900 46px system-ui';
-          x.strokeText('🛟', 150, 262);
-          x.fillText('🛟', 150, 262);
-          x.font = '900 ' + sz + 'px system-ui';
-          x.strokeText('ÚLTIMA SALVACIÓN', 150, 306);
-          x.fillStyle = '#fde047';
-          x.fillText('ÚLTIMA SALVACIÓN', 150, 306);
-          if (this.saveFx.auto) {
-            x.font = 'bold 15px system-ui';
-            x.lineWidth = 4;
-            x.strokeText('¡Te salvó de perder!', 150, 338);
-            x.fillText('¡Te salvó de perder!', 150, 338);
-          }
-          x.restore();
         }
       }
 
@@ -1316,15 +1393,32 @@
     update(dt, t) {
       this.now = t;
       const s = dt / 1000;
-      this.parts.forEach(o => { o.x += o.vx * s; o.y += o.vy * s; o.l -= s * 1.2; });
-      this.parts = this.parts.filter(o => o.l > 0);
-      this.rings.forEach(o => o.l -= s * 2.5);
-      this.rings = this.rings.filter(o => o.l > 0);
+
+      // Optimización 60 FPS: Filtrado in-place sin generar arrays intermedios ni sobrecarga de GC
+      let pWrite = 0;
+      for (let i = 0; i < this.parts.length; i++) {
+        const o = this.parts[i];
+        o.x += o.vx * s;
+        o.y += o.vy * s;
+        o.l -= s * 1.3;
+        if (o.l > 0) this.parts[pWrite++] = o;
+      }
+      this.parts.length = pWrite;
+
+      let rWrite = 0;
+      for (let i = 0; i < this.rings.length; i++) {
+        const o = this.rings[i];
+        o.l -= s * 2.5;
+        if (o.l > 0) this.rings[rWrite++] = o;
+      }
+      this.rings.length = rWrite;
+
       this.shk = Math.max(0, this.shk - s * 9);
 
       if (this.anim) {
         const tRatio = (this.now - this.animT) / this.ANIM;
-        this.anim.forEach(G => {
+        for (let i = 0; i < this.anim.length; i++) {
+          const G = this.anim[i];
           if (!G.hit && Math.min(1, Math.max(0, (tRatio - G.dl) / 0.78)) >= 0.8) {
             G.hit = true;
             if (G.fell) {
@@ -1336,7 +1430,7 @@
               }
             }
           }
-        });
+        }
       }
 
       if (!this.run || this.over) return;
@@ -1384,6 +1478,7 @@
       this.active = false;
       this.rafId = null;
       this.lastTime = 0;
+      this.matchStartTime = 0;
       this.p1 = null;
       this.p2 = null;
       this.keysBound = false;
@@ -1393,16 +1488,18 @@
 
     init() {
       if (!this.p1) {
-        this.p1 = new ClassicTetrisEngine('c', 0, 'p1-score-val', 'p1-lines-val', 'p1-skf', 'p1-skt', audio);
+        this.p1 = new ClassicTetrisEngine('c', 0, 'p1-score-val', 'p1-lines-val', 'p1-skf', 'p1-skt', audio, this);
       }
       if (!this.p2) {
-        this.p2 = new ClassicTetrisEngine('c2', 1, 'p2-score-val', 'p2-lines-val', 'p2-skf', 'p2-skt', audio);
+        this.p2 = new ClassicTetrisEngine('c2', 1, 'p2-score-val', 'p2-lines-val', 'p2-skf', 'p2-skt', audio, this);
       }
+
       this.p1.rival = this.p2;
       this.p2.rival = this.p1;
 
-      this.p1.onGameOver = () => this.handlePlayerDefeat(this.p1, this.p2);
-      this.p2.onGameOver = () => this.handlePlayerDefeat(this.p2, this.p1);
+      // El que no aguante la presión y pierda otorga victoria directa al rival
+      this.p1.onGameOver = () => this.handlePlayerVictory(this.p2, this.p1, 'topout');
+      this.p2.onGameOver = () => this.handlePlayerVictory(this.p1, this.p2, 'topout');
 
       if (!this.keysBound) {
         window.addEventListener('keydown', this.onKeyDown);
@@ -1415,21 +1512,44 @@
       this.init();
       audio.init();
       this.active = true;
+      this.matchStartTime = performance.now();
 
-      // Adaptar la UI al modo 1v1
+      // Añadir clase versus-active para que la UI se centre y el overlay sea pantalla completa
+      document.body.classList.add('versus-active');
+
+      // Adaptar la UI al modo 1v1 Local
       const bw2 = document.getElementById('boardwrap-2');
       if (bw2) bw2.style.display = 'block';
       const p1b = document.getElementById('p1-badge');
       if (p1b) p1b.style.display = 'block';
 
-      // Tarjetas laterales
+      // Tarjetas P1 (Ella - Rosa)
       const p1Sc = document.getElementById('p1-score-card');
       if (p1Sc) p1Sc.style.display = 'block';
       const p1Ct = document.getElementById('p1-ctrl-card');
       if (p1Ct) p1Ct.style.display = 'block';
 
+      // Tarjetas P2 (Él - Azul)
       const p2Sc = document.getElementById('p2-score-card');
-      if (p2Sc) p2Sc.style.display = 'block';
+      if (p2Sc) {
+        p2Sc.style.display = 'block';
+        p2Sc.style.borderColor = 'rgba(59,130,246,0.6)';
+        p2Sc.style.background = 'rgba(14,24,48,0.88)';
+        p2Sc.style.boxShadow = '0 4px 20px rgba(59,130,246,0.25)';
+      }
+      const p2Title = document.getElementById('p2-badge-title');
+      if (p2Title) {
+        p2Title.textContent = '💙 P2 (Él)';
+        p2Title.style.color = '#60a5fa';
+      }
+      const p2Dot = document.getElementById('p2-status-dot');
+      if (p2Dot) {
+        p2Dot.style.background = '#60a5fa';
+        p2Dot.style.boxShadow = '0 0 8px #60a5fa';
+      }
+      const p2ScVal = document.getElementById('p2-score-val');
+      if (p2ScVal) p2ScVal.style.color = '#60a5fa';
+
       const p2Ct = document.getElementById('p2-ctrl-card');
       if (p2Ct) p2Ct.style.display = 'block';
 
@@ -1458,13 +1578,38 @@
       this.active = false;
       cancelAnimationFrame(this.rafId);
       audio.musicStop();
-      if (this.p1) this.p1.run = false;
-      if (this.p2) this.p2.run = false;
+      if (this.p1) {
+        this.p1.run = false;
+        this.p1.clearWatchdog();
+      }
+      if (this.p2) {
+        this.p2.run = false;
+        this.p2.clearWatchdog();
+      }
     }
 
-    handlePlayerDefeat(loser, winner) {
+    /**
+     * Gestión unificada de victoria con overlay centrado para ambos tableros
+     * y entrega de recompensas oficiales de LP y monedas
+     */
+    handlePlayerVictory(winner, loser, reason = 'lines') {
+      if (!this.active) return;
       this.stop();
-      audio.snd(120, 1.2, 'sawtooth', 0.35, 40);
+
+      // Fanfarria triunfal
+      audio.victoryFanfare();
+
+      const durationMs = Math.max(1000, performance.now() - (this.matchStartTime || performance.now()));
+
+      // Reparto de monedas y LP con reward-config
+      let rewards = { earnedCoins: 28, lpAward: 90 };
+      if (typeof window.enviarRecompensaTetris === 'function') {
+        rewards = window.enviarRecompensaTetris({
+          score: winner.sc,
+          durationMs: durationMs,
+          win: true
+        }) || rewards;
+      }
 
       const ov = document.getElementById('ov');
       const ovt = document.getElementById('ovt');
@@ -1474,19 +1619,50 @@
       if (ov && ovt) {
         const winColor = winner.playerIdx === 0 ? '#f472b6' : '#60a5fa';
         const winIcon = winner.playerIdx === 0 ? '💗' : '💙';
+        const reasonText = reason === 'lines' 
+          ? `¡Completó primero la meta de ${CFG.lineasMeta} líneas!` 
+          : `El oponente superó el límite del tablero.`;
+
+        const mins = Math.floor(durationMs / 60000);
+        const secs = Math.floor((durationMs % 60000) / 1000);
+        const timeStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 
         ovt.innerHTML = `
-          <div style="font-size:1.8rem;font-weight:900;color:${winColor};margin-bottom:8px;text-shadow:0 0 25px ${winColor}88;">
-            🏆 ¡GANA ${winner.name.toUpperCase()}! ${winIcon}
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:12px;">
+            <span style="font-size:2.8rem;filter:drop-shadow(0 0 24px ${winColor});">🏆</span>
+            <div style="font-size:1.85rem;font-weight:900;color:${winColor};text-shadow:0 0 30px ${winColor}aa;letter-spacing:0.5px;">
+              ¡VICTORIA DE ${winner.name.toUpperCase()}! ${winIcon}
+            </div>
+            <div style="font-size:0.86rem;color:#cbd5e1;font-weight:600;">
+              ${reasonText}
+            </div>
           </div>
-          <div style="font-size:0.95rem;color:#cbd5e1;line-height:1.4;">
-            <b>${winner.name}:</b> ${winner.sc.toLocaleString('es')} pts (${winner.ln} líneas)<br>
-            <span style="color:#94a3b8;">${loser.name}: ${loser.sc.toLocaleString('es')} pts (${loser.ln} líneas)</span>
+
+          <!-- Tarjetas comparativas de rendimiento 1v1 -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:380px;margin-bottom:14px;">
+            <div style="background:rgba(236,72,153,0.12);border:1.5px solid ${winner.playerIdx === 0 ? '#f472b6' : 'rgba(236,72,153,0.3)'};border-radius:12px;padding:10px;text-align:center;box-shadow:${winner.playerIdx === 0 ? '0 0 20px rgba(236,72,153,0.35)' : 'none'};">
+              <small style="color:#f472b6;font-weight:800;font-size:0.75rem;text-transform:uppercase;">💗 Ella ${winner.playerIdx === 0 ? '👑' : ''}</small>
+              <div style="font-size:1.35rem;font-weight:900;color:#fff;margin:2px 0;">${(winner.playerIdx === 0 ? winner.sc : loser.sc).toLocaleString('es')}</div>
+              <small style="color:#cbd5e1;font-size:0.75rem;">${winner.playerIdx === 0 ? winner.ln : loser.ln} / ${CFG.lineasMeta} líneas</small>
+            </div>
+
+            <div style="background:rgba(59,130,246,0.12);border:1.5px solid ${winner.playerIdx === 1 ? '#60a5fa' : 'rgba(59,130,246,0.3)'};border-radius:12px;padding:10px;text-align:center;box-shadow:${winner.playerIdx === 1 ? '0 0 20px rgba(59,130,246,0.35)' : 'none'};">
+              <small style="color:#60a5fa;font-weight:800;font-size:0.75rem;text-transform:uppercase;">💙 Él ${winner.playerIdx === 1 ? '👑' : ''}</small>
+              <div style="font-size:1.35rem;font-weight:900;color:#fff;margin:2px 0;">${(winner.playerIdx === 1 ? winner.sc : loser.sc).toLocaleString('es')}</div>
+              <small style="color:#cbd5e1;font-size:0.75rem;">${winner.playerIdx === 1 ? winner.ln : loser.ln} / ${CFG.lineasMeta} líneas</small>
+            </div>
+          </div>
+
+          <!-- Resumen de Recompensas -->
+          <div style="display:flex;align-items:center;justify-content:center;gap:16px;background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:20px;border:1px solid rgba(255,255,255,0.1);margin-bottom:16px;font-size:0.85rem;">
+            <span style="color:#facc15;font-weight:800;">🪙 +${rewards.earnedCoins} monedas</span>
+            <span style="color:#a855f7;font-weight:800;">⚡ +${rewards.lpAward} LP</span>
+            <span style="color:#94a3b8;font-size:0.78rem;">⏱️ ${timeStr}</span>
           </div>
         `;
 
         if (startBtn) {
-          startBtn.textContent = 'Jugar otra revancha';
+          startBtn.textContent = '⚔️ Jugar Otra Revancha';
           startBtn.style.display = 'block';
           startBtn.onclick = () => {
             if (ov) ov.style.display = 'none';
@@ -1494,7 +1670,12 @@
           };
         }
 
-        if (modeOpt) modeOpt.style.display = 'none';
+        if (modeOpt) {
+          modeOpt.style.display = 'flex';
+          const titleSpan = modeOpt.querySelector('span');
+          if (titleSpan) titleSpan.textContent = 'O selecciona otro modo';
+        }
+
         ov.style.display = 'flex';
       }
     }

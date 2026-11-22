@@ -1329,8 +1329,7 @@ function draw() {
 
 function loop(t) {
   if (window.TetrisVersus1v1 && window.TetrisVersus1v1.active) {
-    requestAnimationFrame(loop);
-    return;
+    return; // Pausar loop de modo solo en 1v1 para máximo rendimiento 60 FPS
   }
   now = t;
   const dt = Math.min(50, t - last);
@@ -1393,6 +1392,7 @@ const btnSolo = $('btn-play-solo');
 if (btnSolo) {
   btnSolo.onclick = (e) => {
     e.stopPropagation();
+    document.body.classList.remove('versus-active');
     if (window.TetrisOnlineManager) window.TetrisOnlineManager.stopCpu();
     ['boardwrap-2', 'p1-badge', 'p1-score-card', 'p1-ctrl-card', 'p2-score-card', 'p2-ctrl-card'].forEach(id => {
       const el = $(id);
@@ -1412,6 +1412,7 @@ const btnCpu = $('btn-play-cpu');
 if (btnCpu) {
   btnCpu.onclick = (e) => {
     e.stopPropagation();
+    document.body.classList.remove('versus-active');
     ['boardwrap-2', 'p1-badge', 'p1-ctrl-card', 'p2-ctrl-card'].forEach(id => {
       const el = $(id);
       if (el) el.style.display = 'none';
@@ -1442,6 +1443,7 @@ const btnOnline = $('btn-play-online');
 if (btnOnline) {
   btnOnline.onclick = (e) => {
     e.stopPropagation();
+    document.body.classList.remove('versus-active');
     ['boardwrap-2', 'p1-badge', 'p1-ctrl-card', 'p2-ctrl-card'].forEach(id => {
       const el = $(id);
       if (el) el.style.display = 'none';

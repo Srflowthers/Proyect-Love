@@ -537,6 +537,42 @@ button {
 @keyframes spinQueue {
   to { transform: rotate(360deg); }
 }
+
+/* ============================================================================
+   OVERLAY UNIFICADO Y CENTRADO PARA MODO 1v1 LOCAL
+   ============================================================================ */
+body.versus-active #ov {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  z-index: 99999 !important;
+  background: rgba(8, 4, 16, 0.94) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 0 !important;
+  padding: 24px !important;
+  box-sizing: border-box !important;
 }
+
+body.versus-active #ov > div,
+body.versus-active #ov > button,
+body.versus-active #ov > #mode-options {
+  max-width: 440px !important;
+}
+
+body.versus-active #ov #start {
+  padding: 12px 28px !important;
+  font-size: 1.05rem !important;
+  border-radius: 30px !important;
+  box-shadow: 0 0 25px rgba(236, 72, 153, 0.45) !important;
+}
+
 
 

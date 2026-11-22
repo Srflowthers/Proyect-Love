@@ -25,7 +25,7 @@
   </script>
 
   <!-- Estilos desacoplados -->
-  <link rel="stylesheet" href="pool.css">
+  <link rel="stylesheet" href="pool.css?v=6">
   <style>
     html, body, #stage, #stage canvas {
       background-color: transparent !important;
@@ -74,7 +74,7 @@
     </button>
 
 
-    <!-- Menú flotante de configuración y reglas -->
+    <!-- Menú flotante de cámara y reglas (sin tienda ni selectores en partida) -->
     <div id="menu" hidden>
       <div class="row">
         <button id="mode">🎯 Cámara de tiro</button>
@@ -84,16 +84,9 @@
         <button id="zo">－</button>
       </div>
       <div class="row">
-        <button data-t="0" class="sel">Verde</button>
-        <button data-t="1">Azul</button>
-        <button data-t="2">Burdeos</button>
         <button id="btnOpenModes" style="background:#5b2a86;border-color:#a855f7;color:#fff;font-weight:700;">🎮 Cambiar Modo</button>
         <button id="new">🔄 Nueva partida</button>
         <button id="epicBtn" class="sel">🎬 Cámara épica: ON</button>
-      </div>
-      <div class="row">
-        <select id="selCue"></select>
-        <select id="selBg"></select>
         <button id="btnExit" style="background:#8b1b1b;border-color:#b92929;color:#fff;font-weight:600;">🚪 Volver al Catálogo</button>
       </div>
       <p class="hint">Clic derecho para rotar la mira (360°). Mantén Clic izquierdo (o barra FUERZA / Espacio) para ejercer la fuerza y suelta para disparar. Rueda = zoom.</p>
@@ -111,7 +104,7 @@
     </div>
   </div>
 
-  <!-- Modal de Selección de Modos de Juego (FUERA de #stage para interacción 100% limpia) -->
+  <!-- Modal de Selección de Modos de Juego (la Tienda General está exclusivamente en el Lobby de Arcade) -->
   <div id="modeModal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
@@ -119,17 +112,35 @@
           <div class="pool-ball-icon" aria-hidden="true">
             <span class="pool-ball-inner">8</span>
           </div>
-          <h2 class="modal-title">Pool 3D · Selección de Modo</h2>
+          <div>
+            <h2 class="modal-title">Pool 3D · Selección de Modo</h2>
+            <p class="modal-sub">Elige cómo quieres jugar esta partida (personaliza tu Vara y Mesa en la Tienda del Lobby)</p>
+          </div>
         </div>
-        <button id="btnExitToCatalogModal" class="btn-header-back" title="Cerrar y volver al catálogo">
+        <button id="btnExitToCatalogModal" class="btn-header-back" title="Cerrar y volver al Lobby">
           <svg class="ui-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
-          Salir
+          Salir al Lobby
         </button>
       </div>
-      <p class="modal-sub">Elige cómo quieres jugar esta partida</p>
+
+      <!-- Resumen informativo de lo que traes equipado desde la Tienda del Lobby -->
+      <div id="poolLoadoutSummary" class="pool-loadout-bar" style="margin-bottom:12px;">
+        <div class="loadout-chip">
+          <span class="loadout-lbl">Vara (La ve tu rival):</span>
+          <strong id="loadoutCueName">Clásica</strong>
+        </div>
+        <div class="loadout-chip">
+          <span class="loadout-lbl">Mesa (Solo tú):</span>
+          <strong id="loadoutFeltName">Verde Clásico</strong>
+        </div>
+        <div class="loadout-chip">
+          <span class="loadout-lbl">Escenario (Solo tú):</span>
+          <strong id="loadoutBgName">Fondo del Perfil</strong>
+        </div>
+      </div>
 
       <div class="mode-grid">
         <button id="btnMode1v1Cpu" class="mode-btn cpu-mode">
@@ -323,12 +334,12 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
   <!-- Módulo desacoplado de rescate de LP y monedas -->
-  <script src="reward-config.js"></script>
+  <script src="reward-config.js?v=6"></script>
 
   <!-- Módulo desacoplado Online y Modos de Juego (1v1, 2v2, CPU, WebSockets) -->
-  <script src="pool-online.js"></script>
+  <script src="pool-online.js?v=6"></script>
 
   <!-- Lógica desacoplada de Pool 3D 2v2 -->
-  <script src="pool.js"></script>
+  <script src="pool.js?v=6"></script>
 </body>
 </html>

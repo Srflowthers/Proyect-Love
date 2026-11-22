@@ -31,7 +31,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Figtree:wght@500;700;800&display=swap" rel="stylesheet">
 
   <!-- Hoja de estilos desacoplada -->
-  <link rel="stylesheet" href="gomi.css">
+  <link rel="stylesheet" href="gomi.css?v=9">
 </head>
 <body>
 
@@ -58,7 +58,7 @@
           </div>
         </div>
 
-        <!-- Marcadores de estado -->
+        <!-- Marcadores de estado (Movimientos y Puntaje) -->
         <div class="stats">
           <div class="stat stat-moves">
             <span class="label">Movimientos</span>
@@ -67,10 +67,6 @@
           <div class="stat">
             <span class="label">Puntaje</span>
             <b id="score">0</b>
-          </div>
-          <div class="stat" title="Al llegar a este puntaje ganas un poder extra (Rayo, Color o Martillo)">
-            <span class="label">Hito Poder</span>
-            <b id="target">1.000</b>
           </div>
         </div>
 
@@ -123,6 +119,12 @@
             <span>Color</span>
             <span class="ct" id="ct-rainbow">0</span>
           </button>
+
+          <!-- Barra compacta de carga de poder en vivo (0% a 100%) -->
+          <div class="skill-charge-box" title="Se carga en cada combinación y al llegar a 100% ganas +1 poder">
+            <span class="skill-charge-lbl" id="msTxt">0%</span>
+            <div class="skill-charge-track"><i id="msBar"></i></div>
+          </div>
         </aside>
 
         <!-- Contenedor del lienzo de juego (Canvas) y efectos flotantes -->
@@ -258,11 +260,11 @@
 </div>
 
 <!-- Módulo desacoplado de recompensas y rescate de LP/monedas -->
-<script src="reward-config.js"></script>
+<script src="reward-config.js?v=9"></script>
 <!-- Sistema de 101 niveles (0 al 100), layouts y validador automático -->
-<script src="levels-gomi.js"></script>
+<script src="levels-gomi.js?v=9"></script>
 <!-- Lógica del juego desacoplada -->
-<script src="gomi.js"></script>
+<script src="gomi.js?v=9"></script>
 
 </body>
 </html>

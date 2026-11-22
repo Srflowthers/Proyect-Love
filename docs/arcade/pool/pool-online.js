@@ -162,13 +162,16 @@
   };
 
   // 1. TRANSMISIÓN EN VIVO DEL APUNTADO (Emisor hacia WebSocket a 30 Hz cuando cambia o pulso cada 400ms)
+  // Solo se transmite la Vara equipada al rival; el Color de Mesa y el Fondo quedan 100% privados en cada jugador.
+  let lastSentCue = null;
   window.onPoolAimTransmit = function (a, l) {
     const canSendAim = window.isPoolMyTurn() || (isCpuTurnNow() && isCpuAuthority());
     if (isOnline() && poolWs && poolWs.readyState === WebSocket.OPEN && canSendAim) {
       const now = performance.now();
       const yaw = Number(a.toFixed(4));
       const pw = Number((l / 180).toFixed(3));
-      const changed = lastSentYaw === null || Math.abs(yaw - lastSentYaw) > 0.0005 || Math.abs(pw - lastSentPw) > 0.002;
+      const activeCue = isCpuTurnNow() ? 'clasico' : (window.getMyEquippedCue ? window.getMyEquippedCue() : 'clasico');
+      const changed = lastSentYaw === null || Math.abs(yaw - lastSentYaw) > 0.0005 || Math.abs(pw - lastSentPw) > 0.002 || lastSentCue !== activeCue;
       const keepAliveAim = (now - lastSentAimTime) > 400;
 
       if ((changed && (now - wsThrottle > 33)) || keepAliveAim) {
@@ -176,10 +179,13 @@
         lastSentAimTime = now;
         lastSentYaw = yaw;
         lastSentPw = pw;
+        lastSentCue = activeCue;
         poolWs.send(JSON.stringify({
           t: 'aim',
           yaw,
-          pw
+          pw,
+          cue: activeCue,
+          cueX: activeCue
         }));
       }
     }
@@ -204,18 +210,21 @@
     }
   };
 
-  // 2. TRANSMISIÓN DEL DISPARO (incluye snapshot de bolas para que el rival simule exactamente lo mismo)
+  // 2. TRANSMISIÓN DEL DISPARO (incluye snapshot de bolas y la vara equipada para que el rival simule exactamente lo mismo)
   window.onPoolShootTransmit = function (a, p) {
     const canSendShot = window.isPoolMyTurn() || (isCpuTurnNow() && isCpuAuthority());
     if (isOnline() && poolWs && poolWs.readyState === WebSocket.OPEN && canSendShot) {
       shotOwnerSeat = myPlayerSeat;
       rivalAimData = null;
+      const activeCue = isCpuTurnNow() ? 'clasico' : (window.getMyEquippedCue ? window.getMyEquippedCue() : 'clasico');
       poolWs.send(JSON.stringify({
         t: 'shot',
         vx: window.B[0].vx,
         vy: window.B[0].vy,
         pw: p,
         a: a,
+        cue: activeCue,
+        cueX: activeCue,
         balls: snapshotBalls()
       }));
     }
@@ -961,10 +970,12 @@
           }
         }
 
-        // C. TELEMETRÍA EN VIVO (Ver cómo apunta y mide fuerza el rival en tiempo real)
+        // C. TELEMETRÍA EN VIVO (Ver cómo apunta, mide fuerza y la Vara equipada del rival en tiempo real)
         if (data.t === 'aim') {
           if (data.seat !== myPlayerSeat) {
-            rivalAimData = { yaw: data.yaw, pw: data.pw };
+            const rivalCue = data.cue || data.cueX || 'clasico';
+            rivalAimData = { yaw: data.yaw, pw: data.pw, cue: rivalCue };
+            if (window.applyCueVisual) window.applyCueVisual(rivalCue);
             window.setAimYaw(data.yaw);
             const cueL = data.pw * 180;
             window.originalAim(data.yaw, cueL);
@@ -1121,9 +1132,15 @@
       });
     }
 
+    const shopSection = document.getElementById('poolShopSection');
+    const setOnlinePanelVisible = (visible) => {
+      if (onlinePanel) onlinePanel.hidden = !visible;
+      if (shopSection) shopSection.classList.toggle('compact-online', !!visible);
+    };
+
     const openModes = () => {
       modal.hidden = false;
-      if (onlinePanel) onlinePanel.hidden = true;
+      setOnlinePanelVisible(false);
     };
 
     const exitToCatalog = () => {
@@ -1201,7 +1218,7 @@
     if (b2Cpu) {
       b2Cpu.onclick = (e) => {
         e.stopPropagation();
-        if (onlinePanel) onlinePanel.hidden = false;
+        setOnlinePanelVisible(true);
         document.getElementById('onlinePanelTitle').textContent = '2v2 Pareja vs CPU';
         const p = new URLSearchParams(window.location.search);
         const coupleRoom = 'couple_cpu_' + (p.get('coupleId') || 'room_default');
@@ -1215,7 +1232,7 @@
       b1Online.onclick = (e) => {
         e.stopPropagation();
         roomOverflowIndex = 0;
-        if (onlinePanel) onlinePanel.hidden = false;
+        setOnlinePanelVisible(true);
         document.getElementById('onlinePanelTitle').textContent = '1v1 Online';
         document.getElementById('roomCodeBox').dataset.targetMode = '1v1';
         // Emparejamiento automático instantáneo en la sala pública global de 1v1
@@ -1227,7 +1244,7 @@
     if (b2Online) {
       b2Online.onclick = (e) => {
         e.stopPropagation();
-        if (onlinePanel) onlinePanel.hidden = false;
+        setOnlinePanelVisible(true);
         document.getElementById('onlinePanelTitle').textContent = '2v2 Pareja vs Pareja Online';
         // Sala pública global de 2v2 para emparejar 2 parejas distintas (4 jugadores en total)
         connectPoolOnline('global_match_2v2', '2v2', '2v2_online');
@@ -1238,7 +1255,7 @@
     if (btnCancel) {
       btnCancel.onclick = (e) => {
         e.stopPropagation();
-        if (onlinePanel) onlinePanel.hidden = true;
+        setOnlinePanelVisible(false);
         cancelMatchmaking();
       };
     }

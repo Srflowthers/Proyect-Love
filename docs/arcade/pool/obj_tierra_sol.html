@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pool 3D · Objeto 3D: obj_tierra_sol</title>
+<style>
+  :root {
+    --bg: #05060b;
+    --card: #0e1220;
+    --border: rgba(255, 255, 255, 0.12);
+    --accent: #f59e0b;
+    --text: #f8fafc;
+    --muted: #94a3b8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+  }
+  header {
+    background: rgba(10, 13, 24, 0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .title-wrap { display: flex; align-items: center; gap: 12px; }
+  .badge-3d {
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
+    color: #fff; font-size: 0.75rem; font-weight: 800; padding: 4px 10px; border-radius: 8px;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  h1 { margin: 0; font-size: 1.25rem; }
+  .subtitle { margin: 0; font-size: 0.8rem; color: var(--muted); }
+  .top-links { display: flex; align-items: center; gap: 8px; }
+  .top-links a {
+    color: var(--muted); text-decoration: none; font-size: 0.85rem; padding: 6px 14px;
+    border-radius: 20px; background: rgba(255,255,255,0.06); border: 1px solid var(--border); transition: all 0.2s;
+  }
+  .top-links a:hover, .top-links a.active {
+    color: #fff; background: rgba(245, 158, 11, 0.25); border-color: var(--accent);
+  }
+  .studio-layout {
+    display: grid; grid-template-columns: 1fr 360px; flex: 1; min-height: calc(100vh - 65px);
+  }
+  @media (max-width: 900px) { .studio-layout { grid-template-columns: 1fr; } }
+  .viewport-wrap {
+    position: relative;
+    background: radial-gradient(circle at 60% 40%, #171026 0%, #030408 85%);
+    overflow: hidden;
+  }
+  #webgl-canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+  #webgl-canvas:active { cursor: grabbing; }
+  .viewport-overlay {
+    position: absolute; bottom: 20px; left: 20px; right: 20px;
+    display: flex; justify-content: space-between; align-items: center; pointer-events: none;
+  }
+  .hud-pill {
+    pointer-events: auto; background: rgba(8, 10, 18, 0.88); border: 1px solid var(--border);
+    border-radius: 30px; padding: 8px 18px; font-size: 0.8rem; color: var(--muted);
+    backdrop-filter: blur(8px); display: flex; align-items: center; gap: 12px;
+  }
+  .hud-btn {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #fff;
+    padding: 5px 12px; border-radius: 14px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;
+  }
+  .hud-btn:hover { background: var(--accent); }
+  .sidebar {
+    background: var(--card); border-left: 1px solid var(--border); padding: 20px;
+    overflow-y: auto; display: flex; flex-direction: column; gap: 20px;
+  }
+  .panel-section {
+    background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 14px; padding: 16px;
+  }
+  .panel-title {
+    font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--accent);
+    margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .form-row {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 0.82rem;
+  }
+  .form-row:last-child { margin-bottom: 0; }
+  .form-row label { color: var(--muted); }
+  .form-row input[type="range"] { width: 120px; accent-color: var(--accent); }
+  pre {
+    background: #090b14; padding: 12px; border-radius: 10px; font-family: ui-monospace, monospace;
+    font-size: 0.72rem; color: #cbd5e1; overflow-x: auto; border: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-wrap">
+    <span class="badge-3d">3D Universe</span>
+    <div>
+      <h1>obj_tierra_sol · Escenario 3D Cósmico</h1>
+      <p class="subtitle">Planeta Tierra con continentes y atmósfera en rotación, Sol radiante y campo estelar</p>
+    </div>
+  </div>
+
+  <nav class="top-links">
+    <a href="objvara-normal.html">🎱 Vara 3D (Normal)</a>
+    <a href="obj_mesa.html">🟢 Mesa 3D</a>
+    <a href="obj_tierra_sol.html" class="active">🌌 Tierra y Sol 3D</a>
+    <a href="index.html">🎮 Jugar Pool 3D</a>
+  </nav>
+</header>
+
+<div class="studio-layout">
+  <div class="viewport-wrap">
+    <canvas id="webgl-canvas"></canvas>
+
+    <div class="viewport-overlay">
+      <div class="hud-pill">
+        <span>🖱️ Arrastra para orbitar 360° · Rueda = Zoom</span>
+        <button class="hud-btn" id="btnPauseOrbit">⏸️ Pausar Órbita</button>
+      </div>
+
+      <div class="hud-pill">
+        <button class="hud-btn" id="btnFocusEarth">Enfocar Tierra</button>
+        <button class="hud-btn" id="btnFocusSun">Enfocar Sol</button>
+        <button class="hud-btn" id="btnResetView">Vista General</button>
+      </div>
+    </div>
+  </div>
+
+  <aside class="sidebar">
+    <div class="panel-section">
+      <div class="panel-title">
+        <span>Velocidades de Rotación</span>
+      </div>
+      <div class="form-row">
+        <label>Giro Terrestre:</label>
+        <input type="range" id="valEarthRot" min="0" max="3" step="0.1" value="1">
+      </div>
+      <div class="form-row">
+        <label>Pulsación del Sol:</label>
+        <input type="range" id="valSunPulse" min="0" max="3" step="0.1" value="1">
+      </div>
+      <div class="form-row">
+        <label>Intensidad Solar:</label>
+        <input type="range" id="valSunLight" min="0.5" max="3.5" step="0.1" value="2.2">
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">
+        <span>Componentes del Escenario</span>
+      </div>
+      <p style="font-size:0.78rem; color:var(--muted); line-height:1.5; margin:0;">
+        • <b>Planeta Tierra:</b> Malla esférica con textura procedural de océanos profundos, masa continental verde esmeralda y casquetes polares.<br><br>
+        • <b>Atmósfera:</b> Capa cian exterior con mezcla aditiva y sutil resplandor.<br><br>
+        • <b>Sol Radiante:</b> Esfera de plasma con corona solar pulsante y luz direccional principal.<br><br>
+        • <b>Polvo Cósmico:</b> Nube de 800 partículas brillantes en el fondo.
+      </p>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">
+        <span>Código Modular Three.js</span>
+      </div>
+      <pre><code>// Creación del escenario Tierra y Sol 3D
+const spaceGroup = new THREE.Group();
+
+const earth = new THREE.Mesh(
+  new THREE.SphereGeometry(32, 48, 36),
+  new THREE.MeshStandardMaterial({
+    map: makeEarthTexture(),
+    roughness: 0.65
+  })
+);
+earth.position.set(-65, -5, 0);
+spaceGroup.add(earth);
+
+const sun = new THREE.Mesh(
+  new THREE.SphereGeometry(24, 32, 24),
+  new THREE.MeshBasicMaterial({ color: '#ffea60' })
+);
+sun.position.set(95, 45, -40);
+spaceGroup.add(sun);</code></pre>
+    </div>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+const canvas = document.getElementById('webgl-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.setClearColor(0x04050a, 1);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(36, 1, 1, 4000);
+camera.position.set(0, 20, 310);
+
+scene.add(new THREE.HemisphereLight('#38bdf8', '#1e1b4b', 0.5));
+
+// Generador de textura procedural de la Tierra (Océanos + Continentes)
+function makeEarthTex() {
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 256;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#0f3866'; ctx.fillRect(0, 0, 512, 256);
+
+  // Continentes estilizados
+  ctx.fillStyle = '#227845';
+  const continents = [
+    [100, 70, 48, 35], [130, 160, 42, 60], [290, 80, 85, 45],
+    [320, 150, 55, 50], [420, 160, 40, 30]
+  ];
+  continents.forEach(([cx, cy, rx, ry]) => {
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // Casquetes polares blancos
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, 512, 18);
+  ctx.fillRect(0, 238, 512, 18);
+
+  return new THREE.CanvasTexture(cv);
+}
+
+// 1. Planeta Tierra 3D
+const earthRoot = new THREE.Group();
+earthRoot.position.set(-65, -5, 0);
+
+const earthGeo = new THREE.SphereGeometry(34, 54, 40);
+const earthMat = new THREE.MeshStandardMaterial({
+  map: makeEarthTex(),
+  roughness: 0.55,
+  metalness: 0.1
+});
+const earthMesh = new THREE.Mesh(earthGeo, earthMat);
+earthRoot.add(earthMesh);
+
+// Capa de Atmósfera Cian
+const atmosGeo = new THREE.SphereGeometry(35.5, 48, 36);
+const atmosMat = new THREE.MeshBasicMaterial({
+  color: '#38bdf8',
+  transparent: true,
+  opacity: 0.22,
+  side: THREE.BackSide
+});
+const atmosMesh = new THREE.Mesh(atmosGeo, atmosMat);
+earthRoot.add(atmosMesh);
+
+scene.add(earthRoot);
+
+// 2. Sol 3D Radiante
+const sunRoot = new THREE.Group();
+sunRoot.position.set(95, 45, -40);
+
+const sunMesh = new THREE.Mesh(
+  new THREE.SphereGeometry(24, 36, 28),
+  new THREE.MeshBasicMaterial({ color: '#ffea60' })
+);
+sunRoot.add(sunMesh);
+
+// Corona de resplandor solar
+const coronaMesh = new THREE.Mesh(
+  new THREE.SphereGeometry(28, 32, 24),
+  new THREE.MeshBasicMaterial({
+    color: '#f59e0b',
+    transparent: true,
+    opacity: 0.35,
+    side: THREE.BackSide
+  })
+);
+sunRoot.add(coronaMesh);
+
+// Luz del Sol hacia la Tierra
+const sunLight = new THREE.DirectionalLight('#fff7ed', 2.2);
+sunLight.position.set(95, 45, -40);
+scene.add(sunLight);
+
+scene.add(sunRoot);
+
+// 3. Campo de Estrellas
+const starCount = 600;
+const starGeo = new THREE.BufferGeometry();
+const starPos = new Float32Array(starCount * 3);
+for (let i = 0; i < starCount * 3; i += 3) {
+  starPos[i] = (Math.random() - 0.5) * 1600;
+  starPos[i + 1] = (Math.random() - 0.5) * 1600;
+  starPos[i + 2] = -300 - Math.random() * 800;
+}
+starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+const starMat = new THREE.PointsMaterial({ color: '#f8fafc', size: 1.8, transparent: true, opacity: 0.75 });
+const starField = new THREE.Points(starGeo, starMat);
+scene.add(starField);
+
+// Control de Órbita
+let isDragging = false, prevX = 0, prevY = 0;
+let yaw = 0, pitch = 0.05, dist = 310;
+let isPaused = false;
+
+function updateCamera() {
+  pitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, pitch));
+  camera.position.x = dist * Math.sin(yaw) * Math.cos(pitch);
+  camera.position.y = dist * Math.sin(pitch);
+  camera.position.z = dist * Math.cos(yaw) * Math.cos(pitch);
+  camera.lookAt(0, 0, 0);
+}
+updateCamera();
+
+canvas.addEventListener('pointerdown', (e) => {
+  isDragging = true; prevX = e.clientX; prevY = e.clientY;
+  try { canvas.setPointerCapture(e.pointerId); } catch(err){}
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (!isDragging) return;
+  yaw -= (e.clientX - prevX) * 0.008;
+  pitch += (e.clientY - prevY) * 0.008;
+  prevX = e.clientX; prevY = e.clientY;
+  updateCamera();
+});
+window.addEventListener('pointerup', () => { isDragging = false; });
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  dist = Math.max(120, Math.min(800, dist + e.deltaY * 0.3));
+  updateCamera();
+}, { passive: false });
+
+function resize() {
+  const w = canvas.parentElement.clientWidth, h = canvas.parentElement.clientHeight;
+  if (w && h) {
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+}
+window.addEventListener('resize', resize);
+resize();
+
+function animate(t) {
+  requestAnimationFrame(animate);
+
+  const rotSpeed = parseFloat(document.getElementById('valEarthRot').value);
+  const pulseSpeed = parseFloat(document.getElementById('valSunPulse').value);
+
+  if (!isPaused) {
+    earthMesh.rotation.y += 0.004 * rotSpeed;
+    const pulse = Math.sin(t * 0.0025 * pulseSpeed) * 0.04;
+    coronaMesh.scale.setScalar(1 + pulse);
+  }
+
+  renderer.render(scene, camera);
+}
+animate(0);
+
+// Controles
+document.getElementById('valSunLight').addEventListener('input', (e) => {
+  sunLight.intensity = parseFloat(e.target.value);
+});
+
+document.getElementById('btnPauseOrbit').addEventListener('click', (e) => {
+  isPaused = !isPaused;
+  e.target.innerText = isPaused ? '▶️ Reanudar Órbita' : '⏸️ Pausar Órbita';
+});
+
+document.getElementById('btnFocusEarth').addEventListener('click', () => {
+  yaw = 0.35; pitch = 0.05; dist = 140; updateCamera();
+});
+document.getElementById('btnFocusSun').addEventListener('click', () => {
+  yaw = -0.4; pitch = 0.15; dist = 130; updateCamera();
+});
+document.getElementById('btnResetView').addEventListener('click', () => {
+  yaw = 0; pitch = 0.05; dist = 310; updateCamera();
+});
+</script>
+</body>
+</html>

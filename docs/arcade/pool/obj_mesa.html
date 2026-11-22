@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pool 3D · Objeto 3D: obj_mesa</title>
+<style>
+  :root {
+    --bg: #090a12;
+    --card: #131726;
+    --border: rgba(255, 255, 255, 0.12);
+    --accent: #10b981;
+    --text: #f8fafc;
+    --muted: #94a3b8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+  }
+  header {
+    background: rgba(15, 18, 32, 0.9);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .title-wrap { display: flex; align-items: center; gap: 12px; }
+  .badge-3d {
+    background: linear-gradient(135deg, #10b981, #06b6d4);
+    color: #fff; font-size: 0.75rem; font-weight: 800; padding: 4px 10px; border-radius: 8px;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  h1 { margin: 0; font-size: 1.25rem; }
+  .subtitle { margin: 0; font-size: 0.8rem; color: var(--muted); }
+  .top-links { display: flex; align-items: center; gap: 8px; }
+  .top-links a {
+    color: var(--muted); text-decoration: none; font-size: 0.85rem; padding: 6px 14px;
+    border-radius: 20px; background: rgba(255,255,255,0.06); border: 1px solid var(--border); transition: all 0.2s;
+  }
+  .top-links a:hover, .top-links a.active {
+    color: #fff; background: rgba(16, 185, 129, 0.25); border-color: var(--accent);
+  }
+  .studio-layout {
+    display: grid; grid-template-columns: 1fr 360px; flex: 1; min-height: calc(100vh - 65px);
+  }
+  @media (max-width: 900px) { .studio-layout { grid-template-columns: 1fr; } }
+  .viewport-wrap {
+    position: relative;
+    background: radial-gradient(circle at 50% 50%, #151e2e 0%, #060913 85%);
+    overflow: hidden;
+  }
+  #webgl-canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+  #webgl-canvas:active { cursor: grabbing; }
+  .viewport-overlay {
+    position: absolute; bottom: 20px; left: 20px; right: 20px;
+    display: flex; justify-content: space-between; align-items: center; pointer-events: none;
+  }
+  .hud-pill {
+    pointer-events: auto; background: rgba(10, 13, 24, 0.88); border: 1px solid var(--border);
+    border-radius: 30px; padding: 8px 18px; font-size: 0.8rem; color: var(--muted);
+    backdrop-filter: blur(8px); display: flex; align-items: center; gap: 12px;
+  }
+  .hud-btn {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #fff;
+    padding: 5px 12px; border-radius: 14px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;
+  }
+  .hud-btn:hover { background: var(--accent); }
+  .sidebar {
+    background: var(--card); border-left: 1px solid var(--border); padding: 20px;
+    overflow-y: auto; display: flex; flex-direction: column; gap: 20px;
+  }
+  .panel-section {
+    background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 14px; padding: 16px;
+  }
+  .panel-title {
+    font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--accent);
+    margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .felt-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .btn-felt {
+    background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: #fff;
+    padding: 8px 10px; border-radius: 10px; font-size: 0.78rem; cursor: pointer;
+    display: flex; align-items: center; gap: 8px; text-align: left;
+  }
+  .btn-felt:hover, .btn-felt.active {
+    background: rgba(16, 185, 129, 0.2); border-color: var(--accent);
+  }
+  .color-swatch { width: 12px; height: 12px; border-radius: 50%; flex-none; }
+  pre {
+    background: #090b14; padding: 12px; border-radius: 10px; font-family: ui-monospace, monospace;
+    font-size: 0.72rem; color: #cbd5e1; overflow-x: auto; border: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-wrap">
+    <span class="badge-3d">3D Table</span>
+    <div>
+      <h1>obj_mesa · Estudio 3D de la Mesa de Billar</h1>
+      <p class="subtitle">Modelo tridimensional de la mesa con paños profesionales, bandas y troneras</p>
+    </div>
+  </div>
+
+  <nav class="top-links">
+    <a href="objvara-normal.html">🎱 Vara 3D (Normal)</a>
+    <a href="obj_mesa.html" class="active">🟢 Mesa 3D</a>
+    <a href="obj_tierra_sol.html">🌌 Tierra y Sol 3D</a>
+    <a href="index.html">🎮 Jugar Pool 3D</a>
+  </nav>
+</header>
+
+<div class="studio-layout">
+  <div class="viewport-wrap">
+    <canvas id="webgl-canvas"></canvas>
+
+    <div class="viewport-overlay">
+      <div class="hud-pill">
+        <span>🖱️ Arrastra para girar 360° · Rueda = Zoom</span>
+        <button class="hud-btn" id="btnAutoSpin">🔄 Auto-Giro: OFF</button>
+      </div>
+
+      <div class="hud-pill">
+        <button class="hud-btn" id="btnTopView">Vista Cenital</button>
+        <button class="hud-btn" id="btnPerspView">Perspectiva</button>
+      </div>
+    </div>
+  </div>
+
+  <aside class="sidebar">
+    <div class="panel-section">
+      <div class="panel-title">
+        <span>Colores de Paño Oficiales</span>
+      </div>
+      <div class="felt-grid">
+        <button class="btn-felt active" data-felt="0" data-c1="#1f8f55" data-c2="#0e5f36">
+          <span class="color-swatch" style="background:#1f8f55;"></span>
+          <span>Verde Clásico</span>
+        </button>
+        <button class="btn-felt" data-felt="1" data-c1="#2a78c4" data-c2="#144f8c">
+          <span class="color-swatch" style="background:#2a78c4;"></span>
+          <span>Azul Torneo</span>
+        </button>
+        <button class="btn-felt" data-felt="2" data-c1="#a8283a" data-c2="#6a1526">
+          <span class="color-swatch" style="background:#a8283a;"></span>
+          <span>Burdeos Imperial</span>
+        </button>
+        <button class="btn-felt" data-felt="3" data-c1="#6b21a8" data-c2="#3b0764">
+          <span class="color-swatch" style="background:#6b21a8;"></span>
+          <span>Amatista Real</span>
+        </button>
+        <button class="btn-felt" data-felt="4" data-c1="#263244" data-c2="#111827">
+          <span class="color-swatch" style="background:#263244;"></span>
+          <span>Obsidiana Nocturna</span>
+        </button>
+        <button class="btn-felt" data-felt="5" data-c1="#85581A" data-c2="#4A2E08">
+          <span class="color-swatch" style="background:#85581A;"></span>
+          <span>Bronce Dorado</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">
+        <span>Madera de Banda</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; margin-bottom:10px;">
+        <label style="color:var(--muted);">Tinte de Marco:</label>
+        <select id="woodSel" style="background:#090b14; color:#fff; border:1px solid var(--border); padding:4px 8px; border-radius:6px;">
+          <option value="caoba">Caoba Tradicional</option>
+          <option value="nogal">Nogal Oscuro</option>
+          <option value="negro">Laca Negra</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">
+        <span>Código Modular Three.js</span>
+      </div>
+      <pre><code>// Creación de la Mesa 3D
+const tableGroup = new THREE.Group();
+const tableFelt = new THREE.Mesh(
+  new THREE.BoxGeometry(160, 4, 88),
+  new THREE.MeshStandardMaterial({
+    color: '#1f8f55',
+    roughness: 0.72
+  })
+);
+tableGroup.add(tableFelt);</code></pre>
+    </div>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+const canvas = document.getElementById('webgl-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.setClearColor(0x0a0c16, 1);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, 1, 1, 3000);
+camera.position.set(0, 160, 240);
+
+scene.add(new THREE.HemisphereLight('#f1f5f9', '#1e1b4b', 1.0));
+const light1 = new THREE.DirectionalLight('#fffbeb', 2.0);
+light1.position.set(100, 200, 120);
+scene.add(light1);
+
+// Generador de textura de madera
+function makeWoodTex(color1, color2) {
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64;
+  const ctx = cv.getContext('2d');
+  const gr = ctx.createLinearGradient(0, 0, 0, 64);
+  gr.addColorStop(0, color1); gr.addColorStop(0.5, color2); gr.addColorStop(1, color1);
+  ctx.fillStyle = gr; ctx.fillRect(0, 0, 256, 64);
+  return new THREE.CanvasTexture(cv);
+}
+
+// Mesa 3D
+const tableRoot = new THREE.Group();
+
+const feltMat = new THREE.MeshStandardMaterial({ color: '#1f8f55', roughness: 0.72 });
+const woodMat = new THREE.MeshStandardMaterial({ map: makeWoodTex('#855228', '#5c3516'), roughness: 0.42 });
+const pocketMat = new THREE.MeshStandardMaterial({ color: '#090a0f', roughness: 0.85 });
+const ringMat = new THREE.MeshStandardMaterial({ color: '#d1d5db', roughness: 0.18, metalness: 0.9 });
+
+// 1. Superficie de Paño
+const feltMesh = new THREE.Mesh(new THREE.BoxGeometry(158, 4, 86), feltMat);
+feltMesh.position.y = 0;
+tableRoot.add(feltMesh);
+
+// 2. Bandas de Madera (Rails)
+const railGeoL = new THREE.BoxGeometry(172, 10, 8);
+const railGeoW = new THREE.BoxGeometry(8, 10, 102);
+
+const railTop = new THREE.Mesh(railGeoL, woodMat); railTop.position.set(0, 3, -47); tableRoot.add(railTop);
+const railBot = new THREE.Mesh(railGeoL, woodMat); railBot.position.set(0, 3, 47); tableRoot.add(railBot);
+const railLeft = new THREE.Mesh(railGeoW, woodMat); railLeft.position.set(-83, 3, 0); tableRoot.add(railLeft);
+const railRight = new THREE.Mesh(railGeoW, woodMat); railRight.position.set(83, 3, 0); tableRoot.add(railRight);
+
+// 3. Troneras (6 Pockets)
+const pocketPositions = [
+  [-77, 2.5, -41], [0, 2.5, -43], [77, 2.5, -41],
+  [-77, 2.5, 41],  [0, 2.5, 43],  [77, 2.5, 41]
+];
+pocketPositions.forEach(([px, py, pz]) => {
+  const pMesh = new THREE.Mesh(new THREE.CylinderGeometry(5.2, 5.2, 5, 20), pocketMat);
+  pMesh.position.set(px, py, pz);
+  tableRoot.add(pMesh);
+  const rMesh = new THREE.Mesh(new THREE.TorusGeometry(5.4, 0.8, 12, 24), ringMat);
+  rMesh.rotation.x = Math.PI / 2;
+  rMesh.position.set(px, py + 2.5, pz);
+  tableRoot.add(rMesh);
+});
+
+// 4. Bolas en la mesa
+const ballColors = ['#f8fafc', '#eab308', '#2563eb', '#dc2626', '#7c3aed', '#ea580c', '#16a34a', '#881337', '#0f172a'];
+ballColors.forEach((c, i) => {
+  const bMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(3.2, 24, 18),
+    new THREE.MeshStandardMaterial({ color: c, roughness: 0.16 })
+  );
+  if (i === 0) {
+    bMesh.position.set(-40, 5.2, 0); // Blanca
+  } else {
+    const row = Math.floor(i / 3);
+    const col = i % 3;
+    bMesh.position.set(30 + row * 6, 5.2, (col - 1) * 7);
+  }
+  tableRoot.add(bMesh);
+});
+
+scene.add(tableRoot);
+
+// Controles de Órbita
+let isDragging = false, prevX = 0, prevY = 0;
+let yaw = 0, pitch = 0.55, dist = 280;
+let autoSpin = false;
+
+function updateCamera() {
+  pitch = Math.max(0.05, Math.min(Math.PI / 2 - 0.05, pitch));
+  camera.position.x = dist * Math.sin(yaw) * Math.cos(pitch);
+  camera.position.y = dist * Math.sin(pitch);
+  camera.position.z = dist * Math.cos(yaw) * Math.cos(pitch);
+  camera.lookAt(0, 0, 0);
+}
+updateCamera();
+
+canvas.addEventListener('pointerdown', (e) => {
+  isDragging = true; prevX = e.clientX; prevY = e.clientY;
+  try { canvas.setPointerCapture(e.pointerId); } catch(err){}
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (!isDragging) return;
+  yaw -= (e.clientX - prevX) * 0.01;
+  pitch += (e.clientY - prevY) * 0.01;
+  prevX = e.clientX; prevY = e.clientY;
+  updateCamera();
+});
+window.addEventListener('pointerup', () => { isDragging = false; });
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  dist = Math.max(90, Math.min(500, dist + e.deltaY * 0.25));
+  updateCamera();
+}, { passive: false });
+
+function resize() {
+  const w = canvas.parentElement.clientWidth, h = canvas.parentElement.clientHeight;
+  if (w && h) {
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+}
+window.addEventListener('resize', resize);
+resize();
+
+function animate() {
+  requestAnimationFrame(animate);
+  if (autoSpin && !isDragging) { yaw += 0.005; updateCamera(); }
+  renderer.render(scene, camera);
+}
+animate();
+
+// Botones de Paño
+document.querySelectorAll('.btn-felt').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.btn-felt').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    feltMat.color.set(btn.dataset.c1);
+  });
+});
+
+// Selección de Madera
+document.getElementById('woodSel').addEventListener('change', (e) => {
+  const v = e.target.value;
+  if (v === 'nogal') woodMat.map = makeWoodTex('#422613', '#241408');
+  else if (v === 'negro') woodMat.map = makeWoodTex('#1e1e24', '#0f0f12');
+  else woodMat.map = makeWoodTex('#855228', '#5c3516');
+  woodMat.needsUpdate = true;
+});
+
+// Vistas
+document.getElementById('btnTopView').addEventListener('click', () => {
+  yaw = 0; pitch = Math.PI / 2 - 0.08; dist = 260; updateCamera();
+});
+document.getElementById('btnPerspView').addEventListener('click', () => {
+  yaw = 0.45; pitch = 0.45; dist = 280; updateCamera();
+});
+document.getElementById('btnAutoSpin').addEventListener('click', (e) => {
+  autoSpin = !autoSpin;
+  e.target.innerText = autoSpin ? '🔄 Auto-Giro: ON' : '🔄 Auto-Giro: OFF';
+  e.target.style.background = autoSpin ? 'var(--accent)' : '';
+});
+</script>
+</body>
+</html>

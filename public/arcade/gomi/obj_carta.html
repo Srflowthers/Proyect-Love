@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Objeto Gomi · Carta de Amor</title>
+<style>
+  :root { --bg: #1c0e25; --card: #2c163a; --tile: #3c1e50; --text: #fbebf7; --muted: #bda2bf; --accent: #f472b6; --code-bg: #15091c; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; padding: 20px 16px 50px; display: flex; justify-content: center; }
+  main { width: 100%; max-width: 860px; }
+  .nav-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .nav-bar a { color: var(--muted); text-decoration: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 20px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s; }
+  .nav-bar a:hover { color: #fff; background: rgba(255,255,255,0.15); }
+  .nav-bar a.active { color: #fff; background: var(--accent); border-color: var(--accent); font-weight: bold; }
+  .header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  h1 { font-size: 1.5rem; margin: 0; display: flex; align-items: center; gap: 8px; }
+  .sub { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+  .preview-card { background: var(--card); border-radius: 20px; padding: 24px; box-shadow: 0 16px 36px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); margin-bottom: 24px; }
+  .controls-bar { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-bottom: 20px; background: rgba(0,0,0,0.25); padding: 10px 16px; border-radius: 12px; font-size: 0.85rem; }
+  .controls-bar label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .stage-row { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; align-items: center; }
+  .canvas-box { background: var(--tile); border-radius: 18px; padding: 20px; display: flex; flex-direction: column; align-items: center; box-shadow: inset 0 2px 8px rgba(0,0,0,0.3); }
+  .canvas-box.bg-check { background-image: linear-gradient(45deg, #261334 25%, transparent 25%), linear-gradient(-45deg, #261334 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #261334 75%), linear-gradient(-45deg, transparent 75%, #261334 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0px; }
+  .scales-box { display: flex; flex-direction: column; gap: 12px; justify-content: center; }
+  .scales-row { display: flex; align-items: flex-end; gap: 14px; background: var(--tile); padding: 14px 18px; border-radius: 14px; }
+  .scale-item { text-align: center; }
+  .scale-item span { display: block; font-size: 0.72rem; color: var(--muted); margin-top: 6px; font-family: monospace; }
+  .code-card { background: var(--code-bg); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.08); }
+  .code-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .code-title { font-size: 0.9rem; font-weight: bold; color: var(--accent); font-family: monospace; }
+  .btn-copy { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .btn-copy:hover { background: var(--accent); border-color: var(--accent); }
+  pre { margin: 0; overflow-x: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.82rem; line-height: 1.5; color: #e2d3e6; }
+</style>
+</head>
+<body>
+<main>
+  <nav class="nav-bar">
+    <a href="Objetos_gomi.html">📂 Catálogo Completo</a>
+    <a href="obj_helado.html">🍦 Helado</a>
+    <a href="obj_anillo_boda.html">💍 Anillo Boda</a>
+    <a href="obj_anillo_compromiso.html">💎 Anillo Compromiso</a>
+    <a href="obj_algodon.html">🍡 Algodón</a>
+    <a href="obj_carta.html" class="active">💌 Carta</a>
+    <a href="obj_gusano.html">🐛 Gusano</a>
+    <a href="obj_sushi.html">🍣 Sushi</a>
+  </nav>
+
+  <div class="header">
+    <div>
+      <h1>💌 Carta de Amor con Sello de Lacre</h1>
+      <div class="sub">Sobre de correspondencia sellado con corazón de lacre carmesí y pequeños corazones flotantes.</div>
+    </div>
+  </div>
+
+  <div class="preview-card">
+    <div class="controls-bar">
+      <label><input type="checkbox" id="deep" checked> Sombras intensas (deep)</label>
+      <label><input type="checkbox" id="checker"> Fondo cuadrícula</label>
+      <label>
+        Zoom:
+        <select id="zoomSel" style="background:#1a0c24;color:#fff;border:1px solid #5a3068;border-radius:6px;padding:2px 6px;">
+          <option value="250">250px</option>
+          <option value="200" selected>200px</option>
+          <option value="160">160px</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="stage-row">
+      <div class="canvas-box" id="mainBox">
+        <canvas id="cvMain" width="200" height="200"></canvas>
+      </div>
+
+      <div class="scales-box">
+        <div style="font-size:0.8rem; font-weight:bold; color:var(--muted); text-transform:uppercase;">Tamaños en Juego:</div>
+        <div class="scales-row">
+          <div class="scale-item"><canvas id="cv128" width="128" height="128"></canvas><span>128px</span></div>
+          <div class="scale-item"><canvas id="cv96" width="96" height="96"></canvas><span>96px</span></div>
+          <div class="scale-item"><canvas id="cv64" width="64" height="64"></canvas><span>64px</span></div>
+          <div class="scale-item"><canvas id="cv40" width="40" height="40"></canvas><span>40px</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-title">pCarta(c) &amp; dCarta(c, p, deep)</span>
+      <button class="btn-copy" onclick="copyCode()">Copiar Código</button>
+    </div>
+    <pre><code id="codeBlock">/* ============================ CARTA DE AMOR ========================= */
+function _u(c) { c.translate(-1, -1); c.scale(1 / 128, 1 / 128); }
+function _uCarta(c) { _u(c); c.translate(0, 10); }
+
+function _rrect(c, x, y, w, h, r) {
+  c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.arcTo(x + w, y, x + w, y + r, r);
+  c.lineTo(x + w, y + h - r); c.arcTo(x + w, y + h, x + w - r, y + h, r);
+  c.lineTo(x + r, y + h); c.arcTo(x, y + h, x, y + h - r, r);
+  c.lineTo(x, y + r); c.arcTo(x, y, x + r, y, r); c.closePath();
+}
+
+function _corazon(c, cx, cy, s, rot) {
+  c.save(); c.translate(cx, cy); c.rotate(rot || 0); c.scale(s, s);
+  c.moveTo(0, -0.35);
+  c.bezierCurveTo(0, -0.9, 1, -0.9, 1, -0.3);
+  c.bezierCurveTo(1, 0.2, 0.4, 0.55, 0, 1);
+  c.bezierCurveTo(-0.4, 0.55, -1, 0.2, -1, -0.3);
+  c.bezierCurveTo(-1, -0.9, 0, -0.9, 0, -0.35);
+  c.closePath(); c.restore();
+}
+
+export function pCarta(c) {
+  c.save(); _uCarta(c);
+  c.beginPath();
+  _rrect(c, 28, 74, 200, 126, 14);
+  _corazon(c, 128, 150, 24, 0);
+  _corazon(c, 204, 56, 13, 0.24);
+  _corazon(c, 172, 40, 8, -0.2);
+  c.restore();
+}
+
+export function dCarta(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _uCarta(c);
+  c.lineJoin = 'round'; c.lineCap = 'round';
+
+  // Papel del sobre
+  let g = c.createLinearGradient(0, 74, 0, 200);
+  g.addColorStop(0, '#fff8f0'); g.addColorStop(1, '#ffc9d8');
+  c.beginPath(); _rrect(c, 28, 74, 200, 126, 14); c.fillStyle = g; c.fill();
+
+  // Pliegues y solapa
+  c.save(); c.clip();
+  c.fillStyle = '#ff9db9'; c.globalAlpha = 0.28;
+  c.beginPath(); c.moveTo(28, 74); c.lineTo(128, 146); c.lineTo(28, 200); c.closePath(); c.fill();
+  c.beginPath(); c.moveTo(228, 74); c.lineTo(128, 146); c.lineTo(228, 200); c.closePath(); c.fill();
+  c.globalAlpha = 0.35;
+  c.beginPath(); c.moveTo(28, 200); c.lineTo(128, 146); c.lineTo(228, 200); c.closePath(); c.fill();
+  c.globalAlpha = 0.6; c.strokeStyle = '#d4577a'; c.lineWidth = 3;
+  c.beginPath(); c.moveTo(28, 200); c.lineTo(128, 146); c.lineTo(228, 200); c.stroke();
+
+  // Sombra y solapa superior
+  c.globalAlpha = 0.22 * k; c.fillStyle = '#9a2a4f';
+  c.beginPath(); c.moveTo(28, 80); c.lineTo(228, 80); c.lineTo(128, 152); c.closePath(); c.fill();
+  c.globalAlpha = 1;
+  g = c.createLinearGradient(0, 74, 0, 146);
+  g.addColorStop(0, '#fffdf9'); g.addColorStop(1, '#ffdbe6');
+  c.fillStyle = g;
+  c.beginPath(); c.moveTo(28, 74); c.lineTo(228, 74); c.lineTo(128, 146); c.closePath(); c.fill();
+  c.restore();
+
+  // Contornos
+  c.strokeStyle = '#d4577a'; c.lineWidth = 5;
+  c.beginPath(); _rrect(c, 28, 74, 200, 126, 14); c.stroke();
+  c.lineWidth = 4;
+  c.save(); c.beginPath(); _rrect(c, 28, 74, 200, 126, 14); c.clip();
+  c.beginPath(); c.moveTo(28, 74); c.lineTo(128, 146); c.lineTo(228, 74); c.stroke();
+  c.restore();
+
+  // Brillo de solapa
+  c.strokeStyle = '#fff'; c.lineWidth = 3; c.globalAlpha = 0.7;
+  c.beginPath(); c.moveTo(40, 84); c.lineTo(118, 140); c.stroke();
+  c.globalAlpha = 1;
+
+  // Sello de corazón de lacre
+  c.fillStyle = '#7a1236'; c.globalAlpha = 0.3 * k;
+  c.beginPath(); _corazon(c, 128, 154, 24, 0); c.fill();
+  c.globalAlpha = 1;
+  c.strokeStyle = '#a3173d'; c.lineWidth = 6;
+  c.beginPath(); _corazon(c, 128, 150, 24, 0); c.stroke();
+  g = c.createRadialGradient(118, 140, 2, 128, 152, 36);
+  g.addColorStop(0, '#ff8aa3'); g.addColorStop(0.5, '#e8325f'); g.addColorStop(1, '#b81f48');
+  c.fillStyle = g; c.beginPath(); _corazon(c, 128, 150, 24, 0); c.fill();
+  c.strokeStyle = '#ff9fb4'; c.lineWidth = 2.5; c.globalAlpha = 0.55;
+  c.beginPath(); _corazon(c, 128, 152, 14, 0); c.stroke();
+  c.globalAlpha = 0.85; c.fillStyle = '#fff';
+  c.beginPath(); c.ellipse(112, 138, 7, 4, -40 * Math.PI / 180, 0, Math.PI * 2); c.fill();
+  c.globalAlpha = 1;
+
+  // Corazoncitos flotando
+  [[204, 56, 13, 0.24], [172, 40, 8, -0.2]].forEach(([x, y, s, r]) => {
+    c.strokeStyle = '#c9335f'; c.lineWidth = 3;
+    c.beginPath(); _corazon(c, x, y, s, r); c.stroke();
+    c.fillStyle = '#ff6f95'; c.beginPath(); _corazon(c, x, y, s, r); c.fill();
+    c.fillStyle = '#fff'; c.globalAlpha = 0.85;
+    c.beginPath(); c.arc(x - s * 0.45, y - s * 0.35, s * 0.18, 0, Math.PI * 2); c.fill();
+    c.globalAlpha = 1;
+  });
+  c.restore();
+}</code></pre>
+  </div>
+</main>
+
+<script>
+function _u(c) { c.translate(-1, -1); c.scale(1 / 128, 1 / 128); }
+function _uCarta(c) { _u(c); c.translate(0, 10); }
+
+function _rrect(c, x, y, w, h, r) {
+  c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.arcTo(x + w, y, x + w, y + r, r);
+  c.lineTo(x + w, y + h - r); c.arcTo(x + w, y + h, x + w - r, y + h, r);
+  c.lineTo(x + r, y + h); c.arcTo(x, y + h, x, y + h - r, r);
+  c.lineTo(x, y + r); c.arcTo(x, y, x + r, y, r); c.closePath();
+}
+
+function _corazon(c, cx, cy, s, rot) {
+  c.save(); c.translate(cx, cy); c.rotate(rot || 0); c.scale(s, s);
+  c.moveTo(0, -0.35);
+  c.bezierCurveTo(0, -0.9, 1, -0.9, 1, -0.3);
+  c.bezierCurveTo(1, 0.2, 0.4, 0.55, 0, 1);
+  c.bezierCurveTo(-0.4, 0.55, -1, 0.2, -1, -0.3);
+  c.bezierCurveTo(-1, -0.9, 0, -0.9, 0, -0.35);
+  c.closePath(); c.restore();
+}
+
+function pCarta(c) {
+  c.save(); _uCarta(c);
+  c.beginPath();
+  _rrect(c, 28, 74, 200, 126, 14);
+  _corazon(c, 128, 150, 24, 0);
+  _corazon(c, 204, 56, 13, 0.24);
+  _corazon(c, 172, 40, 8, -0.2);
+  c.restore();
+}
+
+function dCarta(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _uCarta(c);
+  c.lineJoin = 'round'; c.lineCap = 'round';
+
+  let g = c.createLinearGradient(0, 74, 0, 200);
+  g.addColorStop(0, '#fff8f0'); g.addColorStop(1, '#ffc9d8');
+  c.beginPath(); _rrect(c, 28, 74, 200, 126, 14); c.fillStyle = g; c.fill();
+
+  c.save(); c.clip();
+  c.fillStyle = '#ff9db9'; c.globalAlpha = 0.28;
+  c.beginPath(); c.moveTo(28, 74); c.lineTo(128, 146); c.lineTo(28, 200); c.closePath(); c.fill();
+  c.beginPath(); c.moveTo(228, 74); c.lineTo(128, 146); c.lineTo(228, 200); c.closePath(); c.fill();
+  c.globalAlpha = 0.35;
+  c.beginPath(); c.moveTo(28, 200); c.lineTo(128, 146); c.lineTo(228, 200); c.closePath(); c.fill();
+  c.globalAlpha = 0.6; c.strokeStyle = '#d4577a'; c.lineWidth = 3;
+  c.beginPath(); c.moveTo(28, 200); c.lineTo(128, 146); c.lineTo(228, 200); c.stroke();
+
+  c.globalAlpha = 0.22 * k; c.fillStyle = '#9a2a4f';
+  c.beginPath(); c.moveTo(28, 80); c.lineTo(228, 80); c.lineTo(128, 152); c.closePath(); c.fill();
+  c.globalAlpha = 1;
+  g = c.createLinearGradient(0, 74, 0, 146);
+  g.addColorStop(0, '#fffdf9'); g.addColorStop(1, '#ffdbe6');
+  c.fillStyle = g;
+  c.beginPath(); c.moveTo(28, 74); c.lineTo(228, 74); c.lineTo(128, 146); c.closePath(); c.fill();
+  c.restore();
+
+  c.strokeStyle = '#d4577a'; c.lineWidth = 5;
+  c.beginPath(); _rrect(c, 28, 74, 200, 126, 14); c.stroke();
+  c.lineWidth = 4;
+  c.save(); c.beginPath(); _rrect(c, 28, 74, 200, 126, 14); c.clip();
+  c.beginPath(); c.moveTo(28, 74); c.lineTo(128, 146); c.lineTo(228, 74); c.stroke();
+  c.restore();
+
+  c.strokeStyle = '#fff'; c.lineWidth = 3; c.globalAlpha = 0.7;
+  c.beginPath(); c.moveTo(40, 84); c.lineTo(118, 140); c.stroke();
+  c.globalAlpha = 1;
+
+  c.fillStyle = '#7a1236'; c.globalAlpha = 0.3 * k;
+  c.beginPath(); _corazon(c, 128, 154, 24, 0); c.fill();
+  c.globalAlpha = 1;
+  c.strokeStyle = '#a3173d'; c.lineWidth = 6;
+  c.beginPath(); _corazon(c, 128, 150, 24, 0); c.stroke();
+  g = c.createRadialGradient(118, 140, 2, 128, 152, 36);
+  g.addColorStop(0, '#ff8aa3'); g.addColorStop(0.5, '#e8325f'); g.addColorStop(1, '#b81f48');
+  c.fillStyle = g; c.beginPath(); _corazon(c, 128, 150, 24, 0); c.fill();
+  c.strokeStyle = '#ff9fb4'; c.lineWidth = 2.5; c.globalAlpha = 0.55;
+  c.beginPath(); _corazon(c, 128, 152, 14, 0); c.stroke();
+  c.globalAlpha = 0.85; c.fillStyle = '#fff';
+  c.beginPath(); c.ellipse(112, 138, 7, 4, -40 * Math.PI / 180, 0, Math.PI * 2); c.fill();
+  c.globalAlpha = 1;
+
+  [[204, 56, 13, 0.24], [172, 40, 8, -0.2]].forEach(([x, y, s, r]) => {
+    c.strokeStyle = '#c9335f'; c.lineWidth = 3;
+    c.beginPath(); _corazon(c, x, y, s, r); c.stroke();
+    c.fillStyle = '#ff6f95'; c.beginPath(); _corazon(c, x, y, s, r); c.fill();
+    c.fillStyle = '#fff'; c.globalAlpha = 0.85;
+    c.beginPath(); c.arc(x - s * 0.45, y - s * 0.35, s * 0.18, 0, Math.PI * 2); c.fill();
+    c.globalAlpha = 1;
+  });
+  c.restore();
+}
+
+function drawToCanvas(cv, size, deep) {
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = size * dpr; cv.height = size * dpr;
+  cv.style.width = size + 'px'; cv.style.height = size + 'px';
+  const c = cv.getContext('2d');
+  c.scale(dpr, dpr); c.translate(size / 2, size / 2); c.scale(size / 2.1, size / 2.1);
+  pCarta(c);
+  dCarta(c, {}, deep);
+}
+
+function renderAll() {
+  const deep = document.getElementById('deep').checked;
+  const mainSize = Number(document.getElementById('zoomSel').value) || 200;
+  drawToCanvas(document.getElementById('cvMain'), mainSize, deep);
+  drawToCanvas(document.getElementById('cv128'), 128, deep);
+  drawToCanvas(document.getElementById('cv96'), 96, deep);
+  drawToCanvas(document.getElementById('cv64'), 64, deep);
+  drawToCanvas(document.getElementById('cv40'), 40, deep);
+}
+
+document.getElementById('deep').addEventListener('change', renderAll);
+document.getElementById('zoomSel').addEventListener('change', renderAll);
+document.getElementById('checker').addEventListener('change', (e) => {
+  document.getElementById('mainBox').classList.toggle('bg-check', e.target.checked);
+});
+
+function copyCode() {
+  const code = document.getElementById('codeBlock').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.querySelector('.btn-copy');
+    btn.innerText = '✓ ¡Copiado!';
+    setTimeout(() => { btn.innerText = 'Copiar Código'; }, 2000);
+  });
+}
+
+renderAll();
+</script>
+</body>
+</html>

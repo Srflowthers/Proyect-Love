@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Objeto Gomi · Anillo de Compromiso</title>
+<style>
+  :root { --bg: #1c0e25; --card: #2c163a; --tile: #3c1e50; --text: #fbebf7; --muted: #bda2bf; --accent: #f472b6; --code-bg: #15091c; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; padding: 20px 16px 50px; display: flex; justify-content: center; }
+  main { width: 100%; max-width: 860px; }
+  .nav-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .nav-bar a { color: var(--muted); text-decoration: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 20px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s; }
+  .nav-bar a:hover { color: #fff; background: rgba(255,255,255,0.15); }
+  .nav-bar a.active { color: #fff; background: var(--accent); border-color: var(--accent); font-weight: bold; }
+  .header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  h1 { font-size: 1.5rem; margin: 0; display: flex; align-items: center; gap: 8px; }
+  .sub { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+  .preview-card { background: var(--card); border-radius: 20px; padding: 24px; box-shadow: 0 16px 36px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); margin-bottom: 24px; }
+  .controls-bar { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-bottom: 20px; background: rgba(0,0,0,0.25); padding: 10px 16px; border-radius: 12px; font-size: 0.85rem; }
+  .controls-bar label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .stage-row { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; align-items: center; }
+  .canvas-box { background: var(--tile); border-radius: 18px; padding: 20px; display: flex; flex-direction: column; align-items: center; box-shadow: inset 0 2px 8px rgba(0,0,0,0.3); }
+  .canvas-box.bg-check { background-image: linear-gradient(45deg, #261334 25%, transparent 25%), linear-gradient(-45deg, #261334 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #261334 75%), linear-gradient(-45deg, transparent 75%, #261334 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0px; }
+  .scales-box { display: flex; flex-direction: column; gap: 12px; justify-content: center; }
+  .scales-row { display: flex; align-items: flex-end; gap: 14px; background: var(--tile); padding: 14px 18px; border-radius: 14px; }
+  .scale-item { text-align: center; }
+  .scale-item span { display: block; font-size: 0.72rem; color: var(--muted); margin-top: 6px; font-family: monospace; }
+  .code-card { background: var(--code-bg); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.08); }
+  .code-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .code-title { font-size: 0.9rem; font-weight: bold; color: var(--accent); font-family: monospace; }
+  .btn-copy { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .btn-copy:hover { background: var(--accent); border-color: var(--accent); }
+  pre { margin: 0; overflow-x: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.82rem; line-height: 1.5; color: #e2d3e6; }
+</style>
+</head>
+<body>
+<main>
+  <nav class="nav-bar">
+    <a href="Objetos_gomi.html">📂 Catálogo Completo</a>
+    <a href="obj_helado.html">🍦 Helado</a>
+    <a href="obj_anillo_boda.html">💍 Anillo Boda</a>
+    <a href="obj_anillo_compromiso.html" class="active">💎 Anillo Compromiso</a>
+    <a href="obj_algodon.html">🍡 Algodón</a>
+    <a href="obj_carta.html">💌 Carta</a>
+    <a href="obj_gusano.html">🐛 Gusano</a>
+    <a href="obj_sushi.html">🍣 Sushi</a>
+  </nav>
+
+  <div class="header">
+    <div>
+      <h1>💎 Anillo de Compromiso con Diamante</h1>
+      <div class="sub">Argolla solitaria de platino con garras de engaste, diamante con facetas y reflejos celestes.</div>
+    </div>
+  </div>
+
+  <div class="preview-card">
+    <div class="controls-bar">
+      <label><input type="checkbox" id="deep" checked> Sombras intensas (deep)</label>
+      <label><input type="checkbox" id="checker"> Fondo cuadrícula</label>
+      <label>
+        Zoom:
+        <select id="zoomSel" style="background:#1a0c24;color:#fff;border:1px solid #5a3068;border-radius:6px;padding:2px 6px;">
+          <option value="250">250px</option>
+          <option value="200" selected>200px</option>
+          <option value="160">160px</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="stage-row">
+      <div class="canvas-box" id="mainBox">
+        <canvas id="cvMain" width="200" height="200"></canvas>
+      </div>
+
+      <div class="scales-box">
+        <div style="font-size:0.8rem; font-weight:bold; color:var(--muted); text-transform:uppercase;">Tamaños en Juego:</div>
+        <div class="scales-row">
+          <div class="scale-item"><canvas id="cv128" width="128" height="128"></canvas><span>128px</span></div>
+          <div class="scale-item"><canvas id="cv96" width="96" height="96"></canvas><span>96px</span></div>
+          <div class="scale-item"><canvas id="cv64" width="64" height="64"></canvas><span>64px</span></div>
+          <div class="scale-item"><canvas id="cv40" width="40" height="40"></canvas><span>40px</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-title">pAnilloCompromiso(c) &amp; dAnilloCompromiso(c, p, deep)</span>
+      <button class="btn-copy" onclick="copyCode()">Copiar Código</button>
+    </div>
+    <pre><code id="codeBlock">/* ========================= ANILLO DE COMPROMISO ===================== */
+function _u(c) { c.translate(-1, -1); c.scale(1 / 128, 1 / 128); }
+function _ring(c, cx, cy, ro, ri) {
+  c.moveTo(cx + ro, cy); c.arc(cx, cy, ro, 0, Math.PI * 2, false);
+  c.moveTo(cx + ri, cy); c.arc(cx, cy, ri, 0, Math.PI * 2, true);
+}
+function _gema(c) {
+  c.moveTo(88, 62); c.lineTo(108, 30); c.lineTo(148, 30); c.lineTo(168, 62); c.lineTo(128, 118); c.closePath();
+}
+function _garras(c) {
+  c.moveTo(96, 84); c.lineTo(116, 108); c.lineTo(104, 112); c.closePath();
+  c.moveTo(160, 84); c.lineTo(152, 112); c.lineTo(140, 108); c.closePath();
+}
+
+export function pAnilloCompromiso(c) {
+  c.save(); _u(c);
+  c.beginPath();
+  _ring(c, 128, 174, 76, 44);
+  _garras(c);
+  _gema(c);
+  c.restore();
+}
+
+export function dAnilloCompromiso(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _u(c);
+
+  // Banda de platino
+  c.beginPath(); _ring(c, 128, 174, 76, 44); c.fillStyle = '#5b6a80'; c.fill();
+  let g = c.createLinearGradient(78.3, 103, 177.7, 245);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, '#d6dfea'); g.addColorStop(1, '#8d9db3');
+  c.beginPath(); _ring(c, 128, 174, 71, 39); c.fillStyle = g; c.fill();
+
+  // Brillo de la banda
+  c.lineCap = 'round';
+  c.beginPath(); c.arc(128, 174, 61, -2.95, -2.1);
+  c.strokeStyle = '#fff'; c.lineWidth = 7; c.globalAlpha = 0.8; c.stroke();
+  c.globalAlpha = 1;
+
+  // Garras de sujeción
+  c.beginPath(); _garras(c);
+  c.fillStyle = '#c9d3df'; c.fill();
+  c.lineWidth = 2; c.lineJoin = 'round'; c.strokeStyle = '#6b7a8f'; c.stroke();
+
+  // Diamante
+  g = c.createLinearGradient(88, 30, 168, 118);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, '#bfeaff'); g.addColorStop(1, '#6cc4ee');
+  c.beginPath(); _gema(c); c.fillStyle = g; c.fill();
+  c.lineWidth = 3; c.strokeStyle = '#4aa9d6'; c.stroke();
+
+  // Facetas del diamante
+  c.lineWidth = 2; c.globalAlpha = 0.8;
+  c.beginPath();
+  c.moveTo(88, 62); c.lineTo(168, 62);
+  c.moveTo(108, 30); c.lineTo(118, 62); c.moveTo(148, 30); c.lineTo(138, 62);
+  c.moveTo(118, 62); c.lineTo(128, 118); c.moveTo(138, 62); c.lineTo(128, 118);
+  c.stroke();
+
+  // Mesa reflectante
+  c.globalAlpha = 0.55; c.fillStyle = '#fff';
+  c.beginPath(); c.moveTo(108, 30); c.lineTo(148, 30); c.lineTo(138, 62); c.lineTo(118, 62); c.closePath(); c.fill();
+
+  // Destellos estelares
+  c.globalAlpha = 0.9; c.strokeStyle = '#fff'; c.lineWidth = 5;
+  c.beginPath(); c.moveTo(98, 56); c.lineTo(112, 38); c.stroke();
+  c.fillStyle = '#fff';
+  c.beginPath(); c.moveTo(176, 40); c.lineTo(180, 28); c.lineTo(184, 40); c.lineTo(196, 44);
+  c.lineTo(184, 48); c.lineTo(180, 60); c.lineTo(176, 48); c.lineTo(164, 44); c.closePath(); c.fill();
+  c.restore();
+}</code></pre>
+  </div>
+</main>
+
+<script>
+function _u(c) { c.translate(-1, -1); c.scale(1 / 128, 1 / 128); }
+function _ring(c, cx, cy, ro, ri) {
+  c.moveTo(cx + ro, cy); c.arc(cx, cy, ro, 0, Math.PI * 2, false);
+  c.moveTo(cx + ri, cy); c.arc(cx, cy, ri, 0, Math.PI * 2, true);
+}
+function _gema(c) {
+  c.moveTo(88, 62); c.lineTo(108, 30); c.lineTo(148, 30); c.lineTo(168, 62); c.lineTo(128, 118); c.closePath();
+}
+function _garras(c) {
+  c.moveTo(96, 84); c.lineTo(116, 108); c.lineTo(104, 112); c.closePath();
+  c.moveTo(160, 84); c.lineTo(152, 112); c.lineTo(140, 108); c.closePath();
+}
+
+function pAnilloCompromiso(c) {
+  c.save(); _u(c);
+  c.beginPath();
+  _ring(c, 128, 174, 76, 44);
+  _garras(c);
+  _gema(c);
+  c.restore();
+}
+
+function dAnilloCompromiso(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _u(c);
+
+  c.beginPath(); _ring(c, 128, 174, 76, 44); c.fillStyle = '#5b6a80'; c.fill();
+  let g = c.createLinearGradient(78.3, 103, 177.7, 245);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, '#d6dfea'); g.addColorStop(1, '#8d9db3');
+  c.beginPath(); _ring(c, 128, 174, 71, 39); c.fillStyle = g; c.fill();
+
+  c.lineCap = 'round';
+  c.beginPath(); c.arc(128, 174, 61, -2.95, -2.1);
+  c.strokeStyle = '#fff'; c.lineWidth = 7; c.globalAlpha = 0.8; c.stroke();
+  c.globalAlpha = 1;
+
+  c.beginPath(); _garras(c);
+  c.fillStyle = '#c9d3df'; c.fill();
+  c.lineWidth = 2; c.lineJoin = 'round'; c.strokeStyle = '#6b7a8f'; c.stroke();
+
+  g = c.createLinearGradient(88, 30, 168, 118);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, '#bfeaff'); g.addColorStop(1, '#6cc4ee');
+  c.beginPath(); _gema(c); c.fillStyle = g; c.fill();
+  c.lineWidth = 3; c.strokeStyle = '#4aa9d6'; c.stroke();
+
+  c.lineWidth = 2; c.globalAlpha = 0.8;
+  c.beginPath();
+  c.moveTo(88, 62); c.lineTo(168, 62);
+  c.moveTo(108, 30); c.lineTo(118, 62); c.moveTo(148, 30); c.lineTo(138, 62);
+  c.moveTo(118, 62); c.lineTo(128, 118); c.moveTo(138, 62); c.lineTo(128, 118);
+  c.stroke();
+
+  c.globalAlpha = 0.55; c.fillStyle = '#fff';
+  c.beginPath(); c.moveTo(108, 30); c.lineTo(148, 30); c.lineTo(138, 62); c.lineTo(118, 62); c.closePath(); c.fill();
+
+  c.globalAlpha = 0.9; c.strokeStyle = '#fff'; c.lineWidth = 5;
+  c.beginPath(); c.moveTo(98, 56); c.lineTo(112, 38); c.stroke();
+  c.fillStyle = '#fff';
+  c.beginPath(); c.moveTo(176, 40); c.lineTo(180, 28); c.lineTo(184, 40); c.lineTo(196, 44);
+  c.lineTo(184, 48); c.lineTo(180, 60); c.lineTo(176, 48); c.lineTo(164, 44); c.closePath(); c.fill();
+  c.restore();
+}
+
+function drawToCanvas(cv, size, deep) {
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = size * dpr; cv.height = size * dpr;
+  cv.style.width = size + 'px'; cv.style.height = size + 'px';
+  const c = cv.getContext('2d');
+  c.scale(dpr, dpr); c.translate(size / 2, size / 2); c.scale(size / 2.1, size / 2.1);
+  pAnilloCompromiso(c);
+  dAnilloCompromiso(c, {}, deep);
+}
+
+function renderAll() {
+  const deep = document.getElementById('deep').checked;
+  const mainSize = Number(document.getElementById('zoomSel').value) || 200;
+  drawToCanvas(document.getElementById('cvMain'), mainSize, deep);
+  drawToCanvas(document.getElementById('cv128'), 128, deep);
+  drawToCanvas(document.getElementById('cv96'), 96, deep);
+  drawToCanvas(document.getElementById('cv64'), 64, deep);
+  drawToCanvas(document.getElementById('cv40'), 40, deep);
+}
+
+document.getElementById('deep').addEventListener('change', renderAll);
+document.getElementById('zoomSel').addEventListener('change', renderAll);
+document.getElementById('checker').addEventListener('change', (e) => {
+  document.getElementById('mainBox').classList.toggle('bg-check', e.target.checked);
+});
+
+function copyCode() {
+  const code = document.getElementById('codeBlock').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.querySelector('.btn-copy');
+    btn.innerText = '✓ ¡Copiado!';
+    setTimeout(() => { btn.innerText = 'Copiar Código'; }, 2000);
+  });
+}
+
+renderAll();
+</script>
+</body>
+</html>

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Objeto Gomi · Gusano Ácido</title>
+<style>
+  :root { --bg: #1c0e25; --card: #2c163a; --tile: #3c1e50; --text: #fbebf7; --muted: #bda2bf; --accent: #f472b6; --code-bg: #15091c; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; padding: 20px 16px 50px; display: flex; justify-content: center; }
+  main { width: 100%; max-width: 860px; }
+  .nav-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .nav-bar a { color: var(--muted); text-decoration: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 20px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s; }
+  .nav-bar a:hover { color: #fff; background: rgba(255,255,255,0.15); }
+  .nav-bar a.active { color: #fff; background: var(--accent); border-color: var(--accent); font-weight: bold; }
+  .header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  h1 { font-size: 1.5rem; margin: 0; display: flex; align-items: center; gap: 8px; }
+  .sub { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+  .preview-card { background: var(--card); border-radius: 20px; padding: 24px; box-shadow: 0 16px 36px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); margin-bottom: 24px; }
+  .controls-bar { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-bottom: 20px; background: rgba(0,0,0,0.25); padding: 10px 16px; border-radius: 12px; font-size: 0.85rem; }
+  .controls-bar label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .stage-row { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; align-items: center; }
+  .canvas-box { background: var(--tile); border-radius: 18px; padding: 20px; display: flex; flex-direction: column; align-items: center; box-shadow: inset 0 2px 8px rgba(0,0,0,0.3); }
+  .canvas-box.bg-check { background-image: linear-gradient(45deg, #261334 25%, transparent 25%), linear-gradient(-45deg, #261334 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #261334 75%), linear-gradient(-45deg, transparent 75%, #261334 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0px; }
+  .scales-box { display: flex; flex-direction: column; gap: 12px; justify-content: center; }
+  .scales-row { display: flex; align-items: flex-end; gap: 14px; background: var(--tile); padding: 14px 18px; border-radius: 14px; }
+  .scale-item { text-align: center; }
+  .scale-item span { display: block; font-size: 0.72rem; color: var(--muted); margin-top: 6px; font-family: monospace; }
+  .code-card { background: var(--code-bg); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.08); }
+  .code-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .code-title { font-size: 0.9rem; font-weight: bold; color: var(--accent); font-family: monospace; }
+  .btn-copy { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .btn-copy:hover { background: var(--accent); border-color: var(--accent); }
+  pre { margin: 0; overflow-x: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.82rem; line-height: 1.5; color: #e2d3e6; }
+</style>
+</head>
+<body>
+<main>
+  <nav class="nav-bar">
+    <a href="Objetos_gomi.html">📂 Catálogo Completo</a>
+    <a href="obj_helado.html">🍦 Helado</a>
+    <a href="obj_anillo_boda.html">💍 Anillo Boda</a>
+    <a href="obj_anillo_compromiso.html">💎 Anillo Compromiso</a>
+    <a href="obj_algodon.html">🍡 Algodón</a>
+    <a href="obj_carta.html">💌 Carta</a>
+    <a href="obj_gusano.html" class="active">🐛 Gusano</a>
+    <a href="obj_sushi.html">🍣 Sushi</a>
+  </nav>
+
+  <div class="header">
+    <div>
+      <h1>🐛 Gusano Ácido Arcoíris</h1>
+      <div class="sub">Tira de gomita ácida ondulada en S con arcoíris, cristales de azúcar y carita tierna.</div>
+    </div>
+  </div>
+
+  <div class="preview-card">
+    <div class="controls-bar">
+      <label><input type="checkbox" id="deep" checked> Sombras intensas (deep)</label>
+      <label><input type="checkbox" id="checker"> Fondo cuadrícula</label>
+      <label>
+        Zoom:
+        <select id="zoomSel" style="background:#1a0c24;color:#fff;border:1px solid #5a3068;border-radius:6px;padding:2px 6px;">
+          <option value="250">250px</option>
+          <option value="200" selected>200px</option>
+          <option value="160">160px</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="stage-row">
+      <div class="canvas-box" id="mainBox">
+        <canvas id="cvMain" width="200" height="200"></canvas>
+      </div>
+
+      <div class="scales-box">
+        <div style="font-size:0.8rem; font-weight:bold; color:var(--muted); text-transform:uppercase;">Tamaños en Juego:</div>
+        <div class="scales-row">
+          <div class="scale-item"><canvas id="cv128" width="128" height="128"></canvas><span>128px</span></div>
+          <div class="scale-item"><canvas id="cv96" width="96" height="96"></canvas><span>96px</span></div>
+          <div class="scale-item"><canvas id="cv64" width="64" height="64"></canvas><span>64px</span></div>
+          <div class="scale-item"><canvas id="cv40" width="40" height="40"></canvas><span>40px</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-title">pGusano(c) &amp; dGusano(c, p, deep)</span>
+      <button class="btn-copy" onclick="copyCode()">Copiar Código</button>
+    </div>
+    <pre><code id="codeBlock">/* ============================ GUSANO ÁCIDO ========================== */
+const _GS_H = 24;
+
+function _u(c) { c.translate(-1, -1); c.scale(1 / 128, 1 / 128); }
+
+function _gsPunto(t) {
+  const a = t * Math.PI * 2;
+  const x = 128 + 46 * Math.sin(a), y = 28 + 200 * t;
+  const dx = 46 * Math.PI * 2 * Math.cos(a), dy = 200, l = Math.hypot(dx, dy);
+  const tx = dx / l, ty = dy / l;
+  return { x, y, tx, ty, nx: -ty, ny: tx };
+}
+
+function _gsContorno(c) {
+  const N = 48, h = _GS_H, M = 10;
+  const P0 = _gsPunto(0), P1 = _gsPunto(1);
+  c.moveTo(P0.x + P0.nx * h, P0.y + P0.ny * h);
+  for (let i = 1; i <= N; i++) { const q = _gsPunto(i / N); c.lineTo(q.x + q.nx * h, q.y + q.ny * h); }
+  for (let i = 1; i <= M; i++) {
+    const a = Math.PI * i / M;
+    c.lineTo(P1.x + h * (Math.cos(a) * P1.nx + Math.sin(a) * P1.tx), P1.y + h * (Math.cos(a) * P1.ny + Math.sin(a) * P1.ty));
+  }
+  for (let i = N - 1; i >= 0; i--) { const q = _gsPunto(i / N); c.lineTo(q.x - q.nx * h, q.y - q.ny * h); }
+  for (let i = 1; i < M; i++) {
+    const a = Math.PI * i / M;
+    c.lineTo(P0.x + h * (-Math.cos(a) * P0.nx - Math.sin(a) * P0.tx), P0.y + h * (-Math.cos(a) * P0.ny - Math.sin(a) * P0.ty));
+  }
+  c.closePath();
+}
+
+export function pGusano(c) {
+  c.save(); _u(c);
+  c.beginPath(); _gsContorno(c);
+  c.restore();
+}
+
+function _gsLinea(c, off, t0, t1) {
+  c.beginPath();
+  for (let i = 0; i <= 40; i++) {
+    const q = _gsPunto(t0 + (t1 - t0) * i / 40);
+    const x = q.x + q.nx * off, y = q.y + q.ny * off;
+    i ? c.lineTo(x, y) : c.moveTo(x, y);
+  }
+}
+
+export function dGusano(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _u(c);
+  c.lineJoin = 'round'; c.lineCap = 'round';
+
+  // Contorno arcoíris oscuro
+  let g = c.createLinearGradient(0, 14, 0, 242);
+  g.addColorStop(0, '#d63a6c'); g.addColorStop(0.28, '#e08a1c'); g.addColorStop(0.5, '#e0c022');
+  g.addColorStop(0.72, '#2f9f3a'); g.addColorStop(1, '#1488b8');
+  c.beginPath(); _gsContorno(c); c.strokeStyle = g; c.lineWidth = 6; c.stroke();
+
+  // Cuerpo arcoíris vibrante
+  g = c.createLinearGradient(0, 14, 0, 242);
+  g.addColorStop(0, '#ff6f9c'); g.addColorStop(0.28, '#ffb340'); g.addColorStop(0.5, '#ffe94d');
+  g.addColorStop(0.72, '#66d65f'); g.addColorStop(1, '#3cc0ee');
+  c.beginPath(); _gsContorno(c); c.fillStyle = g; c.fill();
+
+  // Volumen: brillo y sombra
+  c.strokeStyle = '#fff'; c.lineWidth = 6; c.globalAlpha = 0.5;
+  _gsLinea(c, -_GS_H * 0.55, 0.04, 0.96); c.stroke();
+  c.strokeStyle = '#6a2a5a'; c.lineWidth = 7; c.globalAlpha = 0.16 * k;
+  _gsLinea(c, _GS_H * 0.6, 0.04, 0.96); c.stroke();
+  c.globalAlpha = 1;
+
+  // Azúcar ácida: cristales
+  let s = 12345; const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  for (let i = 0; i < 190; i++) {
+    const q = _gsPunto(0.02 + 0.96 * rnd()), off = (rnd() * 2 - 1) * _GS_H * 0.9;
+    const x = q.x + q.nx * off, y = q.y + q.ny * off, r = 0.8 + rnd() * 1.4, al = 0.55 + rnd() * 0.4;
+    if (Math.abs(x - 128) < 34 && y > 108 && y < 150) continue;
+    c.globalAlpha = 0.18 * k; c.fillStyle = '#5a2a6a';
+    c.beginPath(); c.arc(x + 0.9, y + 0.9, r, 0, Math.PI * 2); c.fill();
+    c.globalAlpha = al; c.fillStyle = '#fff';
+    c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+  }
+  c.globalAlpha = 1;
+
+  // Carita tierna
+  c.strokeStyle = '#5a2a3a'; c.lineWidth = 4.5;
+  c.beginPath(); c.moveTo(110, 118); c.lineTo(121, 124); c.lineTo(110, 130);
+  c.moveTo(146, 118); c.lineTo(135, 124); c.lineTo(146, 130); c.stroke();
+  c.fillStyle = '#ff5f8a'; c.globalAlpha = 0.45;
+  c.beginPath(); c.ellipse(104, 136, 7, 4.5, 0, 0, Math.PI * 2); c.fill();
+  c.beginPath(); c.ellipse(152, 136, 7, 4.5, 0, 0, Math.PI * 2); c.fill();
+  c.globalAlpha = 1; c.fillStyle = '#5a2a3a';
+  c.beginPath(); c.ellipse(128, 138, 5, 6, 0, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#ff7a9a';
+  c.beginPath(); c.ellipse(128, 141, 3, 2.4, 0, 0, Math.PI * 2); c.fill();
+
+  // Destellos
+  c.fillStyle = '#fff';
+  [[66, 62, 10], [190, 196, 10], [214, 124, 6]].forEach(([x, y, r]) => {
+    c.beginPath(); c.moveTo(x, y - r); c.lineTo(x + r * 0.28, y - r * 0.28); c.lineTo(x + r, y);
+    c.lineTo(x + r * 0.28, y + r * 0.28); c.lineTo(x, y + r); c.lineTo(x - r * 0.28, y + r * 0.28);
+    c.lineTo(x - r, y); c.lineTo(x - r * 0.28, y - r * 0.28); c.closePath(); c.fill();
+  });
+  c.restore();
+}</code></pre>
+  </div>
+</main>
+
+<script>
+const _GS_H = 24;
+function _u(c) { c.translate(-1, -1); c.scale(1 / 128, 1 / 128); }
+
+function _gsPunto(t) {
+  const a = t * Math.PI * 2;
+  const x = 128 + 46 * Math.sin(a), y = 28 + 200 * t;
+  const dx = 46 * Math.PI * 2 * Math.cos(a), dy = 200, l = Math.hypot(dx, dy);
+  const tx = dx / l, ty = dy / l;
+  return { x, y, tx, ty, nx: -ty, ny: tx };
+}
+
+function _gsContorno(c) {
+  const N = 48, h = _GS_H, M = 10;
+  const P0 = _gsPunto(0), P1 = _gsPunto(1);
+  c.moveTo(P0.x + P0.nx * h, P0.y + P0.ny * h);
+  for (let i = 1; i <= N; i++) { const q = _gsPunto(i / N); c.lineTo(q.x + q.nx * h, q.y + q.ny * h); }
+  for (let i = 1; i <= M; i++) {
+    const a = Math.PI * i / M;
+    c.lineTo(P1.x + h * (Math.cos(a) * P1.nx + Math.sin(a) * P1.tx), P1.y + h * (Math.cos(a) * P1.ny + Math.sin(a) * P1.ty));
+  }
+  for (let i = N - 1; i >= 0; i--) { const q = _gsPunto(i / N); c.lineTo(q.x - q.nx * h, q.y - q.ny * h); }
+  for (let i = 1; i < M; i++) {
+    const a = Math.PI * i / M;
+    c.lineTo(P0.x + h * (-Math.cos(a) * P0.nx - Math.sin(a) * P0.tx), P0.y + h * (-Math.cos(a) * P0.ny - Math.sin(a) * P0.ty));
+  }
+  c.closePath();
+}
+
+function pGusano(c) {
+  c.save(); _u(c);
+  c.beginPath(); _gsContorno(c);
+  c.restore();
+}
+
+function _gsLinea(c, off, t0, t1) {
+  c.beginPath();
+  for (let i = 0; i <= 40; i++) {
+    const q = _gsPunto(t0 + (t1 - t0) * i / 40);
+    const x = q.x + q.nx * off, y = q.y + q.ny * off;
+    i ? c.lineTo(x, y) : c.moveTo(x, y);
+  }
+}
+
+function dGusano(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _u(c);
+  c.lineJoin = 'round'; c.lineCap = 'round';
+
+  let g = c.createLinearGradient(0, 14, 0, 242);
+  g.addColorStop(0, '#d63a6c'); g.addColorStop(0.28, '#e08a1c'); g.addColorStop(0.5, '#e0c022');
+  g.addColorStop(0.72, '#2f9f3a'); g.addColorStop(1, '#1488b8');
+  c.beginPath(); _gsContorno(c); c.strokeStyle = g; c.lineWidth = 6; c.stroke();
+
+  g = c.createLinearGradient(0, 14, 0, 242);
+  g.addColorStop(0, '#ff6f9c'); g.addColorStop(0.28, '#ffb340'); g.addColorStop(0.5, '#ffe94d');
+  g.addColorStop(0.72, '#66d65f'); g.addColorStop(1, '#3cc0ee');
+  c.beginPath(); _gsContorno(c); c.fillStyle = g; c.fill();
+
+  c.strokeStyle = '#fff'; c.lineWidth = 6; c.globalAlpha = 0.5;
+  _gsLinea(c, -_GS_H * 0.55, 0.04, 0.96); c.stroke();
+  c.strokeStyle = '#6a2a5a'; c.lineWidth = 7; c.globalAlpha = 0.16 * k;
+  _gsLinea(c, _GS_H * 0.6, 0.04, 0.96); c.stroke();
+  c.globalAlpha = 1;
+
+  let s = 12345; const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  for (let i = 0; i < 190; i++) {
+    const q = _gsPunto(0.02 + 0.96 * rnd()), off = (rnd() * 2 - 1) * _GS_H * 0.9;
+    const x = q.x + q.nx * off, y = q.y + q.ny * off, r = 0.8 + rnd() * 1.4, al = 0.55 + rnd() * 0.4;
+    if (Math.abs(x - 128) < 34 && y > 108 && y < 150) continue;
+    c.globalAlpha = 0.18 * k; c.fillStyle = '#5a2a6a';
+    c.beginPath(); c.arc(x + 0.9, y + 0.9, r, 0, Math.PI * 2); c.fill();
+    c.globalAlpha = al; c.fillStyle = '#fff';
+    c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+  }
+  c.globalAlpha = 1;
+
+  c.strokeStyle = '#5a2a3a'; c.lineWidth = 4.5;
+  c.beginPath(); c.moveTo(110, 118); c.lineTo(121, 124); c.lineTo(110, 130);
+  c.moveTo(146, 118); c.lineTo(135, 124); c.lineTo(146, 130); c.stroke();
+  c.fillStyle = '#ff5f8a'; c.globalAlpha = 0.45;
+  c.beginPath(); c.ellipse(104, 136, 7, 4.5, 0, 0, Math.PI * 2); c.fill();
+  c.beginPath(); c.ellipse(152, 136, 7, 4.5, 0, 0, Math.PI * 2); c.fill();
+  c.globalAlpha = 1; c.fillStyle = '#5a2a3a';
+  c.beginPath(); c.ellipse(128, 138, 5, 6, 0, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#ff7a9a';
+  c.beginPath(); c.ellipse(128, 141, 3, 2.4, 0, 0, Math.PI * 2); c.fill();
+
+  c.fillStyle = '#fff';
+  [[66, 62, 10], [190, 196, 10], [214, 124, 6]].forEach(([x, y, r]) => {
+    c.beginPath(); c.moveTo(x, y - r); c.lineTo(x + r * 0.28, y - r * 0.28); c.lineTo(x + r, y);
+    c.lineTo(x + r * 0.28, y + r * 0.28); c.lineTo(x, y + r); c.lineTo(x - r * 0.28, y + r * 0.28);
+    c.lineTo(x - r, y); c.lineTo(x - r * 0.28, y - r * 0.28); c.closePath(); c.fill();
+  });
+  c.restore();
+}
+
+function drawToCanvas(cv, size, deep) {
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = size * dpr; cv.height = size * dpr;
+  cv.style.width = size + 'px'; cv.style.height = size + 'px';
+  const c = cv.getContext('2d');
+  c.scale(dpr, dpr); c.translate(size / 2, size / 2); c.scale(size / 2.1, size / 2.1);
+  pGusano(c);
+  dGusano(c, {}, deep);
+}
+
+function renderAll() {
+  const deep = document.getElementById('deep').checked;
+  const mainSize = Number(document.getElementById('zoomSel').value) || 200;
+  drawToCanvas(document.getElementById('cvMain'), mainSize, deep);
+  drawToCanvas(document.getElementById('cv128'), 128, deep);
+  drawToCanvas(document.getElementById('cv96'), 96, deep);
+  drawToCanvas(document.getElementById('cv64'), 64, deep);
+  drawToCanvas(document.getElementById('cv40'), 40, deep);
+}
+
+document.getElementById('deep').addEventListener('change', renderAll);
+document.getElementById('zoomSel').addEventListener('change', renderAll);
+document.getElementById('checker').addEventListener('change', (e) => {
+  document.getElementById('mainBox').classList.toggle('bg-check', e.target.checked);
+});
+
+function copyCode() {
+  const code = document.getElementById('codeBlock').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.querySelector('.btn-copy');
+    btn.innerText = '✓ ¡Copiado!';
+    setTimeout(() => { btn.innerText = 'Copiar Código'; }, 2000);
+  });
+}
+
+renderAll();
+</script>
+</body>
+</html>

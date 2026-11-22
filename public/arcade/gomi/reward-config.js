@@ -52,6 +52,32 @@ window.enviarRecompensaGomi = function (data) {
   const roundNo = Number(data.round) || 1;
   const durationMs = Number(data.durationMs) || 60000;
 
+  // Si se trata de la recompensa inmediata por superar una misión/etapa
+  if (data.stageClear && (typeof data.directCoins === 'number' || typeof data.directElo === 'number')) {
+    const earnedCoins = Math.max(1, Number(data.directCoins) || 1);
+    const lpAward = Math.max(1, Number(data.directElo) || 4);
+    const scoreDelta = Math.max(0, Number(data.scoreDelta ?? score) || 0);
+    try {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({
+          type: 'ARCADE_ROUND_COMPLETE',
+          game: 'gomi',
+          coins: earnedCoins,
+          score: scoreDelta,
+          scoreDelta: scoreDelta,
+          target: target,
+          win: true,
+          streak: streak,
+          lpDelta: lpAward,
+          stageClear: true
+        }, '*');
+      }
+    } catch (err) {
+      console.error('[GomiReward] Error enviando postMessage de etapa:', err);
+    }
+    return { earnedCoins, lpAward };
+  }
+
   // 1. Cálculo de Oro (monedas) al morir según tiempo sobrevivido, etapas y puntaje
   const minutes = Math.max(0.35, Math.min(durationMs / 60000, cfg.MAX_MINUTES_COUNTED));
   const perfRatio = target > 0 ? (score / target) : 1;

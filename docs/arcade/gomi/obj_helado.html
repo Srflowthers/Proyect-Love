@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Objeto Gomi · Helado de Cono</title>
+<style>
+  :root {
+    --bg: #1c0e25;
+    --card: #2c163a;
+    --tile: #3c1e50;
+    --text: #fbebf7;
+    --muted: #bda2bf;
+    --accent: #f472b6;
+    --code-bg: #15091c;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, sans-serif;
+    padding: 20px 16px 50px;
+    display: flex;
+    justify-content: center;
+  }
+  main {
+    width: 100%;
+    max-width: 860px;
+  }
+  .nav-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .nav-bar a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: all 0.2s;
+  }
+  .nav-bar a:hover {
+    color: #fff;
+    background: rgba(255,255,255,0.15);
+  }
+  .nav-bar a.active {
+    color: #fff;
+    background: var(--accent);
+    border-color: var(--accent);
+    font-weight: bold;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  h1 {
+    font-size: 1.5rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sub {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-top: 4px;
+  }
+  .preview-card {
+    background: var(--card);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 16px 36px rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 24px;
+  }
+  .controls-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 20px;
+    background: rgba(0,0,0,0.25);
+    padding: 10px 16px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+  }
+  .controls-bar label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+  .stage-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    justify-content: center;
+    align-items: center;
+  }
+  .canvas-box {
+    background: var(--tile);
+    border-radius: 18px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);
+    position: relative;
+  }
+  .canvas-box.bg-check {
+    background-image: linear-gradient(45deg, #261334 25%, transparent 25%),
+                      linear-gradient(-45deg, #261334 25%, transparent 25%),
+                      linear-gradient(45deg, transparent 75%, #261334 75%),
+                      linear-gradient(-45deg, transparent 75%, #261334 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+  }
+  .scales-box {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    justify-content: center;
+  }
+  .scales-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    background: var(--tile);
+    padding: 14px 18px;
+    border-radius: 14px;
+  }
+  .scale-item {
+    text-align: center;
+  }
+  .scale-item span {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 6px;
+    font-family: monospace;
+  }
+  .code-card {
+    background: var(--code-bg);
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid rgba(255,255,255,0.08);
+    position: relative;
+  }
+  .code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .code-title {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: var(--accent);
+    font-family: monospace;
+  }
+  .btn-copy {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-copy:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  pre {
+    margin: 0;
+    overflow-x: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: #e2d3e6;
+  }
+</style>
+</head>
+<body>
+<main>
+  <!-- Barra de Navegación de Objetos Gomi -->
+  <nav class="nav-bar">
+    <a href="Objetos_gomi.html">📂 Catálogo Completo</a>
+    <a href="obj_helado.html" class="active">🍦 Helado</a>
+    <a href="obj_anillo_boda.html">💍 Anillo Boda</a>
+    <a href="obj_anillo_compromiso.html">💎 Anillo Compromiso</a>
+    <a href="obj_algodon.html">🍡 Algodón</a>
+    <a href="obj_carta.html">💌 Carta</a>
+    <a href="obj_gusano.html">🐛 Gusano</a>
+    <a href="obj_sushi.html">🍣 Sushi</a>
+  </nav>
+
+  <div class="header">
+    <div>
+      <h1>🍦 Helado de Cono Bañado</h1>
+      <div class="sub">Cono de barquillo crujiente con baño de chocolate que gotea y helado en espiral con punta rizada.</div>
+    </div>
+  </div>
+
+  <div class="preview-card">
+    <div class="controls-bar">
+      <label><input type="checkbox" id="deep" checked> Sombras intensas (deep)</label>
+      <label><input type="checkbox" id="checker"> Fondo cuadrícula</label>
+      <label>
+        Zoom:
+        <select id="zoomSel" style="background:#1a0c24;color:#fff;border:1px solid #5a3068;border-radius:6px;padding:2px 6px;">
+          <option value="250">250px</option>
+          <option value="200" selected>200px</option>
+          <option value="160">160px</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="stage-row">
+      <!-- Visor Principal -->
+      <div class="canvas-box" id="mainBox">
+        <canvas id="cvMain" width="200" height="200"></canvas>
+      </div>
+
+      <!-- Previsualización en Tamaños de Juego -->
+      <div class="scales-box">
+        <div style="font-size:0.8rem; font-weight:bold; color:var(--muted); text-transform:uppercase;">Tamaños en Juego:</div>
+        <div class="scales-row">
+          <div class="scale-item">
+            <canvas id="cv128" width="128" height="128"></canvas>
+            <span>128px</span>
+          </div>
+          <div class="scale-item">
+            <canvas id="cv96" width="96" height="96"></canvas>
+            <span>96px</span>
+          </div>
+          <div class="scale-item">
+            <canvas id="cv64" width="64" height="64"></canvas>
+            <span>64px</span>
+          </div>
+          <div class="scale-item">
+            <canvas id="cv40" width="40" height="40"></canvas>
+            <span>40px</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Código Fuente Limpio y Modular para Copiar -->
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-title">pHelado(c) &amp; dHelado(c, p, deep)</span>
+      <button class="btn-copy" onclick="copyCode()">Copiar Código</button>
+    </div>
+    <pre><code id="codeBlock">/* ======================= HELADO DE CONO BAÑADO ====================== */
+const _HEL_TIERS = [[128, 108, 66, 26], [128, 78, 52, 24], [128, 52, 36, 20]];
+const _HEL_GOTAS = [[84, 34], [112, 26], [138, 44], [164, 30], [184, 22]];
+
+function _u(c) { c.translate(-1, -1); c.scale(1 / 128, 1 / 128); }
+function _rrect(c, x, y, w, h, r) {
+  c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.arcTo(x + w, y, x + w, y + r, r);
+  c.lineTo(x + w, y + h - r); c.arcTo(x + w, y + h, x + w - r, y + h, r);
+  c.lineTo(x + r, y + h); c.arcTo(x, y + h, x, y + h - r, r);
+  c.lineTo(x, y + r); c.arcTo(x, y, x + r, y, r); c.closePath();
+}
+
+function _helCono(c) {
+  c.moveTo(66, 118); c.lineTo(190, 118); c.lineTo(134, 236);
+  c.quadraticCurveTo(128, 248, 122, 236); c.closePath();
+}
+function _helPunta(c) {
+  c.moveTo(106, 42); c.bezierCurveTo(104, 26, 124, 22, 138, 6);
+  c.bezierCurveTo(140, 18, 150, 28, 150, 42); c.closePath();
+}
+
+export function pHelado(c) {
+  c.save(); _u(c);
+  c.beginPath();
+  _helCono(c);
+  for (const [x, y, rx, ry] of _HEL_TIERS) { c.moveTo(x + rx, y); c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); }
+  _helPunta(c);
+  c.restore();
+}
+
+export function dHelado(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _u(c);
+  c.lineJoin = 'round'; c.lineCap = 'round';
+
+  // Cono de barquillo
+  let g = c.createLinearGradient(66, 0, 190, 0);
+  g.addColorStop(0, '#e8b46a'); g.addColorStop(0.45, '#f6cf8c'); g.addColorStop(1, '#c98f4a');
+  c.beginPath(); _helCono(c); c.fillStyle = g; c.fill();
+  c.save(); c.clip();
+
+  // Rejilla del barquillo
+  c.strokeStyle = '#b9803f'; c.lineWidth = 2.5; c.globalAlpha = 0.7;
+  c.beginPath();
+  for (let x = -60; x <= 260; x += 24) { c.moveTo(x, 110); c.lineTo(x + 130, 250); c.moveTo(x, 110); c.lineTo(x - 130, 250); }
+  c.stroke();
+  c.globalAlpha = 1;
+
+  // Baño de chocolate con gotas
+  g = c.createLinearGradient(0, 118, 0, 165);
+  g.addColorStop(0, '#6b3a20'); g.addColorStop(1, '#3f1d0e');
+  c.fillStyle = g; c.beginPath();
+  _rrect(c, 56, 112, 150, 28, 4);
+  for (const [x, l] of _HEL_GOTAS) _rrect(c, x - 8, 118, 16, l + 14, 8);
+  c.fill();
+  c.strokeStyle = '#d9a070'; c.lineWidth = 2.5; c.globalAlpha = 0.4; c.beginPath();
+  for (const [x, l] of _HEL_GOTAS) { c.moveTo(x - 3, 128); c.lineTo(x - 3, 118 + l - 4); }
+  c.stroke(); c.globalAlpha = 1;
+  c.restore();
+
+  // Contorno del cono
+  c.beginPath(); _helCono(c); c.strokeStyle = '#a8692c'; c.lineWidth = 4; c.stroke();
+
+  // Helado de chocolate en espiral
+  for (const [x, y, rx, ry] of _HEL_TIERS) {
+    c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+    c.strokeStyle = '#3d1c0e'; c.lineWidth = 5; c.stroke();
+    g = c.createRadialGradient(x - rx * 0.3, y - ry * 0.5, 2, x, y, rx * 1.1);
+    g.addColorStop(0, '#b87848'); g.addColorStop(0.5, '#7a4326'); g.addColorStop(1, '#4a2412');
+    c.fillStyle = g; c.fill();
+
+    // Ranura de la espiral
+    c.strokeStyle = '#3d1c0e'; c.lineWidth = 3; c.globalAlpha = 0.35 * k;
+    c.beginPath(); c.moveTo(x - rx * 0.8, y + ry * 0.2); c.quadraticCurveTo(x, y + ry * 1.1, x + rx * 0.8, y - ry * 0.25); c.stroke();
+
+    // Sombra inferior y brillo superior
+    c.lineWidth = 5; c.globalAlpha = 0.3 * k;
+    c.beginPath(); c.ellipse(x, y, rx - 6, ry - 4, 0, 0.15 * Math.PI, 0.85 * Math.PI); c.stroke();
+    c.strokeStyle = '#f1c79a'; c.lineWidth = 4; c.globalAlpha = 0.7;
+    c.beginPath(); c.ellipse(x, y, rx - 8, ry - 6, 0, 1.05 * Math.PI, 1.5 * Math.PI); c.stroke();
+    c.globalAlpha = 1;
+  }
+
+  // Punta rizada
+  c.beginPath(); _helPunta(c); c.strokeStyle = '#3d1c0e'; c.lineWidth = 5; c.stroke();
+  g = c.createLinearGradient(106, 6, 150, 42);
+  g.addColorStop(0, '#b87848'); g.addColorStop(1, '#6b3a20');
+  c.fillStyle = g; c.fill();
+  c.strokeStyle = '#f1c79a'; c.lineWidth = 3; c.globalAlpha = 0.7;
+  c.beginPath(); c.moveTo(114, 36); c.quadraticCurveTo(116, 26, 130, 16); c.stroke();
+  c.globalAlpha = 1;
+
+  // Destello
+  c.fillStyle = '#fff'; c.globalAlpha = 0.9;
+  c.beginPath(); c.moveTo(196, 56); c.lineTo(199, 65); c.lineTo(208, 68); c.lineTo(199, 71);
+  c.lineTo(196, 80); c.lineTo(193, 71); c.lineTo(184, 68); c.lineTo(193, 65); c.closePath(); c.fill();
+  c.restore();
+}</code></pre>
+  </div>
+</main>
+
+<script>
+// Funciones de dibujo de Helado
+const _HEL_TIERS = [[128, 108, 66, 26], [128, 78, 52, 24], [128, 52, 36, 20]];
+const _HEL_GOTAS = [[84, 34], [112, 26], [138, 44], [164, 30], [184, 22]];
+
+function _u(c) { c.translate(-1, -1); c.scale(1 / 128, 1 / 128); }
+function _rrect(c, x, y, w, h, r) {
+  c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.arcTo(x + w, y, x + w, y + r, r);
+  c.lineTo(x + w, y + h - r); c.arcTo(x + w, y + h, x + w - r, y + h, r);
+  c.lineTo(x + r, y + h); c.arcTo(x, y + h, x, y + h - r, r);
+  c.lineTo(x, y + r); c.arcTo(x, y, x + r, y, r); c.closePath();
+}
+
+function _helCono(c) {
+  c.moveTo(66, 118); c.lineTo(190, 118); c.lineTo(134, 236);
+  c.quadraticCurveTo(128, 248, 122, 236); c.closePath();
+}
+function _helPunta(c) {
+  c.moveTo(106, 42); c.bezierCurveTo(104, 26, 124, 22, 138, 6);
+  c.bezierCurveTo(140, 18, 150, 28, 150, 42); c.closePath();
+}
+
+function pHelado(c) {
+  c.save(); _u(c);
+  c.beginPath();
+  _helCono(c);
+  for (const [x, y, rx, ry] of _HEL_TIERS) { c.moveTo(x + rx, y); c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); }
+  _helPunta(c);
+  c.restore();
+}
+
+function dHelado(c, p, deep) {
+  const k = deep ? 1.4 : 1;
+  c.save(); _u(c);
+  c.lineJoin = 'round'; c.lineCap = 'round';
+
+  let g = c.createLinearGradient(66, 0, 190, 0);
+  g.addColorStop(0, '#e8b46a'); g.addColorStop(0.45, '#f6cf8c'); g.addColorStop(1, '#c98f4a');
+  c.beginPath(); _helCono(c); c.fillStyle = g; c.fill();
+  c.save(); c.clip();
+
+  c.strokeStyle = '#b9803f'; c.lineWidth = 2.5; c.globalAlpha = 0.7;
+  c.beginPath();
+  for (let x = -60; x <= 260; x += 24) { c.moveTo(x, 110); c.lineTo(x + 130, 250); c.moveTo(x, 110); c.lineTo(x - 130, 250); }
+  c.stroke();
+  c.globalAlpha = 1;
+
+  g = c.createLinearGradient(0, 118, 0, 165);
+  g.addColorStop(0, '#6b3a20'); g.addColorStop(1, '#3f1d0e');
+  c.fillStyle = g; c.beginPath();
+  _rrect(c, 56, 112, 150, 28, 4);
+  for (const [x, l] of _HEL_GOTAS) _rrect(c, x - 8, 118, 16, l + 14, 8);
+  c.fill();
+  c.strokeStyle = '#d9a070'; c.lineWidth = 2.5; c.globalAlpha = 0.4; c.beginPath();
+  for (const [x, l] of _HEL_GOTAS) { c.moveTo(x - 3, 128); c.lineTo(x - 3, 118 + l - 4); }
+  c.stroke(); c.globalAlpha = 1;
+  c.restore();
+
+  c.beginPath(); _helCono(c); c.strokeStyle = '#a8692c'; c.lineWidth = 4; c.stroke();
+
+  for (const [x, y, rx, ry] of _HEL_TIERS) {
+    c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+    c.strokeStyle = '#3d1c0e'; c.lineWidth = 5; c.stroke();
+    g = c.createRadialGradient(x - rx * 0.3, y - ry * 0.5, 2, x, y, rx * 1.1);
+    g.addColorStop(0, '#b87848'); g.addColorStop(0.5, '#7a4326'); g.addColorStop(1, '#4a2412');
+    c.fillStyle = g; c.fill();
+
+    c.strokeStyle = '#3d1c0e'; c.lineWidth = 3; c.globalAlpha = 0.35 * k;
+    c.beginPath(); c.moveTo(x - rx * 0.8, y + ry * 0.2); c.quadraticCurveTo(x, y + ry * 1.1, x + rx * 0.8, y - ry * 0.25); c.stroke();
+
+    c.lineWidth = 5; c.globalAlpha = 0.3 * k;
+    c.beginPath(); c.ellipse(x, y, rx - 6, ry - 4, 0, 0.15 * Math.PI, 0.85 * Math.PI); c.stroke();
+    c.strokeStyle = '#f1c79a'; c.lineWidth = 4; c.globalAlpha = 0.7;
+    c.beginPath(); c.ellipse(x, y, rx - 8, ry - 6, 0, 1.05 * Math.PI, 1.5 * Math.PI); c.stroke();
+    c.globalAlpha = 1;
+  }
+
+  c.beginPath(); _helPunta(c); c.strokeStyle = '#3d1c0e'; c.lineWidth = 5; c.stroke();
+  g = c.createLinearGradient(106, 6, 150, 42);
+  g.addColorStop(0, '#b87848'); g.addColorStop(1, '#6b3a20');
+  c.fillStyle = g; c.fill();
+  c.strokeStyle = '#f1c79a'; c.lineWidth = 3; c.globalAlpha = 0.7;
+  c.beginPath(); c.moveTo(114, 36); c.quadraticCurveTo(116, 26, 130, 16); c.stroke();
+  c.globalAlpha = 1;
+
+  c.fillStyle = '#fff'; c.globalAlpha = 0.9;
+  c.beginPath(); c.moveTo(196, 56); c.lineTo(199, 65); c.lineTo(208, 68); c.lineTo(199, 71);
+  c.lineTo(196, 80); c.lineTo(193, 71); c.lineTo(184, 68); c.lineTo(193, 65); c.closePath(); c.fill();
+  c.restore();
+}
+
+function drawToCanvas(cv, size, deep) {
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = size * dpr;
+  cv.height = size * dpr;
+  cv.style.width = size + 'px';
+  cv.style.height = size + 'px';
+  const c = cv.getContext('2d');
+  c.scale(dpr, dpr);
+  c.translate(size / 2, size / 2);
+  c.scale(size / 2.1, size / 2.1);
+  pHelado(c);
+  dHelado(c, {}, deep);
+}
+
+function renderAll() {
+  const deep = document.getElementById('deep').checked;
+  const mainSize = Number(document.getElementById('zoomSel').value) || 200;
+  drawToCanvas(document.getElementById('cvMain'), mainSize, deep);
+  drawToCanvas(document.getElementById('cv128'), 128, deep);
+  drawToCanvas(document.getElementById('cv96'), 96, deep);
+  drawToCanvas(document.getElementById('cv64'), 64, deep);
+  drawToCanvas(document.getElementById('cv40'), 40, deep);
+}
+
+document.getElementById('deep').addEventListener('change', renderAll);
+document.getElementById('zoomSel').addEventListener('change', renderAll);
+document.getElementById('checker').addEventListener('change', (e) => {
+  document.getElementById('mainBox').classList.toggle('bg-check', e.target.checked);
+});
+
+function copyCode() {
+  const code = document.getElementById('codeBlock').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.querySelector('.btn-copy');
+    btn.innerText = '✓ ¡Copiado!';
+    setTimeout(() => { btn.innerText = 'Copiar Código'; }, 2000);
+  });
+}
+
+renderAll();
+</script>
+</body>
+</html>

@@ -1,162 +1,422 @@
 [
   {
-    "archivo": "README.md",
-    "mensaje": "docs: documentación de minijuegos arcade y políticas de seguridad anti-bot"
+    "archivo": "docs/arcade/gomi/Objetos_gomi.html",
+    "mensaje": "docs(gomi): catálogo de objetos canvas 2D con enlaces a visores independientes",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/gomi/Objetos_gomi.html",
+    "msg": "docs(gomi): catálogo de objetos canvas 2D con enlaces a visores independientes"
   },
   {
-    "archivo": "src/services/authService.js",
-    "mensaje": "fix(auth): limpieza de token de sesión arcade al cerrar sesión"
+    "archivo": "docs/arcade/gomi/gomi.css",
+    "mensaje": "docs(gomi): estilos y diseño responsivo para minijuego gominola",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/gomi/gomi.css",
+    "msg": "docs(gomi): estilos y diseño responsivo para minijuego gominola"
   },
   {
-    "archivo": "src/components/ui/PricingModal.jsx",
-    "mensaje": "feat(pricing): soporte de aviso initialNotice para acceso a minijuegos"
+    "archivo": "docs/arcade/gomi/gomi.js",
+    "mensaje": "docs(gomi): lógica de juego, recompensas de monedas y sincronización de puntaje",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/gomi/gomi.js",
+    "msg": "docs(gomi): lógica de juego, recompensas de monedas y sincronización de puntaje"
   },
   {
-    "archivo": "src/views/settings/ProfileTab.jsx",
-    "mensaje": "feat(profile): opción de tema espacial Espacio 3D en perfil"
+    "archivo": "docs/arcade/gomi/index.html",
+    "mensaje": "docs(gomi): estructura html aislada para iframe arcade con control de sesión",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/gomi/index.html",
+    "msg": "docs(gomi): estructura html aislada para iframe arcade con control de sesión"
   },
   {
-    "archivo": "src/views/GalleryView.jsx",
-    "mensaje": "feat(gallery): estilos de fondo y aura para tema espacial"
+    "archivo": "docs/arcade/gomi/reward-config.js",
+    "mensaje": "docs(gomi): configuración de recompensas de lp y monedas por nivel",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/gomi/reward-config.js",
+    "msg": "docs(gomi): configuración de recompensas de lp y monedas por nivel"
   },
   {
-    "archivo": "src/components/Dock.css",
-    "mensaje": "style(dock): soporte de dock colapsado para PC y modo horizontal móvil en juegos"
+    "archivo": "docs/arcade/pool/index.html",
+    "mensaje": "docs(pool): interfaz de billar 3d con selector de modos y menú de cámara",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/pool/index.html",
+    "msg": "docs(pool): interfaz de billar 3d con selector de modos y menú de cámara"
   },
   {
-    "archivo": "src/views/games/gameIcons.jsx",
-    "mensaje": "feat(arcade): iconos SVG y distintivos para catálogo de minijuegos"
+    "archivo": "docs/arcade/pool/pool-online.js",
+    "mensaje": "docs(pool): integración multijugador online 1v1 y 2v2 con reconexión",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/pool/pool-online.js",
+    "msg": "docs(pool): integración multijugador online 1v1 y 2v2 con reconexión"
   },
   {
-    "archivo": "src/views/games/arcadeCards.css",
-    "mensaje": "style(arcade): estilos y animaciones para tarjetas de juegos"
+    "archivo": "docs/arcade/pool/pool.css",
+    "mensaje": "docs(pool): estilos y capas transparentes para sincronización con fondo cósmico",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/pool/pool.css",
+    "msg": "docs(pool): estilos y capas transparentes para sincronización con fondo cósmico"
   },
   {
-    "archivo": "src/views/games/ArcadeFrame.jsx",
-    "mensaje": "feat(arcade): marco de ejecución para minijuegos con partículas cósmicas"
+    "archivo": "docs/arcade/pool/pool.js",
+    "mensaje": "docs(pool): física 3d de bolas, cálculo de tiro con taco y sincronización de estado",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/pool/pool.js",
+    "msg": "docs(pool): física 3d de bolas, cálculo de tiro con taco y sincronización de estado"
   },
   {
-    "archivo": "src/views/games/LoveRoulette.jsx",
-    "mensaje": "feat(arcade): componente para minijuego Ruleta del Amor"
+    "archivo": "docs/arcade/pool/reward-config.js",
+    "mensaje": "docs(pool): configuración de entrega de monedas y puntos de liga (lp)",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/pool/reward-config.js",
+    "msg": "docs(pool): configuración de entrega de monedas y puntos de liga (lp)"
   },
   {
-    "archivo": "src/views/games/LoveScratch.jsx",
-    "mensaje": "feat(arcade): componente para minijuego Raspadito de Pareja"
+    "archivo": "docs/arcade/puzzle/index.html",
+    "mensaje": "docs(puzzle): plantilla html desacoplada con carga de fotos dinámicas",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/puzzle/index.html",
+    "msg": "docs(puzzle): plantilla html desacoplada con carga de fotos dinámicas"
   },
   {
-    "archivo": "src/views/games/LoveTrivia.jsx",
-    "mensaje": "feat(arcade): componente para minijuego Trivia de Recuerdos"
+    "archivo": "docs/arcade/puzzle/puzzle.css",
+    "mensaje": "docs(puzzle): estilos responsivos y efectos de encaje de piezas",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/puzzle/puzzle.css",
+    "msg": "docs(puzzle): estilos responsivos y efectos de encaje de piezas"
   },
   {
-    "archivo": "src/views/GamesView.jsx",
-    "mensaje": "feat(arcade): vista principal de minijuegos y catálogo interactivo"
+    "archivo": "docs/arcade/puzzle/puzzle.js",
+    "mensaje": "docs(puzzle): generador matemático de piezas bézier y validación de rompecabezas",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/puzzle/puzzle.js",
+    "msg": "docs(puzzle): generador matemático de piezas bézier y validación de rompecabezas"
   },
   {
-    "archivo": "src/App.jsx",
-    "mensaje": "feat(app): integración de GamesView y dock colapsable inteligente"
+    "archivo": "docs/assets/AdminView-DKRYxYhJ.js",
+    "mensaje": "docs(build): eliminación de chunk anterior de adminview",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/assets/AdminView-DKRYxYhJ.js",
+    "msg": "docs(build): eliminación de chunk anterior de adminview"
   },
   {
-    "archivo": "scripts/extract_arcade_games.cjs",
-    "mensaje": "tools: script de utilidad para sincronización de minijuegos"
+    "archivo": "docs/assets/index-CqP2cxIH.css",
+    "mensaje": "docs(build): eliminación de bundle css anterior",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/assets/index-CqP2cxIH.css",
+    "msg": "docs(build): eliminación de bundle css anterior"
   },
   {
-    "archivo": "public/arcade/gomi.html",
-    "mensaje": "feat(public): redirección segura para Gominola Romántica"
-  },
-  {
-    "archivo": "public/arcade/gomi/gomi.css",
-    "mensaje": "style(public): estilos para minijuego Gominola"
-  },
-  {
-    "archivo": "public/arcade/gomi/gomi.js",
-    "mensaje": "feat(public): lógica y física para minijuego Gominola Match-3"
-  },
-  {
-    "archivo": "public/arcade/gomi/index.html",
-    "mensaje": "feat(public): estructura y guardia anti-bypass para Gominola"
-  },
-  {
-    "archivo": "public/arcade/pool.html",
-    "mensaje": "feat(public): redirección segura para Pool 3D"
-  },
-  {
-    "archivo": "public/arcade/pool/pool.css",
-    "mensaje": "style(public): estilos de mesa y cámara para Pool 3D"
-  },
-  {
-    "archivo": "public/arcade/pool/pool.js",
-    "mensaje": "feat(public): motor Three.js y física 2D para Pool 3D 2v2"
-  },
-  {
-    "archivo": "public/arcade/pool/index.html",
-    "mensaje": "feat(public): estructura y guardia anti-bypass para Pool 3D"
-  },
-  {
-    "archivo": "public/arcade/puzzle.html",
-    "mensaje": "feat(public): redirección segura para Rompecabezas"
-  },
-  {
-    "archivo": "public/arcade/puzzle/puzzle.css",
-    "mensaje": "style(public): estilos panorámicos para Rompecabezas"
-  },
-  {
-    "archivo": "public/arcade/puzzle/puzzle.js",
-    "mensaje": "feat(public): lógica de armado con fotos de la pareja para Rompecabezas"
-  },
-  {
-    "archivo": "public/arcade/puzzle/index.html",
-    "mensaje": "feat(public): estructura y guardia anti-bypass para Rompecabezas"
-  },
-  {
-    "archivo": "public/arcade/sudoku.html",
-    "mensaje": "feat(public): redirección segura para Sudoku Pareja"
-  },
-  {
-    "archivo": "public/arcade/sudoku/sudoku.css",
-    "mensaje": "style(public): estilos de cuadrícula para Sudoku Pareja"
-  },
-  {
-    "archivo": "public/arcade/sudoku/sudoku.js",
-    "mensaje": "feat(public): motor generador y validador cooperativo para Sudoku"
-  },
-  {
-    "archivo": "public/arcade/sudoku/index.html",
-    "mensaje": "feat(public): estructura y selector de dificultad para Sudoku"
-  },
-  {
-    "archivo": "public/arcade/tetris.html",
-    "mensaje": "feat(public): redirección segura para Tetris Pareja"
-  },
-  {
-    "archivo": "public/arcade/tetris/tetris.css",
-    "mensaje": "style(public): estilos responsive para Tetris Pareja"
-  },
-  {
-    "archivo": "public/arcade/tetris/tetris.js",
-    "mensaje": "feat(public): lógica y controles táctiles para Tetris Pareja"
-  },
-  {
-    "archivo": "public/arcade/tetris/index.html",
-    "mensaje": "feat(public): estructura y guardia anti-bypass para Tetris Pareja"
-  },
-  {
-    "archivo": "docs/arcade/",
-    "mensaje": "build(docs): compilación de minijuegos arcade para producción"
+    "archivo": "docs/assets/index-DJKQ7jq2.js",
+    "mensaje": "docs(build): eliminación de bundle js anterior",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/assets/index-DJKQ7jq2.js",
+    "msg": "docs(build): eliminación de bundle js anterior"
   },
   {
     "archivo": "docs/index.html",
-    "mensaje": "build(docs): actualización de index.html compilado para GitHub Pages"
+    "mensaje": "docs(build): punto de entrada html actualizado para despliegue en producción",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/index.html",
+    "msg": "docs(build): punto de entrada html actualizado para despliegue en producción"
   },
   {
-    "archivo": "docs/assets/",
-    "mensaje": "build(docs): bundles de scripts y estilos generados para producción"
+    "archivo": "public/arcade/gomi/Objetos_gomi.html",
+    "mensaje": "feat(gomi): galería principal de objetos 2d con accesos directos a laboratorios",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/gomi/Objetos_gomi.html",
+    "msg": "feat(gomi): galería principal de objetos 2d con accesos directos a laboratorios"
+  },
+  {
+    "archivo": "public/arcade/gomi/gomi.css",
+    "mensaje": "feat(gomi): hoja de estilos principal con mejoras para juego y ui limpia",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/gomi/gomi.css",
+    "msg": "feat(gomi): hoja de estilos principal con mejoras para juego y ui limpia"
+  },
+  {
+    "archivo": "public/arcade/gomi/gomi.js",
+    "mensaje": "feat(gomi): motor del juego gominola con persistencia y recompensas",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/gomi/gomi.js",
+    "msg": "feat(gomi): motor del juego gominola con persistencia y recompensas"
+  },
+  {
+    "archivo": "public/arcade/gomi/index.html",
+    "mensaje": "feat(gomi): interfaz pública para minijuego gominola",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/gomi/index.html",
+    "msg": "feat(gomi): interfaz pública para minijuego gominola"
+  },
+  {
+    "archivo": "public/arcade/gomi/reward-config.js",
+    "mensaje": "feat(gomi): configuración de balance de recompensas arcade",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/gomi/reward-config.js",
+    "msg": "feat(gomi): configuración de balance de recompensas arcade"
+  },
+  {
+    "archivo": "public/arcade/pool/index.html",
+    "mensaje": "feat(pool): interfaz de billar 3d con integración de tienda y escenarios",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/pool/index.html",
+    "msg": "feat(pool): interfaz de billar 3d con integración de tienda y escenarios"
+  },
+  {
+    "archivo": "public/arcade/pool/pool-online.js",
+    "mensaje": "feat(pool): socket y sincronización multijugador en tiempo real",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/pool/pool-online.js",
+    "msg": "feat(pool): socket y sincronización multijugador en tiempo real"
+  },
+  {
+    "archivo": "public/arcade/pool/pool.css",
+    "mensaje": "feat(pool): estilos transparentes optimizados para visualización cósmica",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/pool/pool.css",
+    "msg": "feat(pool): estilos transparentes optimizados para visualización cósmica"
+  },
+  {
+    "archivo": "public/arcade/pool/pool.js",
+    "mensaje": "feat(pool): motor 3d de billar con soporte de vara personalizada y paño",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/pool/pool.js",
+    "msg": "feat(pool): motor 3d de billar con soporte de vara personalizada y paño"
+  },
+  {
+    "archivo": "public/arcade/pool/reward-config.js",
+    "mensaje": "feat(pool): balance de recompensas lp y monedas para pool",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/pool/reward-config.js",
+    "msg": "feat(pool): balance de recompensas lp y monedas para pool"
+  },
+  {
+    "archivo": "public/arcade/puzzle/index.html",
+    "mensaje": "feat(puzzle): interfaz desacoplada para minijuego rompecabezas",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/puzzle/index.html",
+    "msg": "feat(puzzle): interfaz desacoplada para minijuego rompecabezas"
+  },
+  {
+    "archivo": "public/arcade/puzzle/puzzle.css",
+    "mensaje": "feat(puzzle): estilos visuales para rompecabezas y partículas",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/puzzle/puzzle.css",
+    "msg": "feat(puzzle): estilos visuales para rompecabezas y partículas"
+  },
+  {
+    "archivo": "public/arcade/puzzle/puzzle.js",
+    "mensaje": "feat(puzzle): motor de rompecabezas con retícula dinámica y audio fx",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/puzzle/puzzle.js",
+    "msg": "feat(puzzle): motor de rompecabezas con retícula dinámica y audio fx"
+  },
+  {
+    "archivo": "src/views/GamesView.jsx",
+    "mensaje": "feat(arcade): barra superior persistente con indicador visual de monedas y acceso a tienda",
+    "repo": "Front-love-Endpoint",
+    "file": "src/views/GamesView.jsx",
+    "msg": "feat(arcade): barra superior persistente con indicador visual de monedas y acceso a tienda"
+  },
+  {
+    "archivo": "src/views/games/ArcadeFrame.jsx",
+    "mensaje": "feat(arcade): integración de iframe seguro con backdrop cósmico",
+    "repo": "Front-love-Endpoint",
+    "file": "src/views/games/ArcadeFrame.jsx",
+    "msg": "feat(arcade): integración de iframe seguro con backdrop cósmico"
+  },
+  {
+    "archivo": "src/views/games/ArcadeProfileView.jsx",
+    "mensaje": "feat(profile): vista inmersiva completa de elos y ligas sin cortes negros",
+    "repo": "Front-love-Endpoint",
+    "file": "src/views/games/ArcadeProfileView.jsx",
+    "msg": "feat(profile): vista inmersiva completa de elos y ligas sin cortes negros"
+  },
+  {
+    "archivo": "docs/arcade/gomi/obj_algodon.html",
+    "mensaje": "docs(gomi): visor y laboratorio de diseño independiente para objeto algodón de azúcar",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/gomi/obj_algodon.html",
+    "msg": "docs(gomi): visor y laboratorio de diseño independiente para objeto algodón de azúcar"
+  },
+  {
+    "archivo": "docs/arcade/gomi/obj_anillo_boda.html",
+    "mensaje": "docs(gomi): visor y laboratorio de diseño independiente para objeto anillo de boda",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/gomi/obj_anillo_boda.html",
+    "msg": "docs(gomi): visor y laboratorio de diseño independiente para objeto anillo de boda"
+  },
+  {
+    "archivo": "docs/arcade/gomi/obj_anillo_compromiso.html",
+    "mensaje": "docs(gomi): visor y laboratorio de diseño independiente para objeto anillo de compromiso",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/gomi/obj_anillo_compromiso.html",
+    "msg": "docs(gomi): visor y laboratorio de diseño independiente para objeto anillo de compromiso"
+  },
+  {
+    "archivo": "docs/arcade/gomi/obj_carta.html",
+    "mensaje": "docs(gomi): visor y laboratorio de diseño independiente para objeto carta de amor",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/gomi/obj_carta.html",
+    "msg": "docs(gomi): visor y laboratorio de diseño independiente para objeto carta de amor"
+  },
+  {
+    "archivo": "docs/arcade/gomi/obj_gusano.html",
+    "mensaje": "docs(gomi): visor y laboratorio de diseño independiente para objeto gusano ácido",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/gomi/obj_gusano.html",
+    "msg": "docs(gomi): visor y laboratorio de diseño independiente para objeto gusano ácido"
+  },
+  {
+    "archivo": "docs/arcade/gomi/obj_helado.html",
+    "mensaje": "docs(gomi): visor y laboratorio de diseño independiente para objeto helado de cono",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/gomi/obj_helado.html",
+    "msg": "docs(gomi): visor y laboratorio de diseño independiente para objeto helado de cono"
+  },
+  {
+    "archivo": "docs/arcade/gomi/obj_sushi.html",
+    "mensaje": "docs(gomi): visor y laboratorio de diseño independiente para objeto sushi frito",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/gomi/obj_sushi.html",
+    "msg": "docs(gomi): visor y laboratorio de diseño independiente para objeto sushi frito"
+  },
+  {
+    "archivo": "docs/arcade/pool/obj_mesa.html",
+    "mensaje": "docs(pool): visor 3d interactivo de la mesa de billar y materiales",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/pool/obj_mesa.html",
+    "msg": "docs(pool): visor 3d interactivo de la mesa de billar y materiales"
+  },
+  {
+    "archivo": "docs/arcade/pool/obj_tierra_sol.html",
+    "mensaje": "docs(pool): visor 3d del escenario orbital de la tierra y el sol",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/pool/obj_tierra_sol.html",
+    "msg": "docs(pool): visor 3d del escenario orbital de la tierra y el sol"
+  },
+  {
+    "archivo": "docs/arcade/pool/objvara-normal.html",
+    "mensaje": "docs(pool): estudio 3d paramétrico de la vara de pool normal y variantes",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/pool/objvara-normal.html",
+    "msg": "docs(pool): estudio 3d paramétrico de la vara de pool normal y variantes"
+  },
+  {
+    "archivo": "docs/arcade/pool/objvara-normal.js",
+    "mensaje": "docs(pool): módulo javascript desacoplado para generación de vara 3d",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/arcade/pool/objvara-normal.js",
+    "msg": "docs(pool): módulo javascript desacoplado para generación de vara 3d"
+  },
+  {
+    "archivo": "docs/assets/AdminView-B8Z0XBdo.js",
+    "mensaje": "docs(build): nuevo bundle compilado para adminview",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/assets/AdminView-B8Z0XBdo.js",
+    "msg": "docs(build): nuevo bundle compilado para adminview"
+  },
+  {
+    "archivo": "docs/assets/index-XrjuEWey.css",
+    "mensaje": "docs(build): nuevo bundle css compilado con estilos optimizados",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/assets/index-XrjuEWey.css",
+    "msg": "docs(build): nuevo bundle css compilado con estilos optimizados"
+  },
+  {
+    "archivo": "docs/assets/index-ueCwok50.js",
+    "mensaje": "docs(build): nuevo bundle de producción de la aplicación",
+    "repo": "Front-love-Endpoint",
+    "file": "docs/assets/index-ueCwok50.js",
+    "msg": "docs(build): nuevo bundle de producción de la aplicación"
+  },
+  {
+    "archivo": "public/arcade/gomi/obj_algodon.html",
+    "mensaje": "feat(gomi): archivo independiente de diseño para objeto algodón de azúcar",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/gomi/obj_algodon.html",
+    "msg": "feat(gomi): archivo independiente de diseño para objeto algodón de azúcar"
+  },
+  {
+    "archivo": "public/arcade/gomi/obj_anillo_boda.html",
+    "mensaje": "feat(gomi): archivo independiente de diseño para objeto anillo de boda",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/gomi/obj_anillo_boda.html",
+    "msg": "feat(gomi): archivo independiente de diseño para objeto anillo de boda"
+  },
+  {
+    "archivo": "public/arcade/gomi/obj_anillo_compromiso.html",
+    "mensaje": "feat(gomi): archivo independiente de diseño para objeto anillo de compromiso",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/gomi/obj_anillo_compromiso.html",
+    "msg": "feat(gomi): archivo independiente de diseño para objeto anillo de compromiso"
+  },
+  {
+    "archivo": "public/arcade/gomi/obj_carta.html",
+    "mensaje": "feat(gomi): archivo independiente de diseño para objeto carta de amor",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/gomi/obj_carta.html",
+    "msg": "feat(gomi): archivo independiente de diseño para objeto carta de amor"
+  },
+  {
+    "archivo": "public/arcade/gomi/obj_gusano.html",
+    "mensaje": "feat(gomi): archivo independiente de diseño para objeto gusano ácido",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/gomi/obj_gusano.html",
+    "msg": "feat(gomi): archivo independiente de diseño para objeto gusano ácido"
+  },
+  {
+    "archivo": "public/arcade/gomi/obj_helado.html",
+    "mensaje": "feat(gomi): archivo independiente de diseño para objeto helado de cono",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/gomi/obj_helado.html",
+    "msg": "feat(gomi): archivo independiente de diseño para objeto helado de cono"
+  },
+  {
+    "archivo": "public/arcade/gomi/obj_sushi.html",
+    "mensaje": "feat(gomi): archivo independiente de diseño para objeto sushi frito",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/gomi/obj_sushi.html",
+    "msg": "feat(gomi): archivo independiente de diseño para objeto sushi frito"
+  },
+  {
+    "archivo": "public/arcade/pool/obj_mesa.html",
+    "mensaje": "feat(pool): archivo independiente para diseño e inspección 3d de la mesa",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/pool/obj_mesa.html",
+    "msg": "feat(pool): archivo independiente para diseño e inspección 3d de la mesa"
+  },
+  {
+    "archivo": "public/arcade/pool/obj_tierra_sol.html",
+    "mensaje": "feat(pool): archivo independiente para diseño 3d del escenario cósmico tierra y sol",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/pool/obj_tierra_sol.html",
+    "msg": "feat(pool): archivo independiente para diseño 3d del escenario cósmico tierra y sol"
+  },
+  {
+    "archivo": "public/arcade/pool/objvara-normal.html",
+    "mensaje": "feat(pool): archivo independiente para diseño e inspección 3d de la vara normal",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/pool/objvara-normal.html",
+    "msg": "feat(pool): archivo independiente para diseño e inspección 3d de la vara normal"
+  },
+  {
+    "archivo": "public/arcade/pool/objvara-normal.js",
+    "mensaje": "feat(pool): módulo modular con definiciones geométricas y materiales de varas 3d",
+    "repo": "Front-love-Endpoint",
+    "file": "public/arcade/pool/objvara-normal.js",
+    "msg": "feat(pool): módulo modular con definiciones geométricas y materiales de varas 3d"
+  },
+  {
+    "archivo": "src/views/games/ArcadeShopView.jsx",
+    "mensaje": "feat(shop): tienda general de accesorios 3d multijuego con visor en vivo 360°",
+    "repo": "Front-love-Endpoint",
+    "file": "src/views/games/ArcadeShopView.jsx",
+    "msg": "feat(shop): tienda general de accesorios 3d multijuego con visor en vivo 360°"
   },
   {
     "archivo": "commits.json",
-    "mensaje": "chore: registro de mapeo de commits para sincronización"
-  },
-  {
-    "archivo": "push_1x1.ps1",
-    "mensaje": "chore: script de automatización de commits individuales 1x1"
+    "mensaje": "chore(arcade): registro de commits individuales y mapeo de tareas de push",
+    "repo": "Front-love-Endpoint",
+    "file": "commits.json",
+    "msg": "chore(arcade): registro de commits individuales y mapeo de tareas de push"
   }
 ]

@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pool 3D · Objeto 3D: objvara-normal</title>
+<style>
+  :root {
+    --bg: #090a12;
+    --card: #131726;
+    --border: rgba(255, 255, 255, 0.12);
+    --accent: #ec4899;
+    --accent-glow: rgba(236, 72, 153, 0.4);
+    --gold: #f59e0b;
+    --text: #f8fafc;
+    --muted: #94a3b8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background: rgba(15, 18, 32, 0.9);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .badge-3d {
+    background: linear-gradient(135deg, #ec4899, #8b5cf6);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  h1 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+  .subtitle {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .top-links {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .top-links a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    transition: all 0.2s;
+  }
+  .top-links a:hover, .top-links a.active {
+    color: #fff;
+    background: rgba(236, 72, 153, 0.25);
+    border-color: var(--accent);
+  }
+  .studio-layout {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    flex: 1;
+    min-height: calc(100vh - 65px);
+  }
+  @media (max-width: 900px) {
+    .studio-layout { grid-template-columns: 1fr; }
+  }
+  .viewport-wrap {
+    position: relative;
+    background: radial-gradient(circle at 50% 50%, #151a2e 0%, #070913 80%);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #webgl-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: grab;
+  }
+  #webgl-canvas:active {
+    cursor: grabbing;
+  }
+  .viewport-overlay {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none;
+  }
+  .hud-pill {
+    pointer-events: auto;
+    background: rgba(10, 13, 24, 0.85);
+    border: 1px solid var(--border);
+    border-radius: 30px;
+    padding: 8px 18px;
+    font-size: 0.8rem;
+    color: var(--muted);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .hud-btn {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #fff;
+    padding: 5px 12px;
+    border-radius: 14px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .hud-btn:hover {
+    background: var(--accent);
+  }
+  .sidebar {
+    background: var(--card);
+    border-left: 1px solid var(--border);
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .panel-section {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .panel-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--accent);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .preset-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .btn-preset {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-preset:hover, .btn-preset.active {
+    background: rgba(236,72,153,0.2);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .preset-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-none;
+  }
+  .form-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 0.82rem;
+  }
+  .form-row:last-child { margin-bottom: 0; }
+  .form-row label { color: var(--muted); }
+  .form-row input[type="color"] {
+    -webkit-appearance: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    width: 32px;
+    height: 24px;
+    cursor: pointer;
+    background: none;
+  }
+  .form-row input[type="range"] {
+    width: 120px;
+    accent-color: var(--accent);
+  }
+  .action-btn {
+    width: 100%;
+    padding: 10px 16px;
+    border-radius: 12px;
+    border: none;
+    font-weight: bold;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #ec4899, #a855f7);
+    color: #fff;
+    box-shadow: 0 4px 15px var(--accent-glow);
+  }
+  .btn-primary:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+  }
+  .btn-secondary {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn-secondary:hover {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+  }
+  pre {
+    background: #090b14;
+    padding: 12px;
+    border-radius: 10px;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.72rem;
+    color: #cbd5e1;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    max-height: 220px;
+    margin: 8px 0 0;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-wrap">
+    <span class="badge-3d">3D Model</span>
+    <div>
+      <h1>objvara-normal · Estudio 3D de la Vara de Pool</h1>
+      <p class="subtitle">Modelo tridimensional modular, paramétrico y renderizado a 60 FPS con Three.js</p>
+    </div>
+  </div>
+
+  <nav class="top-links">
+    <a href="objvara-normal.html" class="active">🎱 Vara 3D (Normal)</a>
+    <a href="obj_mesa.html">🟢 Mesa 3D</a>
+    <a href="obj_tierra_sol.html">🌌 Tierra y Sol 3D</a>
+    <a href="index.html">🎮 Jugar Pool 3D</a>
+  </nav>
+</header>
+
+<div class="studio-layout">
+  <!-- Visor WebGL 3D Principal con Arrastre 360° -->
+  <div class="viewport-wrap">
+    <canvas id="webgl-canvas"></canvas>
+
+    <div class="viewport-overlay">
+      <div class="hud-pill">
+        <span>🖱️ Arrastra con clic izquierdo para rotar en 360° · Rueda para Zoom</span>
+        <button class="hud-btn" id="btnShoot">💥 Simular Tiro</button>
+        <button class="hud-btn" id="btnAutoSpin">🔄 Auto-Giro: OFF</button>
+      </div>
+
+      <div class="hud-pill">
+        <button class="hud-btn" id="btnViewTip">Puntera</button>
+        <button class="hud-btn" id="btnViewFull">Completa</button>
+        <button class="hud-btn" id="btnViewButt">Mango</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel Lateral de Ajustes del Objeto 3D -->
+  <aside class="sidebar">
+    <!-- Presets oficiales de la tienda -->
+    <div class="panel-section">
+      <div class="panel-title">
+        <span>Modelos de Vara</span>
+      </div>
+      <div class="preset-grid">
+        <button class="btn-preset active" data-preset="clasico">
+          <span class="preset-dot" style="background:#d9a95f;"></span>
+          <span>Normal (Arce)</span>
+        </button>
+        <button class="btn-preset" data-preset="ebano">
+          <span class="preset-dot" style="background:#1b1b1f; border:1px solid #d4af37;"></span>
+          <span>Ébano Imperial</span>
+        </button>
+        <button class="btn-preset" data-preset="neon">
+          <span class="preset-dot" style="background:#00e5ff; box-shadow:0 0 6px #00e5ff;"></span>
+          <span>Neón Cian</span>
+        </button>
+        <button class="btn-preset" data-preset="rubi">
+          <span class="preset-dot" style="background:#e11d48; box-shadow:0 0 6px #e11d48;"></span>
+          <span>Carmesí Rubí</span>
+        </button>
+        <button class="btn-preset" data-preset="oro">
+          <span class="preset-dot" style="background:#ffd700; box-shadow:0 0 6px #ffd700;"></span>
+          <span>Oro Real</span>
+        </button>
+        <button class="btn-preset" data-preset="galaxia">
+          <span class="preset-dot" style="background:#9333ea; box-shadow:0 0 6px #9333ea;"></span>
+          <span>Vara Cósmica</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Parámetros de Material y Color -->
+    <div class="panel-section">
+      <div class="panel-title">
+        <span>Personalización de Partes</span>
+      </div>
+      <div class="form-row">
+        <label>Cuerpo / Flecha (Shaft):</label>
+        <input type="color" id="colShaft" value="#d9a95f">
+      </div>
+      <div class="form-row">
+        <label>Mango / Empuñadura (Butt):</label>
+        <input type="color" id="colButt" value="#141418">
+      </div>
+      <div class="form-row">
+        <label>Anillos Decorativos (Rings):</label>
+        <input type="color" id="colRings" value="#fbbf24">
+      </div>
+      <div class="form-row">
+        <label>Virola (Ferrule):</label>
+        <input type="color" id="colFerrule" value="#f8fafc">
+      </div>
+      <div class="form-row">
+        <label>Puntera de Tiza (Tip):</label>
+        <input type="color" id="colTip" value="#4aa3df">
+      </div>
+      <div class="form-row">
+        <label>Rugosidad (Roughness):</label>
+        <input type="range" id="valRough" min="0" max="1" step="0.02" value="0.35">
+      </div>
+      <div class="form-row">
+        <label>Metalizado (Metalness):</label>
+        <input type="range" id="valMetal" min="0" max="1" step="0.02" value="0.05">
+      </div>
+      <div class="form-row">
+        <label>Brillo Emisivo Neón:</label>
+        <input type="range" id="valEmissive" min="0" max="2" step="0.05" value="0">
+      </div>
+    </div>
+
+    <!-- Exportación de Código Modular -->
+    <div class="panel-section">
+      <div class="panel-title">
+        <span>Código Modular del Objeto</span>
+        <button class="hud-btn" onclick="copySnippet()">Copiar JS</button>
+      </div>
+      <p style="font-size:0.75rem; color:var(--muted); margin:0 0 8px;">Función Three.js lista para incluir en cualquier vista o archivo:</p>
+      <pre><code id="codeSnippet">// Función creadora de la vara 3D modular
+function createPoolCue(THREE, config = {}) {
+  const group = new THREE.Group();
+
+  const shaftMat = new THREE.MeshStandardMaterial({
+    color: config.shaftColor || '#d9a95f',
+    roughness: config.roughness ?? 0.35,
+    metalness: config.metalness ?? 0.05
+  });
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 4.6, 132, 28), shaftMat);
+  shaft.rotation.z = -Math.PI / 2;
+  shaft.position.x = 12;
+  group.add(shaft);
+
+  const buttMat = new THREE.MeshStandardMaterial({
+    color: config.buttColor || '#141418',
+    roughness: config.roughness ?? 0.35,
+    metalness: config.metalness ?? 0.25
+  });
+  const butt = new THREE.Mesh(new THREE.CylinderGeometry(4.6, 5.6, 54, 28), buttMat);
+  butt.rotation.z = -Math.PI / 2;
+  butt.position.x = -81;
+  group.add(butt);
+
+  const ringMat = new THREE.MeshStandardMaterial({
+    color: config.ringsColor || '#fbbf24',
+    metalness: 0.9, roughness: 0.18
+  });
+  const ring1 = new THREE.Mesh(new THREE.CylinderGeometry(4.75, 4.75, 3.8, 28), ringMat);
+  ring1.rotation.z = -Math.PI / 2; ring1.position.x = -54; group.add(ring1);
+
+  const tipMat = new THREE.MeshStandardMaterial({ color: config.tipColor || '#4aa3df' });
+  const tip = new THREE.Mesh(new THREE.CylinderGeometry(2.0, 2.18, 5.5, 28), tipMat);
+  tip.rotation.z = -Math.PI / 2; tip.position.x = 86.8; group.add(tip);
+
+  return group;
+}</code></pre>
+    </div>
+  </aside>
+</div>
+
+<!-- Three.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+// ============================================================================
+// ESTUDIO 3D EN TIEMPO REAL: OBJETO VARA NORMAL (Three.js)
+// ============================================================================
+const canvas = document.getElementById('webgl-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.setClearColor(0x0a0c16, 1);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(32, 1, 1, 3000);
+camera.position.set(0, 45, 260);
+
+// Iluminación de estudio profesional
+scene.add(new THREE.HemisphereLight('#f1f5f9', '#1e1b4b', 1.1));
+const keyLight = new THREE.DirectionalLight('#fffbeb', 2.0);
+keyLight.position.set(120, 180, 150);
+scene.add(keyLight);
+
+const rimLight = new THREE.DirectionalLight('#ec4899', 1.1);
+rimLight.position.set(-140, -60, -120);
+scene.add(rimLight);
+
+const fillLight = new THREE.DirectionalLight('#00e5ff', 0.6);
+fillLight.position.set(-80, 100, 80);
+scene.add(fillLight);
+
+// Suelo con sutil reflejo de sombra
+const floorGeo = new THREE.PlaneGeometry(800, 800);
+const floorMat = new THREE.MeshStandardMaterial({ color: '#070912', roughness: 0.85, metalness: 0.1 });
+const floor = new THREE.Mesh(floorGeo, floorMat);
+floor.rotation.x = -Math.PI / 2;
+floor.position.y = -35;
+scene.add(floor);
+
+// ----------------------------------------------------------------------------
+// CONSTRUCCIÓN DEL OBJETO 3D: VARA
+// ----------------------------------------------------------------------------
+const cueRoot = new THREE.Group();
+
+const shaftMat = new THREE.MeshStandardMaterial({ color: '#d9a95f', roughness: 0.35, metalness: 0.05 });
+const buttMat = new THREE.MeshStandardMaterial({ color: '#141418', roughness: 0.35, metalness: 0.25 });
+const ringMat = new THREE.MeshStandardMaterial({ color: '#fbbf24', roughness: 0.18, metalness: 0.92 });
+const ferruleMat = new THREE.MeshStandardMaterial({ color: '#f8fafc', roughness: 0.18 });
+const tipMat = new THREE.MeshStandardMaterial({ color: '#4aa3df', roughness: 0.35 });
+const glowMat = new THREE.MeshBasicMaterial({ color: '#00e5ff', transparent: true, opacity: 0, side: THREE.BackSide });
+
+// 1. Cuerpo / Flecha cónica
+const shaft = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 4.6, 132, 32), shaftMat);
+shaft.rotation.z = -Math.PI / 2;
+shaft.position.x = 12;
+cueRoot.add(shaft);
+
+// 2. Mango / Butt
+const butt = new THREE.Mesh(new THREE.CylinderGeometry(4.6, 5.6, 54, 32), buttMat);
+butt.rotation.z = -Math.PI / 2;
+butt.position.x = -81;
+cueRoot.add(butt);
+
+// 3. Anillos de unión de bronce/oro
+const ring1 = new THREE.Mesh(new THREE.CylinderGeometry(4.75, 4.75, 3.8, 32), ringMat);
+ring1.rotation.z = -Math.PI / 2;
+ring1.position.x = -54;
+cueRoot.add(ring1);
+
+const ring2 = new THREE.Mesh(new THREE.CylinderGeometry(5.7, 5.4, 4.4, 32), ringMat);
+ring2.rotation.z = -Math.PI / 2;
+ring2.position.x = -108;
+cueRoot.add(ring2);
+
+// 4. Virola blanca
+const ferrule = new THREE.Mesh(new THREE.CylinderGeometry(2.15, 2.25, 6.2, 32), ferruleMat);
+ferrule.rotation.z = -Math.PI / 2;
+ferrule.position.x = 81;
+cueRoot.add(ferrule);
+
+// 5. Puntera de tiza azul
+const tip = new THREE.Mesh(new THREE.CylinderGeometry(2.0, 2.18, 5.5, 32), tipMat);
+tip.rotation.z = -Math.PI / 2;
+tip.position.x = 86.8;
+cueRoot.add(tip);
+
+// 6. Malla de Aura Neón (opcional)
+const glow = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 5.9, 134, 28), glowMat);
+glow.rotation.z = -Math.PI / 2;
+glow.position.x = 12;
+cueRoot.add(glow);
+
+// 7. Bola blanca de referencia en la punta
+const cueBall = new THREE.Mesh(
+  new THREE.SphereGeometry(6, 32, 24),
+  new THREE.MeshStandardMaterial({ color: '#f8fafc', roughness: 0.15 })
+);
+cueBall.position.set(98, 0, 0);
+cueRoot.add(cueBall);
+
+scene.add(cueRoot);
+
+// ----------------------------------------------------------------------------
+// CONTROL DE ÓRBITA Y CÁMARA (Mouse drag 360°)
+// ----------------------------------------------------------------------------
+let isDragging = false;
+let prevX = 0, prevY = 0;
+let yaw = 0, pitch = 0.15;
+let dist = 260;
+let autoSpin = false;
+let isAnimatingShoot = false;
+
+function updateCamera() {
+  const maxPitch = Math.PI / 2 - 0.05;
+  const minPitch = -Math.PI / 2 + 0.05;
+  pitch = Math.max(minPitch, Math.min(maxPitch, pitch));
+
+  camera.position.x = dist * Math.sin(yaw) * Math.cos(pitch);
+  camera.position.y = dist * Math.sin(pitch);
+  camera.position.z = dist * Math.cos(yaw) * Math.cos(pitch);
+  camera.lookAt(0, 0, 0);
+}
+updateCamera();
+
+canvas.addEventListener('pointerdown', (e) => {
+  isDragging = true;
+  prevX = e.clientX;
+  prevY = e.clientY;
+  try { canvas.setPointerCapture(e.pointerId); } catch(err) {}
+});
+
+canvas.addEventListener('pointermove', (e) => {
+  if (!isDragging) return;
+  const dx = e.clientX - prevX;
+  const dy = e.clientY - prevY;
+  prevX = e.clientX;
+  prevY = e.clientY;
+
+  yaw -= dx * 0.01;
+  pitch += dy * 0.01;
+  updateCamera();
+});
+
+window.addEventListener('pointerup', () => { isDragging = false; });
+window.addEventListener('pointercancel', () => { isDragging = false; });
+
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  dist = Math.max(70, Math.min(650, dist + e.deltaY * 0.25));
+  updateCamera();
+}, { passive: false });
+
+// Redimensionamiento adaptable
+function resize() {
+  const w = canvas.parentElement.clientWidth;
+  const h = canvas.parentElement.clientHeight;
+  if (w && h) {
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Bucle de animación 60 FPS
+function animate() {
+  requestAnimationFrame(animate);
+
+  if (autoSpin && !isDragging) {
+    yaw += 0.007;
+    updateCamera();
+  }
+
+  renderer.render(scene, camera);
+}
+animate();
+
+// ----------------------------------------------------------------------------
+// INTERACCIÓN Y CONTROLES DEL PANEL
+// ----------------------------------------------------------------------------
+const PRESETS = {
+  clasico: { shaft: '#d9a95f', butt: '#141418', rings: '#fbbf24', ferrule: '#f8fafc', tip: '#4aa3df', rough: 0.35, metal: 0.05, emissive: '#000000', glow: 0 },
+  ebano:   { shaft: '#1b1b1f', butt: '#101012', rings: '#d4af37', ferrule: '#f8fafc', tip: '#d4af37', rough: 0.25, metal: 0.25, emissive: '#000000', glow: 0 },
+  neon:    { shaft: '#10202a', butt: '#091319', rings: '#00e5ff', ferrule: '#00bcd4', tip: '#00e5ff', rough: 0.28, metal: 0.15, emissive: '#00bcd4', glow: 0.85 },
+  rubi:    { shaft: '#3b0718', butt: '#20030c', rings: '#ff4d94', ferrule: '#f8fafc', tip: '#ff4d94', rough: 0.22, metal: 0.35, emissive: '#e11d48', glow: 0.75 },
+  oro:     { shaft: '#d4af37', butt: '#593e09', rings: '#ffffff', ferrule: '#ffffff', tip: '#ffffff', rough: 0.16, metal: 0.95, emissive: '#785508', glow: 0.3 },
+  galaxia: { shaft: '#1e1035', butt: '#110820', rings: '#e879f9', ferrule: '#e879f9', tip: '#e879f9', rough: 0.20, metal: 0.50, emissive: '#9333ea', glow: 0.85 }
+};
+
+function applyPreset(key) {
+  const p = PRESETS[key] || PRESETS.clasico;
+  document.getElementById('colShaft').value = p.shaft;
+  document.getElementById('colButt').value = p.butt;
+  document.getElementById('colRings').value = p.rings;
+  document.getElementById('colFerrule').value = p.ferrule;
+  document.getElementById('colTip').value = p.tip;
+  document.getElementById('valRough').value = p.rough;
+  document.getElementById('valMetal').value = p.metal;
+  document.getElementById('valEmissive').value = p.glow;
+
+  updateMaterials();
+
+  document.querySelectorAll('.btn-preset').forEach(b => {
+    b.classList.toggle('active', b.dataset.preset === key);
+  });
+}
+
+function updateMaterials() {
+  const sCol = document.getElementById('colShaft').value;
+  const bCol = document.getElementById('colButt').value;
+  const rCol = document.getElementById('colRings').value;
+  const fCol = document.getElementById('colFerrule').value;
+  const tCol = document.getElementById('colTip').value;
+  const rough = parseFloat(document.getElementById('valRough').value);
+  const metal = parseFloat(document.getElementById('valMetal').value);
+  const glowVal = parseFloat(document.getElementById('valEmissive').value);
+
+  shaftMat.color.set(sCol);
+  shaftMat.roughness = rough;
+  shaftMat.metalness = metal;
+
+  buttMat.color.set(bCol);
+  buttMat.roughness = rough;
+  buttMat.metalness = Math.min(1, metal + 0.15);
+
+  ringMat.color.set(rCol);
+  ferruleMat.color.set(fCol);
+  tipMat.color.set(tCol);
+
+  if (glowVal > 0) {
+    shaftMat.emissive.set(tCol);
+    shaftMat.emissiveIntensity = glowVal;
+    glowMat.color.set(tCol);
+    glowMat.opacity = glowVal * 0.35;
+  } else {
+    shaftMat.emissive.set('#000000');
+    glowMat.opacity = 0;
+  }
+}
+
+document.querySelectorAll('.btn-preset').forEach(btn => {
+  btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+});
+
+['colShaft', 'colButt', 'colRings', 'colFerrule', 'colTip', 'valRough', 'valMetal', 'valEmissive'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateMaterials);
+});
+
+// Botón auto rotación
+const btnAuto = document.getElementById('btnAutoSpin');
+btnAuto.addEventListener('click', () => {
+  autoSpin = !autoSpin;
+  btnAuto.innerText = autoSpin ? '🔄 Auto-Giro: ON' : '🔄 Auto-Giro: OFF';
+  btnAuto.style.background = autoSpin ? 'var(--accent)' : '';
+});
+
+// Botones de vistas de cámara
+document.getElementById('btnViewTip').addEventListener('click', () => {
+  yaw = -0.3; pitch = 0.2; dist = 110; updateCamera();
+});
+document.getElementById('btnViewFull').addEventListener('click', () => {
+  yaw = 0; pitch = 0.2; dist = 260; updateCamera();
+});
+document.getElementById('btnViewButt').addEventListener('click', () => {
+  yaw = Math.PI - 0.3; pitch = 0.2; dist = 120; updateCamera();
+});
+
+// Animación de disparo
+document.getElementById('btnShoot').addEventListener('click', () => {
+  if (isAnimatingShoot) return;
+  isAnimatingShoot = true;
+
+  const startX = cueRoot.position.x;
+  const pullBack = -22;
+
+  // Fase 1: Retroceder
+  const t0 = performance.now();
+  function pullAnim(now) {
+    const elapsed = now - t0;
+    const p = Math.min(1, elapsed / 400);
+    cueRoot.position.x = startX + pullBack * p;
+    if (p < 1) {
+      requestAnimationFrame(pullAnim);
+    } else {
+      // Fase 2: Impactar hacia adelante
+      const t1 = performance.now();
+      function strikeAnim(now2) {
+        const elapsed2 = now2 - t1;
+        const p2 = Math.min(1, elapsed2 / 90);
+        cueRoot.position.x = (startX + pullBack) + (Math.abs(pullBack) + 8) * p2;
+        if (p2 < 1) {
+          requestAnimationFrame(strikeAnim);
+        } else {
+          // Fase 3: Bola blanca sale disparada
+          const tBall = performance.now();
+          function ballAnim(now3) {
+            const eb = (now3 - tBall) / 300;
+            cueBall.position.x = 98 + eb * 120;
+            if (eb < 1) {
+              requestAnimationFrame(ballAnim);
+            } else {
+              // Reset suave
+              setTimeout(() => {
+                cueRoot.position.x = startX;
+                cueBall.position.set(98, 0, 0);
+                isAnimatingShoot = false;
+              }, 400);
+            }
+          }
+          requestAnimationFrame(ballAnim);
+        }
+      }
+      requestAnimationFrame(strikeAnim);
+    }
+  }
+  requestAnimationFrame(pullAnim);
+});
+
+function copySnippet() {
+  const code = document.getElementById('codeSnippet').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    alert('✓ Código Three.js de la vara copiado al portapapeles');
+  });
+}
+</script>
+</body>
+</html>

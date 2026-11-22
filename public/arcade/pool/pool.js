@@ -24,8 +24,23 @@ const PK = [[L - 5, T - 5], [RX + 5, T - 5], [L - 5, BY + 5], [RX + 5, BY + 5], 
 /** Colores base de bolas 0..8 (las rayadas 9..15 reutilizan el color de i-8 vía col()). */
 const BC = ['#f4f1e8', '#f2c230', '#1f4fb0', '#d62b2b', '#5b2a86', '#f07d1a', '#12803a', '#7a1f1f', '#141414'];
 const col = i => BC[i > 8 ? i - 8 : i];
-/** Temas de paño: [color claro, color de bandas]. Índice = botón data-t. */
-const FELT = [['#1f8f55', '#0e5f36'], ['#2a78c4', '#144f8c'], ['#a8283a', '#6a1526']];
+/** Temas de paño: [color claro, color de bandas]. Solo lo ve el jugador local que lo tiene seleccionado. */
+const FELT = [
+  ['#1f8f55', '#0e5f36'], // 0: Verde Clásico
+  ['#2a78c4', '#144f8c'], // 1: Azul Torneo
+  ['#a8283a', '#6a1526'], // 2: Burdeos Imperial
+  ['#6b21a8', '#3b0764'], // 3: Amatista Real
+  ['#263244', '#111827'], // 4: Obsidiana Nocturna
+  ['#85581A', '#4A2E08']  // 5: Bronce Dorado
+];
+const FELT_ITEMS = {
+  '0': { id: '0', idx: 0, name: 'Verde Clásico', price: 0, desc: 'Paño tradicional de club', colors: FELT[0] },
+  '1': { id: '1', idx: 1, name: 'Azul Torneo', price: 25, desc: 'Paño profesional de campeonato', colors: FELT[1] },
+  '2': { id: '2', idx: 2, name: 'Burdeos Imperial', price: 40, desc: 'Terciopelo rojo vino elegante', colors: FELT[2] },
+  '3': { id: '3', idx: 3, name: 'Amatista Real', price: 55, desc: 'Paño púrpura de medianoche', colors: FELT[3] },
+  '4': { id: '4', idx: 4, name: 'Obsidiana Nocturna', price: 75, desc: 'Pizarra oscura de alto contraste', colors: FELT[4] },
+  '5': { id: '5', idx: 5, name: 'Bronce Dorado', price: 95, desc: 'Paño imperial con bandas cálidas', colors: FELT[5] }
+};
 const $ = id => document.getElementById(id);
 
 /* ======== ESCENA: renderer, cámara, luces ======== */
@@ -284,14 +299,17 @@ function buildUniverse(root) {
 }
 
 const BACKGROUNDS = {
-  universo: { name: 'Nuestro Universo (Perfil)', color: '#07050c', build: buildUniverse },
-  espacio: { name: 'Espacio (Tierra y Sol)', color: '#000000', build: buildSpace },
-  atardecer: { name: 'Atardecer', color: '#0b1030', build: buildSunset }
+  universo: { name: 'Fondo del Perfil', price: 0, color: '#07050c', build: buildUniverse },
+  espacio: { name: 'Tierra y Sol (3D)', price: 50, color: '#000000', build: buildSpace }
 };
 let bgGroup = null, bgTick = () => {};
 
+let activeBgId = '';
 function applyBackground(id) {
-  const b = BACKGROUNDS[id] || BACKGROUNDS.universo;
+  const targetId = BACKGROUNDS[id] ? id : 'universo';
+  if (activeBgId === targetId && bgGroup) return;
+  activeBgId = targetId;
+  const b = BACKGROUNDS[targetId];
   if (bgGroup) {
     sc.remove(bgGroup);
     bgGroup.traverse(o => {
@@ -305,7 +323,7 @@ function applyBackground(id) {
   bgGroup = new THREE.Group();
   sc.add(bgGroup);
   
-  if (id === 'universo') {
+  if (targetId === 'universo') {
     const p = new URLSearchParams(window.location.search);
     const uColor = p.get('uColor') || 'purple';
     const theme = UNIVERSE_THEMES[uColor] || UNIVERSE_THEMES.purple;
@@ -352,20 +370,35 @@ function woodTex() {
   return t;
 }
 
+const feltTexCache = {};
+let feltNoisePattern = null;
+function getFeltNoisePattern(ctx) {
+  if (feltNoisePattern) return feltNoisePattern;
+  const [nc, ng] = cvs(64, 64);
+  for (let i = 0; i < 450; i++) {
+    ng.fillStyle = (i & 1) ? '#ffffff' : '#000000';
+    ng.fillRect(Math.random() * 64, Math.random() * 64, 1, 1);
+  }
+  feltNoisePattern = ctx.createPattern(nc, 'repeat');
+  return feltNoisePattern;
+}
+
 function feltTex(k) {
-  const [c, g] = cvs(1840, 880);
-  g.scale(2, 2);
-  g.fillStyle = FELT[k][0];
+  const idx = FELT[k] ? k : 0;
+  if (feltTexCache[idx]) return feltTexCache[idx];
+  const [c, g] = cvs(920, 440);
+  g.fillStyle = FELT[idx][0];
   g.fillRect(0, 0, 920, 440);
   const r = g.createRadialGradient(460, 220, 40, 460, 220, 560);
   r.addColorStop(0, '#fff0');
   r.addColorStop(1, '#0007');
   g.fillStyle = r;
   g.fillRect(0, 0, 920, 440);
-  g.globalAlpha = .09;
-  for (let i = 0; i < 40000; i++) {
-    g.fillStyle = Math.random() < .5 ? '#fff' : '#000';
-    g.fillRect(Math.random() * 920, Math.random() * 440, 1, 1);
+  const pat = getFeltNoisePattern(g);
+  if (pat) {
+    g.globalAlpha = .07;
+    g.fillStyle = pat;
+    g.fillRect(0, 0, 920, 440);
   }
   g.globalAlpha = 1;
   g.strokeStyle = '#ffffff30';
@@ -382,8 +415,8 @@ function feltTex(k) {
   });
   const t = new THREE.CanvasTexture(c);
   t.encoding = THREE.sRGBEncoding;
-  t.anisotropy = 4;
-  return t;
+  t.anisotropy = 2;
+  return feltTexCache[idx] = t;
 }
 
 const ballTex = {};
@@ -1407,12 +1440,15 @@ $('epicBtn').onclick = e => {
   e.target.classList.toggle('sel', epicCam);
 };
 
-document.querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
-  feltM.map = feltTex(+b.dataset.t);
+let activeFeltIdx = 0;
+function applyFelt(indexOrId) {
+  const idx = FELT[+indexOrId] ? +indexOrId : 0;
+  if (activeFeltIdx === idx) return;
+  activeFeltIdx = idx;
+  feltM.map = feltTex(idx);
   feltM.needsUpdate = true;
-  cushM.color.set(FELT[+b.dataset.t][1]);
-  document.querySelectorAll('[data-t]').forEach(x => x.classList.toggle('sel', x == b));
-});
+  cushM.color.set(FELT[idx][1]);
+}
 
 /* ======== AYUDAS DE PUNTERÍA ======== */
 function setLine(g, a, b, c, d, e, f) {
@@ -1431,16 +1467,22 @@ const ghost = new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ color: '#fff', tr
 ghost.visible = false; sc.add(ghost);
 
 const CUES = {
-  clasico: { name: 'Clásica', color: '#d9a95f', tip: '#4aa3df', roughness: .4, metalness: 0 },
-  ebano: { name: 'Ébano', color: '#1b1b1f', tip: '#d4af37', roughness: .25, metalness: .2 },
-  oro: { name: 'Oro', color: '#d4af37', tip: '#ffffff', roughness: .2, metalness: .95 },
-  neon: { name: 'Neón', color: '#10202a', tip: '#00e5ff', roughness: .3, metalness: 0, emissive: '#00bcd4', emissiveIntensity: .9 }
+  clasico: { name: 'Clásica', price: 0, desc: 'Madera de arce con puntera azul', color: '#d9a95f', tip: '#4aa3df', roughness: .4, metalness: 0 },
+  ebano: { name: 'Ébano Imperial', price: 25, desc: 'Madera negra pulida y puntera dorada', color: '#1b1b1f', tip: '#d4af37', roughness: .25, metalness: .2 },
+  neon: { name: 'Neón Cian', price: 45, desc: 'Fibra oscura con brillo neón cian', color: '#10202a', tip: '#00e5ff', roughness: .3, metalness: 0, emissive: '#00bcd4', emissiveIntensity: .9 },
+  rubi: { name: 'Carmesí de Amor', price: 65, desc: 'Acabado rubí con emisión rosa neón', color: '#3b0718', tip: '#ff4d94', roughness: .22, metalness: .35, emissive: '#e11d48', emissiveIntensity: .75 },
+  oro: { name: 'Oro Real', price: 90, desc: 'Aleación dorada reluciente de lujo', color: '#d4af37', tip: '#ffffff', roughness: .18, metalness: .95, emissive: '#785508', emissiveIntensity: .25 },
+  galaxia: { name: 'Vara Cósmica', price: 120, desc: 'Violeta astral con núcleo estelar', color: '#1e1035', tip: '#e879f9', roughness: .2, metalness: .5, emissive: '#9333ea', emissiveIntensity: .85 }
 };
 const cueMat = new THREE.MeshStandardMaterial(), tipMat = new THREE.MeshStandardMaterial();
+let myEquippedCue = 'clasico';
+let activeCueVisual = '';
 
-function applyCue(id) {
-  const k = CUES[id];
-  if (!k) return;
+function applyCueVisual(id) {
+  const cueId = CUES[id] ? id : 'clasico';
+  if (activeCueVisual === cueId) return;
+  activeCueVisual = cueId;
+  const k = CUES[cueId];
   cueMat.color.set(k.color);
   cueMat.roughness = k.roughness;
   cueMat.metalness = k.metalness || 0;
@@ -1448,6 +1490,13 @@ function applyCue(id) {
   cueMat.emissiveIntensity = k.emissiveIntensity || 1;
   tipMat.color.set(k.tip);
 }
+
+function applyCue(id) {
+  myEquippedCue = CUES[id] ? id : 'clasico';
+  applyCueVisual(myEquippedCue);
+}
+window.getMyEquippedCue = () => myEquippedCue;
+window.applyCueVisual = applyCueVisual;
 
 const cue = new THREE.Mesh(new THREE.CylinderGeometry(2, 5, 330, 16), cueMat);
 cue.castShadow = true; cue.visible = false; sc.add(cue);
@@ -1519,9 +1568,32 @@ let acc = 0, last = performance.now();
 let _lastFrameTime = performance.now();
 const _frameInterval = 1000 / 60; // 16.667ms
 
+const modeModalRef = $('modeModal');
+let wasModalOpen = true;
+
 function frame(now) {
   requestAnimationFrame(frame);
   now = now || performance.now();
+
+  // Pausar renderizado 3D mientras está abierto el selector de modo para 0% lag
+  if (modeModalRef && !modeModalRef.hidden) {
+    if (!wasModalOpen) {
+      wasModalOpen = true;
+      st.style.visibility = 'hidden';
+    }
+    _lastFrameTime = now;
+    return;
+  }
+  if (wasModalOpen) {
+    wasModalOpen = false;
+    st.style.visibility = 'visible';
+    applyCue(poolShopState.equipped.cues);
+    applyFelt(poolShopState.equipped.felts);
+    applyBackground(poolShopState.equipped.bgs);
+    resize();
+    rd.shadowMap.needsUpdate = true;
+  }
+
   const elapsed = now - _lastFrameTime;
   if (elapsed < _frameInterval - 1.5) return; // Evita sobrecarga en pantallas 120Hz/144Hz
   const dtMs = Math.min(50, elapsed);
@@ -1575,15 +1647,17 @@ function frame(now) {
   aimL.visible = trgL.visible = bncL.visible = ghost.visible = cue.visible = false;
   if (charging && idle()) charge = Math.min(1, charge + .014);
   if (!B[0].in && idle()) {
+    applyCueVisual(myEquippedCue);
     if (aimMode && !hand) aim(aimYaw, charge * 180);
     else if (drag) {
       const dx = drag.sx - mouse.x, dz = drag.sz - mouse.z;
       aim(Math.atan2(dz, dx), Math.min(Math.hypot(dx, dz), 180));
     }
   } else if (!B[0].in && window.isRivalAiming && window.isRivalAiming()) {
-    // Si es el rival quien está apuntando en una partida online, mostrar su taco y mira en tiempo real
+    // Si es el rival quien está apuntando en una partida online, mostrar únicamente SU vara equipada en tiempo real
     const rData = window.getRivalAimData ? window.getRivalAimData() : null;
     if (rData) {
+      applyCueVisual(rData.cue || 'clasico');
       originalAim(rData.yaw, rData.pw * 180);
     }
   }
@@ -1716,16 +1790,99 @@ finish = function() {
 };
 window.originalFinish = originalFinish;
 
-/* Poblar selectores de vara y fondo */
-for (const [id, k] of Object.entries(CUES)) $('selCue').add(new Option('Vara: ' + k.name, id));
-for (const [id, k] of Object.entries(BACKGROUNDS)) $('selBg').add(new Option('Fondo: ' + k.name, id));
-$('selCue').onchange = e => applyCue(e.target.value);
-$('selBg').onchange = e => applyBackground(e.target.value);
+/* ======== TIENDA Y EQUIPAMIENTO PRE-PARTIDA (CON ORO DEL JUEGO) ======== */
+const POOL_SHOP_STORAGE_KEY = 'pool_shop_state_v1';
+let activeShopTab = 'cues'; // 'cues' | 'felts' | 'bgs'
+let shopFeedbackTimer = null;
 
-applyCue('clasico');
-applyBackground('universo');
+const poolShopState = {
+  coins: 0,
+  unlocked: {
+    cues: ['clasico'],
+    felts: ['0'],
+    bgs: ['universo']
+  },
+  equipped: {
+    cues: 'clasico',
+    felts: '0',
+    bgs: 'universo'
+  }
+};
+
+function mergePoolShopData(src) {
+  if (!src || typeof src !== 'object') return;
+  if (src.unlocked && typeof src.unlocked === 'object') {
+    if (Array.isArray(src.unlocked.cues)) {
+      poolShopState.unlocked.cues = Array.from(new Set(['clasico', ...src.unlocked.cues.filter(id => CUES[id])]));
+    }
+    if (Array.isArray(src.unlocked.felts)) {
+      poolShopState.unlocked.felts = Array.from(new Set(['0', ...src.unlocked.felts.map(String).filter(id => FELT_ITEMS[id])]));
+    }
+    if (Array.isArray(src.unlocked.bgs)) {
+      poolShopState.unlocked.bgs = Array.from(new Set(['universo', ...src.unlocked.bgs.filter(id => BACKGROUNDS[id])]));
+    }
+  }
+  if (src.equipped && typeof src.equipped === 'object') {
+    if (src.equipped.cues && CUES[src.equipped.cues] && poolShopState.unlocked.cues.includes(src.equipped.cues)) {
+      poolShopState.equipped.cues = src.equipped.cues;
+    }
+    const fId = String(src.equipped.felts ?? '0');
+    if (FELT_ITEMS[fId] && poolShopState.unlocked.felts.includes(fId)) {
+      poolShopState.equipped.felts = fId;
+    }
+    if (src.equipped.bgs && BACKGROUNDS[src.equipped.bgs] && poolShopState.unlocked.bgs.includes(src.equipped.bgs)) {
+      poolShopState.equipped.bgs = src.equipped.bgs;
+    }
+  }
+}
+
+function loadPoolShopState() {
+  const p = new URLSearchParams(window.location.search);
+  poolShopState.coins = Math.max(0, Number(p.get('coins')) || 0);
+
+  // 1. Cargar de localStorage
+  try {
+    const rawLocal = localStorage.getItem(POOL_SHOP_STORAGE_KEY);
+    if (rawLocal) {
+      mergePoolShopData(JSON.parse(rawLocal));
+    }
+  } catch (e) {}
+
+  // 2. Fusionar con poolShop enviado desde el perfil del usuario en Firestore (URL param)
+  try {
+    const rawParam = p.get('poolShop');
+    if (rawParam) {
+      mergePoolShopData(JSON.parse(rawParam));
+    }
+  } catch (e) {}
+
+  // Asegurar que lo equipado esté dentro de desbloqueados
+  if (!poolShopState.unlocked.cues.includes(poolShopState.equipped.cues)) poolShopState.equipped.cues = 'clasico';
+  if (!poolShopState.unlocked.felts.includes(poolShopState.equipped.felts)) poolShopState.equipped.felts = '0';
+  if (!poolShopState.unlocked.bgs.includes(poolShopState.equipped.bgs)) poolShopState.equipped.bgs = 'universo';
+
+  // Actualizar etiquetas informativas de equipamiento traído desde la Tienda del Lobby
+  const cueNameEl = $('loadoutCueName');
+  const feltNameEl = $('loadoutFeltName');
+  const bgNameEl = $('loadoutBgName');
+  if (cueNameEl && CUES[poolShopState.equipped.cues]) cueNameEl.textContent = CUES[poolShopState.equipped.cues].name;
+  if (feltNameEl && FELT_ITEMS[poolShopState.equipped.felts]) feltNameEl.textContent = FELT_ITEMS[poolShopState.equipped.felts].name;
+  if (bgNameEl && BACKGROUNDS[poolShopState.equipped.bgs]) bgNameEl.textContent = BACKGROUNDS[poolShopState.equipped.bgs].name;
+
+  const modalEl = $('modeModal');
+  if (modalEl && modalEl.hidden) {
+    applyCue(poolShopState.equipped.cues);
+    applyFelt(poolShopState.equipped.felts);
+    applyBackground(poolShopState.equipped.bgs);
+  } else {
+    myEquippedCue = CUES[poolShopState.equipped.cues] ? poolShopState.equipped.cues : 'clasico';
+    st.style.visibility = 'hidden';
+  }
+}
+
+loadPoolShopState();
+newGame();
 resize();
 if (window.initPoolModeSelector) window.initPoolModeSelector();
-newGame();
 frame();
 

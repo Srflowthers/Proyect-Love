@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ARCADE_ICONS_RAW, ARCADE_SCENES } from './gameIcons';
 import './arcadeCards.css';
 
@@ -146,6 +146,27 @@ export default function ArcadeProfileView({
   const bestScores = userData?.best || {};
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [showEloModal, setShowEloModal] = useState(false);
+  const sliderRef = useRef(null);
+
+  const scrollSlider = (dir) => {
+    if (!sliderRef.current) return;
+    const card = sliderRef.current.querySelector('.elo-slide-card');
+    const step = card ? card.clientWidth + 24 : 370;
+    sliderRef.current.scrollBy({ left: dir * step, behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    if (!showEloModal) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setShowEloModal(false);
+      if (e.key === 'ArrowRight') scrollSlider(1);
+      if (e.key === 'ArrowLeft') scrollSlider(-1);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showEloModal]);
+
   const [draftName, setDraftName] = useState(userData?.arcadeName || defaultTeamName);
   const [draftBannerKey, setDraftBannerKey] = useState(userData?.arcadeBannerKey || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -231,8 +252,260 @@ export default function ArcadeProfileView({
     };
   }, [jigsawTileSize]);
 
+  // Si se activó la vista épica de Elos, renderizar directamente como contenido bajo la barra superior fija aprovechando toda la pantalla
+  if (showEloModal) {
+    return (
+      <div className="relative z-10 w-full flex-1 flex flex-col justify-between px-2 sm:px-6 lg:px-10 py-1.5 select-none animate-in fade-in duration-300 min-h-[calc(100vh-70px)]">
+        {/* Fondo cósmico continuo sin cortes en negro que se funde con el universo */}
+        <div
+          className="fixed inset-0 pointer-events-none z-0"
+          style={{
+            background: `radial-gradient(ellipse 90% 70% at 50% 30%, color-mix(in srgb, ${rank.league.color} 24%, transparent) 0%, rgba(14, 8, 25, 0.88) 55%, #07050c 100%)`
+          }}
+        />
+
+        {/* 1. Título y Acción de Salida Limpia (Sin barra intermedia divisoria) */}
+        <div className="relative z-10 w-full flex items-center justify-between gap-3 px-1 sm:px-4 my-1">
+          <div className="text-left">
+            <span className="text-[10px] sm:text-xs font-mono uppercase tracking-widest text-pink-300 font-extrabold block">
+              Tu Elo Actual y los Próximos Escalones
+            </span>
+            <h2 className="text-sm sm:text-lg md:text-xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-white via-pink-100 to-amber-200">
+              Desliza horizontalmente para explorar el camino de ligas
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowEloModal(false)}
+            className="px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-bold text-gray-200 hover:text-white transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 flex-none shadow-md backdrop-blur-md"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12" />
+              <polyline points="12 19 5 12 12 5" />
+            </svg>
+            <span>Volver a mi Perfil</span>
+          </button>
+        </div>
+
+        {/* 2. Slider Horizontal Épico: Aprovecha ancho y alto en PC y Móvil */}
+        <div className="relative z-10 flex-1 w-full flex items-center justify-center my-1 min-h-0">
+          {/* Flecha Flotante Izquierda */}
+          <button
+            type="button"
+            onClick={() => scrollSlider(-1)}
+            className="hidden md:flex absolute left-2 z-30 w-11 h-11 rounded-full bg-black/85 hover:bg-pink-600/40 border border-white/20 hover:border-pink-400/60 items-center justify-center text-white backdrop-blur-md shadow-2xl transition-all cursor-pointer active:scale-95"
+            title="Ver liga anterior"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+
+          {/* Carrusel Horizontal Adaptable a Pantalla Completa */}
+          <div
+            ref={sliderRef}
+            className="w-full flex items-stretch overflow-x-auto snap-x snap-mandatory py-2 px-3 sm:px-8 lg:px-12 gap-4 sm:gap-6 md:gap-7 scrollbar-none"
+            style={{ scrollBehavior: 'smooth' }}
+          >
+            {/* TARJETA 1: TU ELO ACTUAL (Siempre al inicio a la izquierda) */}
+            <div
+              className="elo-slide-card w-[86vw] max-w-[340px] sm:w-[380px] md:w-[420px] lg:w-[455px] xl:w-[485px] min-h-[460px] sm:min-h-[500px] md:min-h-[530px] flex-none snap-center rounded-3xl p-5 sm:p-7 border flex flex-col justify-between relative overflow-hidden shadow-2xl transition-all my-1"
+              style={{
+                background: `radial-gradient(circle at 50% 25%, color-mix(in srgb, ${rank.league.color} 34%, #140d25), #090614 85%)`,
+                borderColor: `color-mix(in srgb, ${rank.league.color} 80%, rgba(255,255,255,0.25))`,
+                boxShadow: `0 12px 45px color-mix(in srgb, ${rank.league.color} 32%, rgba(0,0,0,0.85))`
+              }}
+            >
+              <div>
+                <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-3">
+                  <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-[10px] font-mono uppercase tracking-wider text-emerald-300 font-extrabold flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.4)]">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Tu Liga Actual
+                  </span>
+                  {rank.league.hasPips && (
+                    <span className="text-xs font-mono font-bold text-pink-300">
+                      División {rank.divisionName}
+                    </span>
+                  )}
+                </div>
+
+                <div className="my-5 flex flex-col items-center justify-center">
+                  <span
+                    className={`rk ${rank.league.hi ? 'hi' : ''}`}
+                    style={{ '--s': '145px', '--c': rank.league.color }}
+                  >
+                    <svg viewBox="0 0 120 120" role="img" aria-label={rank.fullName}>
+                      <use href={`#${rank.league.key}`} />
+                    </svg>
+                  </span>
+                </div>
+
+                <div className="text-center">
+                  <h3 className="text-2xl sm:text-3xl font-serif font-bold text-white tracking-wide">
+                    {rank.fullName}
+                  </h3>
+                  <p className="text-xs text-gray-300 mt-1 leading-relaxed">
+                    {rank.league.desc}
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-white/10 flex flex-col gap-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-gray-300 font-mono font-bold">
+                    {currentLp} LP Acumulados
+                  </span>
+                  <span className="text-pink-300 font-mono text-[11px] font-semibold">
+                    {rank.league.hasPips ? `${rank.lpInDivision} / 100 LP` : 'Rango Máximo'}
+                  </span>
+                </div>
+
+                <div className="w-full h-2.5 rounded-full bg-black/80 border border-white/15 overflow-hidden p-0.5">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-amber-400 shadow-[0_0_12px_rgba(236,72,153,0.9)]"
+                    style={{ width: `${rank.progressPercent}%` }}
+                  />
+                </div>
+
+                <div className="text-[11px] text-left mt-1">
+                  {rank.league.hasPips ? (
+                    <span className="text-gray-200">
+                      Te faltan <b className="text-pink-300 font-mono font-bold">+{rank.lpNeededNext} LP</b> para ascender a <b className="text-white">{rank.nextRankName}</b>
+                    </span>
+                  ) : (
+                    <span className="text-amber-300 font-semibold">
+                      Liga Dúo Maestro: Clasificas por puesto en el Top 60 del servidor.
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* TARJETAS SIGUIENTES: DESLIZAR A LA DERECHA */}
+            {LEAGUES.slice(rank.leagueIndex + 1).map((l, index) => {
+              const lpRemaining = Math.max(0, l.minLp - currentLp);
+              const stepNum = index + 1;
+
+              return (
+                <div
+                  key={l.id}
+                  className="elo-slide-card w-[86vw] max-w-[340px] sm:w-[380px] md:w-[420px] lg:w-[455px] xl:w-[485px] min-h-[460px] sm:min-h-[500px] md:min-h-[530px] flex-none snap-center rounded-3xl p-5 sm:p-7 border flex flex-col justify-between relative overflow-hidden shadow-2xl transition-all my-1 hover:border-white/40"
+                  style={{
+                    background: `radial-gradient(circle at 50% 20%, color-mix(in srgb, ${l.color} 24%, #120c22), #080512 85%)`,
+                    borderColor: `color-mix(in srgb, ${l.color} 45%, rgba(255,255,255,0.12))`,
+                    boxShadow: `0 12px 40px color-mix(in srgb, ${l.color} 22%, rgba(0,0,0,0.85))`
+                  }}
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-3">
+                      <span className="px-3 py-1 rounded-full bg-white/10 border border-white/20 text-[10px] font-mono uppercase tracking-wider text-gray-200 font-bold flex items-center gap-1.5">
+                        <span className="text-pink-400 font-extrabold">#{stepNum}</span>
+                        <span>Siguiente Escalón</span>
+                      </span>
+                      <span className="text-xs font-mono font-bold text-amber-300">
+                        {l.minLp} LP Mínimos
+                      </span>
+                    </div>
+
+                    <div className="my-5 flex flex-col items-center justify-center">
+                      <span
+                        className={`rk ${l.id >= 6 ? 'hi' : ''}`}
+                        style={{ '--s': '145px', '--c': l.color }}
+                      >
+                        <svg viewBox="0 0 120 120" role="img" aria-label={l.name}>
+                          <use href={`#${l.key}`} />
+                        </svg>
+                      </span>
+                    </div>
+
+                    <div className="text-center">
+                      <h3 className="text-2xl sm:text-3xl font-serif font-bold text-white tracking-wide">
+                        {l.name}
+                      </h3>
+                      <p className="text-xs text-gray-300 mt-1 leading-relaxed">
+                        {l.desc}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-white/10 flex flex-col gap-2.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-400 font-mono uppercase tracking-wider text-[10px]">
+                        Puntos restantes
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-mono font-bold text-xs">
+                        Faltan +{lpRemaining} LP
+                      </span>
+                    </div>
+
+                    <div className="p-3 rounded-2xl bg-black/60 border border-white/10 flex items-center justify-between text-xs">
+                      <div className="text-left">
+                        <span className="text-[10px] font-mono uppercase text-gray-400 block">Estructura</span>
+                        <b className="text-gray-200 text-xs">
+                          {l.hasPips ? '4 Divisiones (IV a I)' : 'Rango Maestro Servidor'}
+                        </b>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] font-mono uppercase text-gray-400 block">Meta</span>
+                        <b className="text-pink-300 font-mono text-xs">{l.minLp} LP</b>
+                      </div>
+                    </div>
+
+                    {l.id >= 8 && (
+                      <div className="text-[10px] font-mono text-amber-300/90 bg-amber-500/10 border border-amber-400/20 p-2 rounded-xl text-center">
+                        {l.id === 8 ? 'Requiere estar en el Top 60 del servidor' : 'Requiere estar en el Top 10 del servidor'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Flecha Flotante Derecha */}
+          <button
+            type="button"
+            onClick={() => scrollSlider(1)}
+            className="hidden md:flex absolute right-2 z-30 w-11 h-11 rounded-full bg-black/85 hover:bg-pink-600/40 border border-white/20 hover:border-pink-400/60 items-center justify-center text-white backdrop-blur-md shadow-2xl transition-all cursor-pointer active:scale-95"
+            title="Ver siguiente liga"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        </div>
+
+        {/* 3. Barra Inferior con Controles y Guía */}
+        <div className="relative z-10 w-full flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-white/10 text-xs text-gray-400">
+          <div className="flex items-center gap-2 text-center sm:text-left">
+            <span className="w-2 h-2 rounded-full bg-pink-400 animate-pulse flex-none" />
+            <span>Gana partidas cooperativas y duelos en el Arcade para sumar LP y ascender.</span>
+          </div>
+
+          <div className="flex items-center gap-2 flex-none">
+            <button
+              type="button"
+              onClick={() => scrollSlider(-1)}
+              className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white font-bold transition-all cursor-pointer text-xs active:scale-95"
+            >
+              ← Anterior
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollSlider(1)}
+              className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white font-bold transition-all cursor-pointer text-xs active:scale-95"
+            >
+              Siguiente →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="relative z-10 w-full max-w-5xl mx-auto px-4 sm:px-6 py-4 flex flex-col gap-6 animate-in fade-in duration-300">
+    <div className="relative z-10 w-full max-w-6xl mx-auto px-3 sm:px-6 py-4 flex flex-col gap-6 animate-in fade-in duration-300">
       {/* 1. HERO CARD DEL RANGO ACTUAL: Diseño dividido en 2 zonas limpias (Izquierda: Rango y Barra / Derecha: Vitrina despejada del Rompecabezas) */}
       <div 
         className="rounded-3xl relative overflow-hidden border shadow-2xl grid grid-cols-1 lg:grid-cols-12"
@@ -301,9 +574,14 @@ export default function ArcadeProfileView({
             </div>
           </div>
 
-          {/* Fila Central: Emblema Oficial + Nombre de Liga y Descripción */}
+          {/* Fila Central: Emblema Oficial (Clickeable directamente para abrir la vista épica de Elos) + Nombre de Liga y Descripción */}
           <div className="flex flex-col sm:flex-row items-center sm:items-center gap-5 text-center sm:text-left">
-            <div className="flex flex-col items-center flex-none">
+            <button
+              type="button"
+              onClick={() => setShowEloModal(true)}
+              title="Haz clic en tu emblema para ver tu Elo y las siguientes ligas"
+              className="flex flex-col items-center flex-none group cursor-pointer hover:scale-105 active:scale-95 transition-transform text-center focus:outline-none"
+            >
               <span 
                 className={`rk ${rank.league.hi ? 'hi' : ''}`}
                 style={{ '--s': '118px', '--c': rank.league.color }}
@@ -312,7 +590,7 @@ export default function ArcadeProfileView({
                   <use href={`#${rank.league.key}`} />
                 </svg>
               </span>
-            </div>
+            </button>
 
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl sm:text-4xl font-serif font-bold text-white tracking-wide leading-tight">
@@ -497,16 +775,25 @@ export default function ArcadeProfileView({
             </div>
           </div>
 
-          {/* 2. Selector de Imagen de Fondo (Exclusivo Rompecabezas completados al 100%) */}
-          <div className="flex flex-col gap-3 text-left">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <label className="text-xs font-mono uppercase tracking-wider text-emerald-300 font-bold block">
-                  Imagen de Fondo del Rango (Solo Rompecabezas Completados al 100%)
-                </label>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  Solo puedes seleccionar fotografías que hayan completado al 100% en el modo Rompecabezas.
-                </p>
+          {/* 2. Historial de Retratos Armados en Rompecabezas (Solo visible al apretar Editar Perfil) */}
+          <div className="rounded-2xl p-4 sm:p-5 bg-black/45 border border-emerald-500/25 flex flex-col gap-3.5 text-left">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-emerald-300 flex-none">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="text-sm sm:text-base font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-200 to-amber-200">
+                    Historial de Retratos Armados en Rompecabezas
+                  </h4>
+                  <p className="text-xs text-gray-400">
+                    Selecciona cualquiera de tus retratos completados al 100% para mostrarlo en la barra de tu liga.
+                  </p>
+                </div>
               </div>
               {onGoToPuzzle && (
                 <button
@@ -528,7 +815,7 @@ export default function ArcadeProfileView({
                 {/* Opción para dejar sin foto de fondo */}
                 <div
                   onClick={() => setDraftBannerKey('none')}
-                  className={`rounded-2xl p-3 border transition-all cursor-pointer flex flex-col items-center justify-center text-center min-h-[130px] bg-black/50 ${
+                  className={`rounded-2xl p-3 border transition-all cursor-pointer flex flex-col items-center justify-center text-center min-h-[150px] bg-black/50 ${
                     draftBannerKey === 'none'
                       ? 'border-pink-400 ring-2 ring-pink-400/50 shadow-[0_0_20px_rgba(236,72,153,0.35)]'
                       : 'border-white/10 hover:border-white/30'
@@ -542,12 +829,12 @@ export default function ArcadeProfileView({
                   <span className="text-[10px] text-gray-400 mt-0.5">Solo color de liga</span>
                   {draftBannerKey === 'none' && (
                     <span className="mt-2 px-2 py-0.5 rounded-full bg-pink-500/30 border border-pink-400/50 text-[9px] font-mono text-pink-200 font-bold">
-                      Activo
+                      Seleccionado
                     </span>
                   )}
                 </div>
 
-                {/* Retratos 100% completados en el Rompecabezas */}
+                {/* Retratos 100% completados en el Rompecabezas con su historial de dificultades */}
                 {availablePortraits.map((item, idx) => {
                   const maxP = item.maxPieces || Math.max(...(item.levels || [30]));
                   const maxLabel = maxP >= 500 ? 'Imposible' : maxP >= 240 ? 'Difícil' : maxP >= 120 ? 'Media' : maxP >= 60 ? 'Fácil' : 'Muy fácil';
@@ -558,7 +845,7 @@ export default function ArcadeProfileView({
                     <div
                       key={item.key || idx}
                       onClick={() => setDraftBannerKey(item.key)}
-                      className={`group relative rounded-2xl overflow-hidden border transition-all cursor-pointer flex flex-col bg-[#120d1d] ${
+                      className={`group relative rounded-2xl overflow-hidden border transition-all cursor-pointer flex flex-col bg-[#120d1d] shadow-md ${
                         isSelected
                           ? 'border-emerald-400 ring-2 ring-emerald-400/60 shadow-[0_0_25px_rgba(16,185,129,0.4)] scale-[1.01]'
                           : 'border-white/15 hover:border-emerald-400/60'
@@ -586,7 +873,7 @@ export default function ArcadeProfileView({
                           </div>
                         )}
                         <span className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-md bg-black/80 border border-emerald-400/50 text-[9px] font-mono font-bold text-emerald-300">
-                          {maxP} piezas
+                          Máx: {maxP}p
                         </span>
                         {isSelected && (
                           <span className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-md bg-emerald-500 text-white text-[9px] font-mono font-bold shadow flex items-center gap-1">
@@ -598,9 +885,27 @@ export default function ArcadeProfileView({
                         )}
                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/75 to-transparent p-2 pt-4">
                           <span className="text-[10px] text-gray-200 block leading-tight">
-                            100% Armado · <b className="text-emerald-300">{maxLabel}</b>
+                            Llegó hasta: <b className="text-emerald-300">{maxLabel} ({maxP}p)</b>
                           </span>
                         </div>
+                      </div>
+
+                      <div className="p-2 bg-[#161024] border-t border-white/10 flex flex-wrap gap-1 justify-center">
+                        {[30, 60, 120, 240, 500].map(lv => {
+                          const done = (item.levels || []).includes(lv);
+                          return (
+                            <span
+                              key={lv}
+                              className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
+                                done
+                                  ? 'bg-emerald-500/80 text-white font-bold'
+                                  : 'bg-white/5 text-gray-500'
+                              }`}
+                            >
+                              {lv}p{done ? ' ✓' : ''}
+                            </span>
+                          );
+                        })}
                       </div>
                     </div>
                   );
@@ -674,17 +979,12 @@ export default function ArcadeProfileView({
             <span className="text-[10px] font-bold uppercase text-pink-300 tracking-wider drop-shadow">
               Gominola
             </span>
-            {userData?.round > 0 && (
-              <span className="text-[9px] font-mono text-pink-200 font-bold bg-pink-500/30 border border-pink-400/40 px-1.5 py-0.5 rounded-full backdrop-blur-sm">
-                Ronda {userData.round}
-              </span>
-            )}
           </div>
           <b className="relative z-10 text-xl sm:text-2xl font-mono font-extrabold text-white mt-1 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
             {(bestScores.gomi || 0).toLocaleString()}
           </b>
           <span className="relative z-10 text-[10px] text-gray-200/90 font-medium drop-shadow">
-            {userData?.round > 0 ? `Puntaje máx · Ronda ${userData.round}` : 'Puntaje máx'}
+            Puntaje total
           </span>
         </div>
 
@@ -781,321 +1081,6 @@ export default function ArcadeProfileView({
                       ? 'Máx: Muy fácil (30p)'
                       : 'Máx piezas armadas'}
           </span>
-        </div>
-      </div>
-
-      {/* 2.5 COLECCIÓN DE RETRATOS DE ROMPECABEZAS COMPLETADOS */}
-      {availablePortraits.length > 0 && (
-        <div className="rounded-3xl p-5 sm:p-6 bg-black/50 border border-emerald-500/25 flex flex-col gap-3 shadow-lg">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2.5">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-emerald-300 flex-none">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <polyline points="21 15 16 10 5 21" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-base sm:text-lg font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-200 to-amber-200">
-                  Historial de Retratos Armados en Rompecabezas
-                </h3>
-                <p className="text-xs text-gray-400">
-                  Selecciona cualquiera de tus retratos completados al 100% para mostrarlo en la barra de tu liga.
-                </p>
-              </div>
-            </div>
-            <span className="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-xs font-mono text-emerald-300 font-bold">
-              {availablePortraits.length} {availablePortraits.length === 1 ? 'Retrato' : 'Retratos'}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {availablePortraits.map((item, idx) => {
-              const maxP = item.maxPieces || Math.max(...(item.levels || [30]));
-              const maxLabel = maxP >= 500 ? 'Imposible' : maxP >= 240 ? 'Difícil' : maxP >= 120 ? 'Media' : maxP >= 60 ? 'Fácil' : 'Muy fácil';
-              const imgSrc = item.displaySrc || item.liveUrl || item.portrait || item.url;
-              const isBannerActive = activePortrait && activePortrait.key === item.key;
-
-              return (
-                <div
-                  key={item.key || idx}
-                  className={`rounded-2xl overflow-hidden border bg-[#120d1d] flex flex-col shadow-md transition-all ${
-                    isBannerActive
-                      ? 'border-emerald-400 ring-2 ring-emerald-400/50 shadow-[0_0_20px_rgba(16,185,129,0.3)]'
-                      : 'border-white/10 hover:border-emerald-400/50'
-                  }`}
-                >
-                  <div className="relative aspect-[4/3] w-full bg-black/60 overflow-hidden">
-                    {imgSrc ? (
-                      <img
-                        src={imgSrc}
-                        alt="Retrato completado"
-                        onError={(e) => {
-                          if (item.portrait && e.currentTarget.src !== item.portrait) {
-                            e.currentTarget.src = item.portrait;
-                          } else if (item.fallbackUrl && e.currentTarget.src !== item.fallbackUrl) {
-                            e.currentTarget.src = item.fallbackUrl;
-                          }
-                        }}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-500">
-                        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                          <rect x="3" y="3" width="18" height="18" rx="2" />
-                        </svg>
-                      </div>
-                    )}
-                    <span className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-md bg-black/80 border border-emerald-400/50 text-[9px] font-mono font-bold text-emerald-300">
-                      Máx: {maxP}p
-                    </span>
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent p-2 pt-4">
-                      <span className="text-[10px] text-gray-200 block leading-tight">
-                        Llegó hasta: <b className="text-emerald-300">{maxLabel} ({maxP}p)</b>
-                      </span>
-                    </div>
-                  </div>
-                  <div className="p-2 bg-[#161024] border-t border-white/10 flex flex-col gap-1.5">
-                    <div className="flex flex-wrap gap-1 justify-center">
-                      {[30, 60, 120, 240, 500].map(lv => {
-                        const done = (item.levels || []).includes(lv);
-                        return (
-                          <span
-                            key={lv}
-                            className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
-                              done
-                                ? 'bg-emerald-500/80 text-white font-bold'
-                                : 'bg-white/5 text-gray-500'
-                            }`}
-                          >
-                            {lv}p{done ? ' ✓' : ''}
-                          </span>
-                        );
-                      })}
-                    </div>
-                    {onUpdateArcadeProfile && (
-                      <button
-                        type="button"
-                        disabled={isSavingProfile}
-                        onClick={() => handleSaveProfile(isBannerActive ? 'none' : item.key)}
-                        className={`w-full py-1.5 px-2 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer border flex items-center justify-center gap-1.5 ${
-                          isBannerActive
-                            ? 'bg-emerald-500/25 border-emerald-400/60 text-emerald-200 hover:bg-rose-500/25 hover:border-rose-400/50 hover:text-rose-200'
-                            : 'bg-white/5 hover:bg-emerald-500/25 border-white/10 hover:border-emerald-400/50 text-gray-200 hover:text-white'
-                        }`}
-                      >
-                        {isBannerActive ? (
-                          <>
-                            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                            <span>En uso de fondo (Quitar)</span>
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                              <circle cx="8.5" cy="8.5" r="1.5" />
-                              <polyline points="21 15 16 10 5 21" />
-                            </svg>
-                            <span>Usar de fondo en Rango</span>
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* 3. SECCIÓN 6 DE LA DOCUMENTACIÓN: "6. Ligas y puntos necesarios" COMPLETA */}
-      <div className="rounded-3xl p-6 sm:p-8 bg-black/60 border border-white/10 flex flex-col gap-6 shadow-xl">
-        <div className="border-b border-white/10 pb-3">
-          <h3 className="text-xl sm:text-2xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-300 via-rose-200 to-amber-200">
-            6. Ligas y puntos necesarios (Todos los Elos)
-          </h3>
-          <p className="text-xs sm:text-sm text-gray-300 mt-1">
-            Cada liga tiene 4 divisiones de 100 LP (de IV, la más baja, a I, la más alta). Cada liga completa son 400 LP. Los LP se ganan completando rondas y partidas en los minijuegos cooperativos y en línea.
-          </p>
-        </div>
-
-        {/* Galería de las 10 Insignias Oficiales de Liga (SVG con halo y animación) */}
-        <div>
-          <h4 className="text-xs font-mono uppercase tracking-wider text-pink-400 font-bold mb-3">
-            Insignia de cada liga (10 Elos Oficiales)
-          </h4>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3.5">
-            {LEAGUES.map((l) => {
-              const isCurrent = l.id === rank.leagueIndex;
-              const isUnlocked = currentLp >= l.minLp;
-              const lpLeft = Math.max(0, l.minLp - currentLp);
-
-              return (
-                <div
-                  key={l.id}
-                  className={`p-3.5 rounded-2xl text-center border flex flex-col items-center justify-between transition-all ${
-                    isCurrent 
-                      ? 'bg-gradient-to-b from-pink-950/70 to-black border-pink-500 shadow-[0_0_25px_rgba(236,72,153,0.5)] scale-105 z-10'
-                      : isUnlocked 
-                        ? 'bg-white/[0.05] border-white/15 hover:border-pink-500/50'
-                        : 'bg-black/50 border-white/5 opacity-40 hover:opacity-75'
-                  }`}
-                >
-                  {/* Insignia SVG */}
-                  <span 
-                    className={`rk ${l.id >= 6 ? 'hi' : ''} ${!isUnlocked ? 'lk' : ''}`}
-                    style={{ '--s': '72px', '--c': l.color }}
-                  >
-                    <svg viewBox="0 0 120 120" role="img" aria-label={l.name}>
-                      <use href={`#${l.key}`} />
-                    </svg>
-                  </span>
-
-                  <div className="mt-2 w-full">
-                    <b className={`text-xs block font-serif truncate ${isCurrent ? 'text-pink-300 font-bold' : 'text-white'}`}>
-                      {l.name}
-                    </b>
-                    <small className="text-[10px] font-mono text-gray-400 block mt-0.5">
-                      {l.minLp} LP
-                    </small>
-                    <small className="text-[9px] text-gray-500 block line-clamp-2 mt-1 leading-tight">
-                      {l.desc}
-                    </small>
-                  </div>
-
-                  {/* Estado de bloqueo / LP que faltan para este Elo */}
-                  <div className="mt-2 w-full pt-2 border-t border-white/10">
-                    {isCurrent ? (
-                      <span className="text-[10px] font-bold text-pink-400 bg-pink-500/20 px-2 py-0.5 rounded-full block">
-                        Tu Liga Actual
-                      </span>
-                    ) : isUnlocked ? (
-                      <span className="text-[10px] text-emerald-400 font-mono block">
-                        ✓ Desbloqueada
-                      </span>
-                    ) : (
-                      <span className="text-[9px] text-amber-300 font-mono block">
-                        Faltan {lpLeft} LP
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Tabla Exacta de la Documentación: LP mínimos para entrar a cada división */}
-        <div className="mt-4">
-          <h4 className="text-xs font-mono uppercase tracking-wider text-pink-400 font-bold mb-3">
-            LP mínimos para entrar a cada división
-          </h4>
-          <div className="overflow-x-auto rounded-2xl border border-white/10 bg-black/40">
-            <table className="w-full text-left text-xs text-gray-200">
-              <thead className="bg-white/5 text-[11px] uppercase tracking-wider text-gray-400 border-b border-white/10 font-mono">
-                <tr>
-                  <th className="py-3 px-4">Liga</th>
-                  <th className="py-3 px-3">División IV</th>
-                  <th className="py-3 px-3">III</th>
-                  <th className="py-3 px-3">II</th>
-                  <th className="py-3 px-3">I</th>
-                  <th className="py-3 px-4">Siguiente liga</th>
-                  <th className="py-3 px-4">Victorias netas*</th>
-                  <th className="py-3 px-4">Estado</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {LEAGUES.slice(0, 8).map((l) => {
-                  const isCurrent = l.id === rank.leagueIndex;
-                  const isUnlocked = currentLp >= l.minLp;
-                  const lpLeft = Math.max(0, l.minLp - currentLp);
-
-                  return (
-                    <tr 
-                      key={l.id}
-                      className={isCurrent ? 'bg-pink-500/15 font-semibold text-white' : 'hover:bg-white/[0.02]'}
-                    >
-                      <td className="py-2.5 px-4 flex items-center gap-2">
-                        <span 
-                          className="rk"
-                          style={{ '--s': '26px', '--c': l.color }}
-                        >
-                          <svg viewBox="0 0 120 120">
-                            <use href={`#${l.key}`} />
-                          </svg>
-                        </span>
-                        <span className="font-serif">{l.name}</span>
-                      </td>
-
-                      {l.hasPips ? (
-                        <>
-                          <td className="py-2.5 px-3 font-mono text-gray-300">{l.divLps[0]}</td>
-                          <td className="py-2.5 px-3 font-mono text-gray-300">{l.divLps[1]}</td>
-                          <td className="py-2.5 px-3 font-mono text-gray-300">{l.divLps[2]}</td>
-                          <td className="py-2.5 px-3 font-mono text-gray-300">{l.divLps[3]}</td>
-                        </>
-                      ) : (
-                        <td colSpan={4} className="py-2.5 px-3 font-mono text-pink-300 text-center">
-                          {l.specialReq}
-                        </td>
-                      )}
-
-                      <td className="py-2.5 px-4 font-mono text-gray-300">
-                        {l.nextName} desde {l.nextLp}
-                      </td>
-                      <td className="py-2.5 px-4 font-mono text-gray-400">
-                        {l.winsNeeded}
-                      </td>
-                      <td className="py-2.5 px-4 font-mono">
-                        {isCurrent ? (
-                          <span className="text-pink-400 font-bold">● Estás aquí</span>
-                        ) : isUnlocked ? (
-                          <span className="text-emerald-400">Superada</span>
-                        ) : (
-                          <span className="text-amber-300">Faltan {lpLeft} LP</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-[11px] text-gray-400 mt-2">
-            * Victorias netas = victorias menos derrotas contra rivales de tu mismo nivel, a unos 16 LP por partida.
-          </p>
-        </div>
-
-        {/* Ligas Superiores por Puesto (Top 60 y Top 10) */}
-        <div className="mt-3 p-4 rounded-2xl bg-gradient-to-r from-purple-950/40 via-pink-950/30 to-black border border-pink-500/20">
-          <h4 className="text-xs font-mono uppercase tracking-wider text-pink-400 font-bold mb-2">
-            Las dos ligas de arriba dependen del puesto en el servidor
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-black/40 border border-white/5">
-              <span className="rk hi" style={{ '--s': '44px', '--c': '#ee2a45' }}>
-                <svg viewBox="0 0 120 120"><use href="#rk8" /></svg>
-              </span>
-              <div>
-                <b className="text-white block font-serif">Amor Verdadero</b>
-                <span className="text-gray-300">Tener 2.800 LP o más y estar entre los <b>60 mejores</b> del servidor</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-black/40 border border-white/5">
-              <span className="rk hi" style={{ '--s': '44px', '--c': '#ffd24a' }}>
-                <svg viewBox="0 0 120 120"><use href="#rk9" /></svg>
-              </span>
-              <div>
-                <b className="text-amber-200 block font-serif">Leyendas del Amor</b>
-                <span className="text-gray-300">Tener 2.800 LP o más y estar entre los <b>10 mejores</b> del servidor</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

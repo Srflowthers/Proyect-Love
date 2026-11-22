@@ -627,13 +627,13 @@ function dSushi(c, p, deep) {
 </script>
 <script>
 const OBJ = [
-  { n:'Algodon', t:'Algodón de azúcar' },
-  { n:'AnilloBoda', t:'Anillo de boda' },
-  { n:'AnilloCompromiso', t:'Anillo de compromiso' },
-  { n:'Carta', t:'Carta de amor' },
-  { n:'Gusano', t:'Gusano ácido' },
-  { n:'Helado', t:'Helado de cono' },
-  { n:'Sushi', t:'Sushi frito' }
+  { n:'Algodon', t:'Algodón de azúcar', f:'obj_algodon.html' },
+  { n:'AnilloBoda', t:'Anillo de boda', f:'obj_anillo_boda.html' },
+  { n:'AnilloCompromiso', t:'Anillo de compromiso', f:'obj_anillo_compromiso.html' },
+  { n:'Carta', t:'Carta de amor', f:'obj_carta.html' },
+  { n:'Gusano', t:'Gusano ácido', f:'obj_gusano.html' },
+  { n:'Helado', t:'Helado de cono', f:'obj_helado.html' },
+  { n:'Sushi', t:'Sushi frito', f:'obj_sushi.html' }
 ];
 function draw(cv, n, size, deep) {
   const dpr = window.devicePixelRatio || 1;
@@ -647,7 +647,11 @@ function draw(cv, n, size, deep) {
 const grid = document.getElementById('grid'), cards = [];
 OBJ.forEach(o => {
   const el = document.createElement('div'); el.className = 'card';
-  el.innerHTML = '<h2>' + o.t + '</h2><div class="tile"><canvas data-s="200"></canvas></div>' +
+  el.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+    '<h2 style="margin:0;">' + o.t + '</h2>' +
+    '<a href="' + o.f + '" style="font-size:0.75rem;color:var(--accent);text-decoration:none;font-weight:bold;padding:3px 8px;border-radius:6px;background:rgba(233,88,143,0.12);border:1px solid rgba(233,88,143,0.3);">🎨 Archivo individual →</a>' +
+    '</div>' +
+    '<div class="tile"><canvas data-s="200"></canvas></div>' +
     '<div class="small"><canvas data-s="96"></canvas><canvas data-s="64"></canvas><canvas data-s="40"></canvas></div>' +
     '<code>p' + o.n + '(c) · d' + o.n + '(c, p, deep)</code>';
   grid.appendChild(el); cards.push([o, el]);

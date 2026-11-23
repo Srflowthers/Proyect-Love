@@ -352,79 +352,57 @@ export default function LettersTab({ formData, setFormData, user, setGlobalUserD
       </div>
 
       <form onSubmit={(e) => e.preventDefault()}>
-        {/* Barra de Navegación y Paginación Ergonómica */}
-        <div className="bg-gray-950/90 border border-purple-500/20 rounded-2xl p-3 sm:p-4 mb-6 shadow-xl backdrop-blur-md">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            {/* Pestañas de Hojas */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-              {localPages.map((_, idx) => {
-                const isActive = safePageIndex === idx;
-                const isMod = isPageIndexModified(idx);
-                const titleSnippet = localTitles[idx] ? ` · ${localTitles[idx].slice(0, 10)}${localTitles[idx].length > 10 ? '…' : ''}` : '';
+        {/* Barra de Navegación Limpia y Elegante: Anterior / Contador / Siguiente */}
+        <div className="bg-gray-950/80 border border-purple-500/25 rounded-2xl p-3 sm:p-4 mb-6 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3">
+          {/* Controles de Navegación de Hoja */}
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-start">
+            <button
+              type="button"
+              onClick={() => setActivePageIndex(p => Math.max(0, p - 1))}
+              disabled={safePageIndex === 0}
+              className="px-4 py-2 rounded-xl bg-gray-900 border border-gray-700 hover:border-purple-500 text-gray-200 hover:text-white hover:bg-gray-850 disabled:opacity-30 disabled:border-gray-800 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 text-xs font-bold shadow-sm"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
+              </svg>
+              <span>Anterior</span>
+            </button>
 
-                return (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setActivePageIndex(idx)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap border ${
-                      isActive
-                        ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 text-white border-purple-400 shadow-md shadow-purple-600/40 scale-[1.02]'
-                        : 'bg-gray-900/90 text-gray-400 hover:text-white hover:bg-gray-850 border-gray-800 hover:border-gray-700'
-                    }`}
-                  >
-                    <span>Hoja {idx + 1}</span>
-                    {titleSnippet && (
-                      <span className={`text-[10px] font-normal ${isActive ? 'text-purple-100' : 'text-gray-500'}`}>
-                        {titleSnippet}
-                      </span>
-                    )}
-                    {isMod && (
-                      <span 
-                        className="w-2 h-2 rounded-full bg-pink-400 animate-pulse shadow-[0_0_6px_rgba(244,114,182,0.8)]"
-                        title="Esta hoja tiene modificaciones sin guardar"
-                      />
-                    )}
-                  </button>
-                );
-              })}
-
-              {/* Botón rápido + para añadir hoja directamente en la barra */}
-              <button
-                type="button"
-                onClick={handleAddPage}
-                className="w-8 h-8 rounded-xl bg-purple-950/50 hover:bg-purple-900 border border-purple-500/30 hover:border-purple-400 text-purple-300 hover:text-white flex items-center justify-center transition-all flex-shrink-0 text-base font-bold shadow-sm"
-                title="Añadir nueva hoja a la carta"
-              >
-                +
-              </button>
+            {/* Contador Central: Hoja X de Y */}
+            <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gray-900/90 border border-purple-500/30 rounded-xl text-xs font-bold shadow-inner">
+              <span className="text-gray-400">Hoja</span>
+              <span className="text-purple-400 font-mono text-sm">{safePageIndex + 1}</span>
+              <span className="text-gray-500">de</span>
+              <span className="text-gray-300 font-mono text-sm">{localPages.length}</span>
+              {isPageIndexModified(safePageIndex) && (
+                <span 
+                  className="w-2 h-2 rounded-full bg-pink-400 animate-pulse ml-1 shadow-[0_0_6px_rgba(244,114,182,0.8)]"
+                  title="Esta hoja tiene modificaciones sin guardar"
+                />
+              )}
             </div>
 
-            {/* Controles Anterior / Siguiente */}
-            <div className="flex items-center justify-between sm:justify-end gap-2 text-xs pt-1 sm:pt-0 border-t sm:border-t-0 border-gray-800/60">
-              <button
-                type="button"
-                onClick={() => setActivePageIndex(p => Math.max(0, p - 1))}
-                disabled={safePageIndex === 0}
-                className="px-3 py-1.5 rounded-xl bg-gray-900 border border-gray-800 text-gray-300 hover:text-white hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 font-semibold"
-              >
-                ← Anterior
-              </button>
-
-              <span className="font-semibold text-gray-300 px-1 text-center min-w-[85px]">
-                Hoja <strong className="text-purple-400">{safePageIndex + 1}</strong> de {localPages.length}
-              </span>
-
-              <button
-                type="button"
-                onClick={() => setActivePageIndex(p => Math.min(localPages.length - 1, p + 1))}
-                disabled={safePageIndex === localPages.length - 1}
-                className="px-3 py-1.5 rounded-xl bg-gray-900 border border-gray-800 text-gray-300 hover:text-white hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 font-semibold"
-              >
-                Siguiente →
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setActivePageIndex(p => Math.min(localPages.length - 1, p + 1))}
+              disabled={safePageIndex === localPages.length - 1}
+              className="px-4 py-2 rounded-xl bg-gray-900 border border-gray-700 hover:border-purple-500 text-gray-200 hover:text-white hover:bg-gray-850 disabled:opacity-30 disabled:border-gray-800 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 text-xs font-bold shadow-sm"
+            >
+              <span>Siguiente</span>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
+
+          {/* Botón para Agregar Nueva Hoja */}
+          <button 
+            type="button" 
+            onClick={handleAddPage} 
+            className="w-full sm:w-auto px-4 py-2 border border-dashed border-purple-500/40 hover:border-purple-400 bg-purple-950/20 hover:bg-purple-900/40 text-purple-300 hover:text-white rounded-xl transition-all font-semibold text-xs flex items-center justify-center gap-2 shadow-sm"
+          >
+            <span className="text-sm font-bold">+</span> Agregar Nueva Hoja
+          </button>
         </div>
 
         {/* Hoja Activa Renderizada Única (Ultra optimizado: 1 solo canvas en DOM) */}

@@ -8,11 +8,18 @@ import {
 } from '@/services/coupleService';
 
 // Sección de Vinculación de Pareja (Colapsable y estilizada con iconos profesionales)
-export default function CoupleSection({ currentUser, userPlan, onOpenPricing, partnerName }) {
+export default function CoupleSection({ currentUser, userPlan, onOpenPricing, partnerName, ownerName }) {
   const [coupleData, setCoupleData] = useState(null);
   const [pendingInvite, setPendingInvite] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Nombre resuelto para la pareja vinculada:
+  // Si soy el titular, el nombre de mi pareja es partnerName (Nombre de tu Pareja).
+  // Si soy el invitado, el nombre con quien estoy vinculado es ownerName o partnerName.
+  const partnerLabel = coupleData?.isOwner
+    ? (partnerName?.trim() || coupleData?.partnerDisplayName || 'Tu Pareja')
+    : (ownerName?.trim() || partnerName?.trim() || coupleData?.partnerDisplayName || 'Tu Pareja');
 
   // Formulario de invitación (solo pide correo, el nombre viene de formData.user2Name)
   const [partnerEmail, setPartnerEmail] = useState('');
@@ -166,13 +173,13 @@ export default function CoupleSection({ currentUser, userPlan, onOpenPricing, pa
               <span>Vinculación de Pareja</span>
               {coupleData && (
                 <span className="hidden sm:inline-block text-[11px] font-medium text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                  {coupleData.partnerDisplayName || 'Conectado'}
+                  {partnerLabel}
                 </span>
               )}
             </h3>
             <p className="text-xs text-gray-400">
               {coupleData
-                ? `Vínculo activo con ${coupleData.partnerDisplayName || 'tu pareja'}`
+                ? `Vínculo activo con ${partnerLabel}`
                 : 'Comparte tu universo y recuerdos exclusivos con tu pareja'}
             </p>
           </div>
@@ -209,12 +216,12 @@ export default function CoupleSection({ currentUser, userPlan, onOpenPricing, pa
             <div>
               <p className="text-sm font-semibold text-white">
                 {coupleData.isOwner
-                  ? `Pareja vinculada: ${coupleData.partnerDisplayName || 'Tu Pareja'}`
-                  : `Vinculado/a al universo de: ${coupleData.partnerDisplayName || 'Tu Pareja'}`}
+                  ? `Pareja vinculada: ${partnerLabel}`
+                  : `Vinculado/a con: ${partnerLabel}`}
               </p>
               <p className="text-xs text-gray-400 mt-1">
                 {coupleData.partnerEmail ? `${coupleData.partnerEmail} • ` : ''}
-                {coupleData.isOwner ? 'Titular del universo' : 'Compartiendo fotos, cartas y recuerdos'} • Conectados desde{' '}
+                {!coupleData.isOwner ? 'Titular del universo' : 'Cuenta vinculada'} • Conectados desde{' '}
                 {new Date(coupleData.createdAt).toLocaleDateString()}
               </p>
             </div>
@@ -231,7 +238,7 @@ export default function CoupleSection({ currentUser, userPlan, onOpenPricing, pa
           {showUnlinkModal && (
             <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
               <div className="bg-gray-900 border border-gray-700 rounded-2xl max-w-md w-full p-6 space-y-4">
-                <h4 className="text-lg font-bold text-white">¿Desvincular pareja?</h4>
+                <h4 className="text-lg font-bold text-white">¿Desvincular a {partnerLabel}?</h4>
                 <p className="text-sm text-gray-300">
                   Esta acción finalizará el vínculo compartido. <strong>Ninguna foto ni dato será borrado</strong> (P8). Ambas partes conservan sus cuentas.
                 </p>

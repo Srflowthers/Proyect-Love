@@ -120,6 +120,7 @@ export default function ProfileTab({
             userPlan={userPlan} 
             onOpenPricing={onOpenPricing} 
             partnerName={formData.user2Name}
+            ownerName={formData.user1Name}
           />
 
           {/* Sección de Seres Cercanos (Hijos, Familia y Amigos) */}

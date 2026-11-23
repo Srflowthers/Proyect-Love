@@ -40,6 +40,9 @@ export default function LettersTab({ formData, setFormData, user, setGlobalUserD
     originalPages.map((_, i) => originalTitleColors[i] || defaultTitleColor)
   );
 
+  // Índice de página activa en el paginador
+  const [activePageIndex, setActivePageIndex] = useState(0);
+
   // Estados de guardado individual/contextual
   const [savingTarget, setSavingTarget] = useState(null); // null | number (index) | 'all'
   const [savedTarget, setSavedTarget] = useState(null);
@@ -84,8 +87,31 @@ export default function LettersTab({ formData, setFormData, user, setGlobalUserD
     formData.letterTitleColor
   ]);
 
+  // Asegurar que activePageIndex no quede fuera de límites
+  useEffect(() => {
+    if (activePageIndex >= localPages.length) {
+      setActivePageIndex(Math.max(0, localPages.length - 1));
+    }
+  }, [localPages.length, activePageIndex]);
+
   // Detectar si la cantidad de páginas cambió
   const isPagesCountModified = localPages.length !== originalPages.length;
+
+  // Comprobar si una página específica tiene cambios sin guardar
+  const isPageIndexModified = (idx) => {
+    return (
+      (localPages[idx] ?? '') !== (originalPages[idx] ?? '') ||
+      (localStyles[idx] || defaultStyle) !== (originalStyles[idx] || defaultStyle) ||
+      (localTitles[idx] !== undefined ? localTitles[idx] : '') !== (originalTitles[idx] !== undefined ? originalTitles[idx] : (idx === 0 ? defaultTitle : '')) ||
+      (localTitleColors[idx] || '') !== (originalTitleColors[idx] || defaultTitleColor) ||
+      (localFonts[idx] || defaultFont) !== (originalFonts[idx] || defaultFont) ||
+      (localAligns[idx] || defaultAlign) !== (originalAligns[idx] || defaultAlign) ||
+      (localTextColors[idx] || '') !== (originalTextColors[idx] || defaultColor)
+    );
+  };
+
+  const modifiedPagesCount = localPages.filter((_, i) => isPageIndexModified(i)).length;
+  const hasGlobalModifications = modifiedPagesCount > 0 || isPagesCountModified;
 
   // Guardar en backend
   const executeSave = async (targetId) => {
@@ -194,6 +220,7 @@ export default function LettersTab({ formData, setFormData, user, setGlobalUserD
       if (onExpiredAction) onExpiredAction('crear o agregar nuevas páginas de cartas');
       return;
     }
+    const newIdx = localPages.length;
     setLocalPages([...localPages, '']);
     setLocalStyles([...localStyles, localStyles[localStyles.length - 1] || 'modern']);
     setLocalTitles([...localTitles, '']);
@@ -201,6 +228,9 @@ export default function LettersTab({ formData, setFormData, user, setGlobalUserD
     setLocalAligns([...localAligns, localAligns[localAligns.length - 1] || 'left']);
     setLocalTextColors([...localTextColors, localTextColors[localTextColors.length - 1] || '']);
     setLocalTitleColors([...localTitleColors, localTitleColors[localTitleColors.length - 1] || '']);
+
+    // Pasar automáticamente a la nueva hoja creada
+    setActivePageIndex(newIdx);
   };
 
   const handleDeletePage = (index) => {
@@ -216,6 +246,14 @@ export default function LettersTab({ formData, setFormData, user, setGlobalUserD
     setLocalAligns(localAligns.filter((_, i) => i !== index));
     setLocalTextColors(localTextColors.filter((_, i) => i !== index));
     setLocalTitleColors(localTitleColors.filter((_, i) => i !== index));
+
+    // Ajustar índice de hoja activa para que no quede huérfana
+    setActivePageIndex(prev => {
+      if (prev >= localPages.length - 1) {
+        return Math.max(0, localPages.length - 2);
+      }
+      return prev;
+    });
   };
 
   // Función universal para aplicar color con la única barra de tinta
@@ -237,7 +275,6 @@ export default function LettersTab({ formData, setFormData, user, setGlobalUserD
           handlePageChange(index, activeEl.innerHTML);
         }
       }
-      // Quitar el sombreado azul de selección para ver el color aplicado al instante
       if (sel) {
         sel.collapseToEnd();
       }
@@ -262,98 +299,231 @@ export default function LettersTab({ formData, setFormData, user, setGlobalUserD
     }
   };
 
+  const safePageIndex = Math.min(Math.max(0, activePageIndex), Math.max(0, localPages.length - 1));
+
   return (
     <div className="animate-fadeIn pb-12">
-      <div className="mb-8">
-        <h2 className="text-xl font-bold text-gray-200 flex items-center gap-2">
-          <svg className="w-6 h-6 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-          </svg>
-          Cartas de Amor Personalizadas
-        </h2>
-        <p className="text-sm text-gray-400 mt-1">
-          Escribe directo en el papel. Selecciona cualquier palabra o frase para <strong>ponerla en negrita</strong>, <em>cursiva</em> o <strong>cambiarle el color de tinta individualmente</strong>.
-        </p>
+      {/* Encabezado */}
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-gray-200 flex items-center gap-2">
+            <svg className="w-6 h-6 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+            Cartas de Amor Personalizadas
+          </h2>
+          <p className="text-sm text-gray-400 mt-1">
+            Escribe directo sobre el papel. Navega entre tus hojas con el paginador para una experiencia fluida y sin sobrecargar la pantalla.
+          </p>
+        </div>
+
+        {/* Botón rápido Guardar Todo si hay cambios pendientes */}
+        {hasGlobalModifications && (
+          <button
+            type="button"
+            onClick={() => executeSave('all')}
+            disabled={savingTarget === 'all'}
+            className="self-start sm:self-auto px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl shadow-md shadow-purple-600/30 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 text-xs"
+          >
+            {savingTarget === 'all' ? (
+              <>
+                <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeDasharray="30" strokeLinecap="round" className="opacity-50" />
+                </svg>
+                Guardando Todo...
+              </>
+            ) : savedTarget === 'all' ? (
+              <>
+                <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                </svg>
+                ¡Todo Guardado!
+              </>
+            ) : (
+              <>
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+                Guardar Todas ({modifiedPagesCount > 0 ? `${modifiedPagesCount} mod.` : 'Estructura'})
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       <form onSubmit={(e) => e.preventDefault()}>
-        <div className="space-y-12">
-          {localPages.map((pageText, index) => (
-            <LetterCardItem
-              key={index}
-              index={index}
-              totalLetters={localPages.length}
-              pageText={pageText}
-              originalText={originalPages[index] ?? ''}
-              currentStyle={localStyles[index] || 'modern'}
-              originalStyle={originalStyles[index] || defaultStyle}
-              currentTitle={localTitles[index] || ''}
-              originalTitle={originalTitles[index] !== undefined ? originalTitles[index] : (index === 0 ? defaultTitle : '')}
-              currentTitleColor={localTitleColors[index] || ''}
-              originalTitleColor={originalTitleColors[index] || defaultTitleColor}
-              currentFont={localFonts[index] || 'georgia'}
-              originalFont={originalFonts[index] || defaultFont}
-              currentAlign={localAligns[index] || 'left'}
-              originalAlign={originalAligns[index] || defaultAlign}
-              currentColor={localTextColors[index] || ''}
-              originalColor={originalTextColors[index] || defaultColor}
-              isSaving={savingTarget === index}
-              isSaved={savedTarget === index}
-              signatureName={formData.user1Name}
-              onPageChange={handlePageChange}
-              onTitleChange={handlePageTitleChange}
-              onStyleChange={handlePageStyleChange}
-              onFontChange={handlePageFontChange}
-              onAlignChange={handlePageAlignChange}
-              onDeletePage={handleDeletePage}
-              onExecuteSave={executeSave}
-              onFormat={applyFormatting}
-              onApplyInkColor={applyInkColor}
-            />
-          ))}
+        {/* Barra de Navegación y Paginación Ergonómica */}
+        <div className="bg-gray-950/90 border border-purple-500/20 rounded-2xl p-3 sm:p-4 mb-6 shadow-xl backdrop-blur-md">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* Pestañas de Hojas */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+              {localPages.map((_, idx) => {
+                const isActive = safePageIndex === idx;
+                const isMod = isPageIndexModified(idx);
+                const titleSnippet = localTitles[idx] ? ` · ${localTitles[idx].slice(0, 10)}${localTitles[idx].length > 10 ? '…' : ''}` : '';
+
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setActivePageIndex(idx)}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap border ${
+                      isActive
+                        ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 text-white border-purple-400 shadow-md shadow-purple-600/40 scale-[1.02]'
+                        : 'bg-gray-900/90 text-gray-400 hover:text-white hover:bg-gray-850 border-gray-800 hover:border-gray-700'
+                    }`}
+                  >
+                    <span>Hoja {idx + 1}</span>
+                    {titleSnippet && (
+                      <span className={`text-[10px] font-normal ${isActive ? 'text-purple-100' : 'text-gray-500'}`}>
+                        {titleSnippet}
+                      </span>
+                    )}
+                    {isMod && (
+                      <span 
+                        className="w-2 h-2 rounded-full bg-pink-400 animate-pulse shadow-[0_0_6px_rgba(244,114,182,0.8)]"
+                        title="Esta hoja tiene modificaciones sin guardar"
+                      />
+                    )}
+                  </button>
+                );
+              })}
+
+              {/* Botón rápido + para añadir hoja directamente en la barra */}
+              <button
+                type="button"
+                onClick={handleAddPage}
+                className="w-8 h-8 rounded-xl bg-purple-950/50 hover:bg-purple-900 border border-purple-500/30 hover:border-purple-400 text-purple-300 hover:text-white flex items-center justify-center transition-all flex-shrink-0 text-base font-bold shadow-sm"
+                title="Añadir nueva hoja a la carta"
+              >
+                +
+              </button>
+            </div>
+
+            {/* Controles Anterior / Siguiente */}
+            <div className="flex items-center justify-between sm:justify-end gap-2 text-xs pt-1 sm:pt-0 border-t sm:border-t-0 border-gray-800/60">
+              <button
+                type="button"
+                onClick={() => setActivePageIndex(p => Math.max(0, p - 1))}
+                disabled={safePageIndex === 0}
+                className="px-3 py-1.5 rounded-xl bg-gray-900 border border-gray-800 text-gray-300 hover:text-white hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 font-semibold"
+              >
+                ← Anterior
+              </button>
+
+              <span className="font-semibold text-gray-300 px-1 text-center min-w-[85px]">
+                Hoja <strong className="text-purple-400">{safePageIndex + 1}</strong> de {localPages.length}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setActivePageIndex(p => Math.min(localPages.length - 1, p + 1))}
+                disabled={safePageIndex === localPages.length - 1}
+                className="px-3 py-1.5 rounded-xl bg-gray-900 border border-gray-800 text-gray-300 hover:text-white hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 font-semibold"
+              >
+                Siguiente →
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Sección inferior: Agregar nueva página y Guardar si cambió la cantidad de páginas */}
-        <div className="flex flex-col sm:flex-row gap-4 mt-8">
-          <button 
-            type="button" 
-            onClick={handleAddPage} 
-            className="flex-1 py-4 border-2 border-dashed border-gray-700 text-gray-400 hover:text-purple-400 hover:border-purple-500/50 rounded-xl transition-all font-semibold text-sm"
-          >
-            + Agregar Nueva Página
-          </button>
+        {/* Hoja Activa Renderizada Única (Ultra optimizado: 1 solo canvas en DOM) */}
+        <div>
+          <LetterCardItem
+            key={safePageIndex}
+            index={safePageIndex}
+            totalLetters={localPages.length}
+            pageText={localPages[safePageIndex] ?? ''}
+            originalText={originalPages[safePageIndex] ?? ''}
+            currentStyle={localStyles[safePageIndex] || 'modern'}
+            originalStyle={originalStyles[safePageIndex] || defaultStyle}
+            currentTitle={localTitles[safePageIndex] || ''}
+            originalTitle={originalTitles[safePageIndex] !== undefined ? originalTitles[safePageIndex] : (safePageIndex === 0 ? defaultTitle : '')}
+            currentTitleColor={localTitleColors[safePageIndex] || ''}
+            originalTitleColor={originalTitleColors[safePageIndex] || defaultTitleColor}
+            currentFont={localFonts[safePageIndex] || 'georgia'}
+            originalFont={originalFonts[safePageIndex] || defaultFont}
+            currentAlign={localAligns[safePageIndex] || 'left'}
+            originalAlign={originalAligns[safePageIndex] || defaultAlign}
+            currentColor={localTextColors[safePageIndex] || ''}
+            originalColor={originalTextColors[safePageIndex] || defaultColor}
+            isSaving={savingTarget === safePageIndex}
+            isSaved={savedTarget === safePageIndex}
+            signatureName={formData.user1Name}
+            onPageChange={handlePageChange}
+            onTitleChange={handlePageTitleChange}
+            onStyleChange={handlePageStyleChange}
+            onFontChange={handlePageFontChange}
+            onAlignChange={handlePageAlignChange}
+            onDeletePage={handleDeletePage}
+            onExecuteSave={executeSave}
+            onFormat={applyFormatting}
+            onApplyInkColor={applyInkColor}
+          />
+        </div>
 
-          {isPagesCountModified && (
+        {/* Barra Inferior de Navegación y Adición de Hojas */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-4 border-t border-gray-800/80">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               type="button"
-              onClick={() => executeSave('all')}
-              disabled={savingTarget === 'all'}
-              className="sm:w-auto px-8 py-4 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl shadow-lg shadow-purple-600/30 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 text-sm animate-fadeIn"
+              onClick={() => setActivePageIndex(p => Math.max(0, p - 1))}
+              disabled={safePageIndex === 0}
+              className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-gray-900 border border-gray-800 text-gray-300 hover:text-white hover:bg-gray-850 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-xs font-semibold"
             >
-              {savingTarget === 'all' ? (
-                <>
-                  <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeDasharray="30" strokeLinecap="round" className="opacity-50" />
-                  </svg>
-                  Guardando cambios...
-                </>
-              ) : savedTarget === 'all' ? (
-                <>
-                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-                  </svg>
-                  ¡Páginas Actualizadas!
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                  </svg>
-                  Guardar Estructura de Páginas
-                </>
-              )}
+              ← Hoja Anterior
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() => setActivePageIndex(p => Math.min(localPages.length - 1, p + 1))}
+              disabled={safePageIndex === localPages.length - 1}
+              className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-gray-900 border border-gray-800 text-gray-300 hover:text-white hover:bg-gray-850 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-xs font-semibold"
+            >
+              Siguiente Hoja →
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <button 
+              type="button" 
+              onClick={handleAddPage} 
+              className="px-5 py-2.5 border border-dashed border-purple-500/40 hover:border-purple-400 bg-purple-950/20 hover:bg-purple-900/40 text-purple-300 hover:text-white rounded-xl transition-all font-semibold text-xs flex items-center gap-2"
+            >
+              <span className="text-sm font-bold">+</span> Agregar Nueva Hoja
+            </button>
+
+            {hasGlobalModifications && (
+              <button
+                type="button"
+                onClick={() => executeSave('all')}
+                disabled={savingTarget === 'all'}
+                className="px-6 py-2.5 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl shadow-lg shadow-purple-600/30 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 text-xs"
+              >
+                {savingTarget === 'all' ? (
+                  <>
+                    <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeDasharray="30" strokeLinecap="round" className="opacity-50" />
+                    </svg>
+                    Guardando...
+                  </>
+                ) : savedTarget === 'all' ? (
+                  <>
+                    <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                    </svg>
+                    ¡Todo Guardado!
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                    </svg>
+                    Guardar Todas ({modifiedPagesCount > 0 ? `${modifiedPagesCount} mod.` : 'Estructura'})
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         </div>
       </form>
     </div>

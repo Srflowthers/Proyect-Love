@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PaperCrumple from './PaperCrumple';
 import { drawPaperBackground } from '../../views/settings/letters/drawPaperBackground';
+import { getPaperStyleById } from '../../views/settings/letters/paperStylesCatalog';
 
 const LetterPage = ({ text, title, userName, signature, index, isLastPage, theme, textColor, textFont, textAlign, titleColor }) => {
   const [letterSrc, setLetterSrc] = useState(null);
@@ -17,7 +18,9 @@ const LetterPage = ({ text, title, userName, signature, index, isLastPage, theme
 
     const drawTextAndFinish = () => {
       // Usar color personalizado si se definió, o la tinta por defecto según el papel
-      const defaultInk = (theme === 'parchment' || theme === 'burnt') ? '#2a1a0f' : '#2d2a26';
+      const styleDef = getPaperStyleById(theme);
+      const isBurnt = theme === 'burnt' || (styleDef && styleDef.isBurnt);
+      const defaultInk = styleDef?.preview?.textColor || ((theme === 'parchment' || isBurnt) ? '#2a1a0f' : '#2d2a26');
       const baseColor = textColor || defaultInk;
       
       const align = textAlign || 'left';
@@ -205,8 +208,8 @@ const LetterPage = ({ text, title, userName, signature, index, isLastPage, theme
         foldSharpness={0.6}
         wrinkleDepth={0.65}
         creaseStrength={0.18}
-        paperColor={(theme === 'parchment' || theme === 'burnt') ? '#e5cca5' : '#f4f0e8'}
-        paperTexture={(theme === 'parchment' || theme === 'burnt') ? 0.08 : 0.04}
+        paperColor={styleDef?.preview?.bg && !styleDef.preview.bg.includes('gradient') ? styleDef.preview.bg : ((theme === 'parchment' || isBurnt) ? '#e5cca5' : '#f4f0e8')}
+        paperTexture={(theme === 'parchment' || isBurnt) ? 0.08 : 0.04}
         draggable
         returnToOrigin
       />

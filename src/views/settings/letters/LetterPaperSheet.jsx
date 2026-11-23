@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { getFontFamilyStyle } from './letterConstants';
 import { drawPaperBackground } from './drawPaperBackground';
+import { getPaperStyleById } from './paperStylesCatalog';
 
 export default function LetterPaperSheet({
   index,
@@ -16,8 +17,9 @@ export default function LetterPaperSheet({
   onPageChange,
   onTitleChange
 }) {
-  const isBurnt = currentStyle === 'burnt';
-  const defaultInk = (currentStyle === 'parchment' || currentStyle === 'burnt') ? '#2a1a0f' : '#2d2a26';
+  const styleDef = getPaperStyleById(currentStyle);
+  const isBurnt = currentStyle === 'burnt' || (styleDef && styleDef.isBurnt);
+  const defaultInk = styleDef?.preview?.textColor || ((currentStyle === 'parchment' || isBurnt) ? '#2a1a0f' : '#2d2a26');
   const bgCanvasRef = useRef(null);
 
   // Generar exactamente la misma hoja de inicio compartiendo drawPaperBackground

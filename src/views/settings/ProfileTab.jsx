@@ -15,6 +15,53 @@ export default function ProfileTab({
 }) {
   const isCollaborator = !!globalUserData?.isCollaborator;
 
+  const [newKidInput, setNewKidInput] = React.useState('');
+  const [newPetInput, setNewPetInput] = React.useState('');
+
+  const parseList = (val) => {
+    if (Array.isArray(val)) return val.map(s => String(s).trim()).filter(Boolean);
+    if (typeof val === 'string' && val.trim()) {
+      return val.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    return [];
+  };
+
+  const handleAddKid = (e) => {
+    if (e) e.preventDefault();
+    const trimmed = newKidInput.trim();
+    if (!trimmed) return;
+    const current = parseList(formData.kids);
+    if (!current.some(k => k.toLowerCase() === trimmed.toLowerCase())) {
+      const updated = [...current, trimmed];
+      setFormData(prev => ({ ...prev, kids: updated }));
+    }
+    setNewKidInput('');
+  };
+
+  const handleRemoveKid = (indexToRemove) => {
+    const current = parseList(formData.kids);
+    const updated = current.filter((_, idx) => idx !== indexToRemove);
+    setFormData(prev => ({ ...prev, kids: updated }));
+  };
+
+  const handleAddPet = (e) => {
+    if (e) e.preventDefault();
+    const trimmed = newPetInput.trim();
+    if (!trimmed) return;
+    const current = parseList(formData.pets);
+    if (!current.some(p => p.toLowerCase() === trimmed.toLowerCase())) {
+      const updated = [...current, trimmed];
+      setFormData(prev => ({ ...prev, pets: updated }));
+    }
+    setNewPetInput('');
+  };
+
+  const handleRemovePet = (indexToRemove) => {
+    const current = parseList(formData.pets);
+    const updated = current.filter((_, idx) => idx !== indexToRemove);
+    setFormData(prev => ({ ...prev, pets: updated }));
+  };
+
   return (
     <div className="animate-fadeIn">
       {/* Si es ser cercano / colaborador invitado, muestra su estado y desvinculación */}
@@ -25,6 +72,7 @@ export default function ProfileTab({
           setGlobalUserData={setGlobalUserData}
           userPlan={userPlan}
           onOpenPricing={onOpenPricing}
+          registeredKids={parseList(formData.kids)}
         />
       ) : (!userPlan || userPlan === 'gratis' || userPlan === 'free') ? (
         /* BANNER UNIFICADO PREMIUM CUANDO EL USUARIO NO TIENE PLAN DE PAGO */
@@ -81,6 +129,7 @@ export default function ProfileTab({
             setGlobalUserData={setGlobalUserData}
             userPlan={userPlan}
             onOpenPricing={onOpenPricing}
+            registeredKids={parseList(formData.kids)}
           />
         </>
       )}
@@ -318,13 +367,122 @@ export default function ProfileTab({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-800">
-              <div>
-                <label className="block text-xs text-gray-400 mb-2 uppercase tracking-wider font-semibold">Mascotas (Opcional)</label>
-                <input type="text" name="pets" value={formData.pets} onChange={handleChange} placeholder="Ej: Max (Perrito)" className="w-full bg-black border border-gray-700 rounded-xl p-4 text-white focus:border-pink-500 outline-none transition-colors" />
+              {/* GESTIÓN DE MASCOTAS */}
+              <div className="p-4 bg-gray-950/60 border border-gray-800 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs text-gray-300 uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                    <span>🐾</span>
+                    <span>Mascotas ({parseList(formData.pets).length})</span>
+                  </label>
+                  <span className="text-[11px] text-gray-500">Opcional</span>
+                </div>
+
+                {/* Lista de chips de mascotas */}
+                <div className="flex flex-wrap gap-2 min-h-[32px]">
+                  {parseList(formData.pets).length === 0 ? (
+                    <span className="text-xs text-gray-500 italic">No has agregado mascotas aún.</span>
+                  ) : (
+                    parseList(formData.pets).map((petName, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs bg-amber-500/10 border border-amber-500/30 text-amber-200"
+                      >
+                        <span>🐾 {petName}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePet(idx)}
+                          className="hover:text-red-400 transition-colors ml-0.5 text-xs font-bold"
+                          title="Eliminar mascota"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))
+                  )}
+                </div>
+
+                {/* Input para agregar mascota */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newPetInput}
+                    onChange={(e) => setNewPetInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddPet();
+                      }
+                    }}
+                    placeholder="Ej: Max (Perrito)"
+                    className="flex-1 bg-black border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-xs focus:border-amber-500 outline-none transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddPet}
+                    className="px-3.5 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 text-xs font-bold rounded-xl transition-all"
+                  >
+                    + Agregar
+                  </button>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-2 uppercase tracking-wider font-semibold">Hijos (Opcional)</label>
-                <input type="text" name="kids" value={formData.kids} onChange={handleChange} placeholder="Ej: Sofía y Mateo" className="w-full bg-black border border-gray-700 rounded-xl p-4 text-white focus:border-pink-500 outline-none transition-colors" />
+
+              {/* GESTIÓN DE HIJOS */}
+              <div className="p-4 bg-gray-950/60 border border-gray-800 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs text-gray-300 uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                    <span>👶</span>
+                    <span>Hijos ({parseList(formData.kids).length})</span>
+                  </label>
+                  <span className="text-[11px] text-purple-400 font-medium">Sugeribles en Invitaciones</span>
+                </div>
+
+                {/* Lista de chips de hijos */}
+                <div className="flex flex-wrap gap-2 min-h-[32px]">
+                  {parseList(formData.kids).length === 0 ? (
+                    <span className="text-xs text-gray-500 italic">No has agregado hijos aún. Escribe abajo.</span>
+                  ) : (
+                    parseList(formData.kids).map((kidName, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs bg-purple-500/15 border border-purple-500/30 text-purple-200"
+                      >
+                        <span>👶 {kidName}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveKid(idx)}
+                          className="hover:text-red-400 transition-colors ml-0.5 text-xs font-bold"
+                          title="Eliminar hijo"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))
+                  )}
+                </div>
+
+                {/* Input para agregar hijo */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newKidInput}
+                    onChange={(e) => setNewKidInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddKid();
+                      }
+                    }}
+                    placeholder="Ej: Benja, Mati, Sofía"
+                    className="flex-1 bg-black border border-gray-700 rounded-xl px-3.5 py-2.5 text-white text-xs focus:border-purple-500 outline-none transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddKid}
+                    className="px-3.5 py-2.5 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-xs font-bold rounded-xl transition-all"
+                  >
+                    + Agregar
+                  </button>
+                </div>
               </div>
             </div>
 

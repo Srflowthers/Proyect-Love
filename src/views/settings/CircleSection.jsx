@@ -8,11 +8,20 @@ import {
   revokeCollaboratorInvitation,
 } from '@/services/collaboratorService';
 
-export default function CircleSection({ currentUser, globalUserData, setGlobalUserData, userPlan, onOpenPricing }) {
+export default function CircleSection({ currentUser, globalUserData, setGlobalUserData, userPlan, onOpenPricing, registeredKids: propKids }) {
   const [collaborators, setCollaborators] = useState([]);
   const [pendingInvitations, setPendingInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const parseList = (val) => {
+    if (Array.isArray(val)) return val.map(s => String(s).trim()).filter(Boolean);
+    if (typeof val === 'string' && val.trim()) {
+      return val.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    return [];
+  };
+  const registeredKids = (propKids && propKids.length > 0) ? propKids : parseList(globalUserData?.kids);
 
   // Presets recomendados según el rol
   const getRolePresets = (role) => {
@@ -553,6 +562,52 @@ export default function CircleSection({ currentUser, globalUserData, setGlobalUs
               </h4>
 
             <form onSubmit={handleCreateInvite} className="space-y-4">
+              {/* Sugerencias de Hijos Registrados en el Perfil */}
+              {registeredKids.length > 0 && (
+                <div className="p-3.5 bg-gradient-to-r from-purple-950/40 via-purple-900/20 to-black border border-purple-500/30 rounded-xl space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>👶</span>
+                      <span>Hijos Registrados en tu Perfil:</span>
+                    </span>
+                    <span className="text-[10px] text-gray-400">Toca para autocompletar</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {registeredKids.map((kidName, idx) => {
+                      const isSelected = inviteName.trim().toLowerCase() === kidName.trim().toLowerCase();
+                      const isAlreadyLinked = collaborators.some(c => c.name?.toLowerCase() === kidName.toLowerCase()) ||
+                                             pendingInvitations.some(i => i.name?.toLowerCase() === kidName.toLowerCase());
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setInviteName(kidName);
+                            setRelationType('hijo');
+                            setPermissions(getRolePresets('hijo'));
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                            isSelected
+                              ? 'bg-purple-600 text-white shadow-[0_0_14px_rgba(168,85,247,0.6)] border border-purple-300 scale-105'
+                              : 'bg-gray-800/90 hover:bg-gray-700 text-gray-200 border border-gray-700'
+                          }`}
+                        >
+                          <span>👶</span>
+                          <span>{kidName}</span>
+                          {isAlreadyLinked ? (
+                            <span className="text-[9px] bg-green-500/20 text-green-300 px-1.5 py-0.5 rounded border border-green-500/30">
+                              ✓ En círculo
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-purple-300 font-bold">+</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-[11px] text-gray-400 mb-1 font-semibold uppercase">

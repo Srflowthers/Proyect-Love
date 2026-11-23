@@ -22,11 +22,14 @@
 /* --------------------------------------------------------------------------
    2. REINICIO Y CONTENEDOR BASE A PANTALLA COMPLETA
    -------------------------------------------------------------------------- */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   background: transparent !important;
   color: var(--fg);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -42,7 +45,11 @@ html, body {
   align-items: center;
 }
 
-h1, #banner, .tip, #nm, #rk {
+h1,
+#banner,
+.tip,
+#nm,
+#rk {
   display: none !important;
 }
 
@@ -169,8 +176,13 @@ canvas {
   border-color: currentColor;
 }
 
-#her { color: #f472b6 !important; }
-#him { color: #60a5fa !important; }
+#her {
+  color: #f472b6 !important;
+}
+
+#him {
+  color: #60a5fa !important;
+}
 
 /* --------------------------------------------------------------------------
    6. BARRA DE SALVACIÓN DE EMERGENCIA (HABILIDAD ESPECIAL)
@@ -364,7 +376,8 @@ button {
   transition: transform 0.1s ease, background 0.1s ease;
 }
 
-.pad button:hover, .pad button:active {
+.pad button:hover,
+.pad button:active {
   background: rgba(255, 255, 255, 0.24) !important;
   transform: scale(0.94);
 }
@@ -409,7 +422,9 @@ button {
    9. MEDIA QUERIES PARA PANTALLAS MÓVILES (TELÉFONOS)
    -------------------------------------------------------------------------- */
 @media (max-width: 780px) {
-  html, body {
+
+  html,
+  body {
     padding: 0 !important;
     margin: 0 !important;
     height: 100vh !important;
@@ -455,7 +470,9 @@ button {
     margin: 1px 0 !important;
   }
 
-  #sc-lines, #sc-speed, #skt {
+  #sc-lines,
+  #sc-speed,
+  #skt {
     font-size: 0.65rem !important;
   }
 
@@ -535,7 +552,9 @@ button {
 }
 
 @keyframes spinQueue {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ============================================================================
@@ -561,9 +580,9 @@ body.versus-active #ov {
   box-sizing: border-box !important;
 }
 
-body.versus-active #ov > div,
-body.versus-active #ov > button,
-body.versus-active #ov > #mode-options {
+body.versus-active #ov>div,
+body.versus-active #ov>button,
+body.versus-active #ov>#mode-options {
   max-width: 440px !important;
 }
 
@@ -573,6 +592,3 @@ body.versus-active #ov #start {
   border-radius: 30px !important;
   box-shadow: 0 0 25px rgba(236, 72, 153, 0.45) !important;
 }
-
-
-

@@ -48,9 +48,6 @@
     remolinoCada: 3,
     megaCada: 10,
 
-    // META OFICIAL: Primero en llegar a 30 líneas gana la partida
-    lineasMeta: 30,
-
     puntosLinea: [0, 150, 450, 750, 1200],
     puntosReventon: 15,
     salvacionBase: 1000,
@@ -407,8 +404,7 @@
 
       if (this.linesEl && this.ln !== this._lastRenderedLn) {
         this._lastRenderedLn = this.ln;
-        const reached = this.ln >= CFG.lineasMeta;
-        this.linesEl.innerHTML = `<span style="font-weight:800;color:${reached ? '#4ade80' : 'inherit'};">${this.ln}</span> / ${CFG.lineasMeta} <span style="font-size:0.75rem;opacity:0.8;">líneas</span>`;
+        this.linesEl.innerHTML = `<span style="font-weight:800;">${this.ln}</span> <span style="font-size:0.75rem;opacity:0.8;">líneas</span>`;
       }
 
       const ch = Math.min(1, Math.max(0, (this.sc - this.skBase) / this.skCost));
@@ -599,17 +595,6 @@
       this.audio.snd(520, 0.5, 'triangle', 0.2, 1300);
       if (gray) this.audio.snd(180, 0.3, 'square', 0.1, 60);
       this.lineFx = { rows, t: this.now };
-
-      // =========================================================================
-      // CONDICIÓN PRINCIPAL DE VICTORIA: PRIMER JUGADOR A 30 LÍNEAS
-      // =========================================================================
-      if (this.ln >= CFG.lineasMeta) {
-        this.ui();
-        if (this.manager && this.manager.active) {
-          this.manager.handlePlayerVictory(this, this.rival, 'lines');
-          return;
-        }
-      }
 
       // Enviar filas basura al rival: 2 líneas -> 1 basura, 3 -> 2, 4 -> 4
       if (this.rival && n >= 2) {
@@ -1592,7 +1577,7 @@
      * Gestión unificada de victoria con overlay centrado para ambos tableros
      * y entrega de recompensas oficiales de LP y monedas
      */
-    handlePlayerVictory(winner, loser, reason = 'lines') {
+    handlePlayerVictory(winner, loser, reason = 'topout') {
       if (!this.active) return;
       this.stop();
 
@@ -1619,9 +1604,7 @@
       if (ov && ovt) {
         const winColor = winner.playerIdx === 0 ? '#f472b6' : '#60a5fa';
         const winIcon = winner.playerIdx === 0 ? '💗' : '💙';
-        const reasonText = reason === 'lines' 
-          ? `¡Completó primero la meta de ${CFG.lineasMeta} líneas!` 
-          : `El oponente superó el límite del tablero.`;
+        const reasonText = `${loser.name} superó el límite del tablero. ¡${winner.name} sobrevive y se lleva la victoria!`;
 
         const mins = Math.floor(durationMs / 60000);
         const secs = Math.floor((durationMs % 60000) / 1000);
@@ -1643,13 +1626,13 @@
             <div style="background:rgba(236,72,153,0.12);border:1.5px solid ${winner.playerIdx === 0 ? '#f472b6' : 'rgba(236,72,153,0.3)'};border-radius:12px;padding:10px;text-align:center;box-shadow:${winner.playerIdx === 0 ? '0 0 20px rgba(236,72,153,0.35)' : 'none'};">
               <small style="color:#f472b6;font-weight:800;font-size:0.75rem;text-transform:uppercase;">💗 Ella ${winner.playerIdx === 0 ? '👑' : ''}</small>
               <div style="font-size:1.35rem;font-weight:900;color:#fff;margin:2px 0;">${(winner.playerIdx === 0 ? winner.sc : loser.sc).toLocaleString('es')}</div>
-              <small style="color:#cbd5e1;font-size:0.75rem;">${winner.playerIdx === 0 ? winner.ln : loser.ln} / ${CFG.lineasMeta} líneas</small>
+              <small style="color:#cbd5e1;font-size:0.75rem;">${winner.playerIdx === 0 ? winner.ln : loser.ln} líneas completadas</small>
             </div>
 
             <div style="background:rgba(59,130,246,0.12);border:1.5px solid ${winner.playerIdx === 1 ? '#60a5fa' : 'rgba(59,130,246,0.3)'};border-radius:12px;padding:10px;text-align:center;box-shadow:${winner.playerIdx === 1 ? '0 0 20px rgba(59,130,246,0.35)' : 'none'};">
               <small style="color:#60a5fa;font-weight:800;font-size:0.75rem;text-transform:uppercase;">💙 Él ${winner.playerIdx === 1 ? '👑' : ''}</small>
               <div style="font-size:1.35rem;font-weight:900;color:#fff;margin:2px 0;">${(winner.playerIdx === 1 ? winner.sc : loser.sc).toLocaleString('es')}</div>
-              <small style="color:#cbd5e1;font-size:0.75rem;">${winner.playerIdx === 1 ? winner.ln : loser.ln} / ${CFG.lineasMeta} líneas</small>
+              <small style="color:#cbd5e1;font-size:0.75rem;">${winner.playerIdx === 1 ? winner.ln : loser.ln} líneas completadas</small>
             </div>
           </div>
 

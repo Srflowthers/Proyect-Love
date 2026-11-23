@@ -6,6 +6,10 @@ import { getPaperStyleById } from '../../views/settings/letters/paperStylesCatal
 const LetterPage = ({ text, title, userName, signature, index, isLastPage, theme, textColor, textFont, textAlign, titleColor }) => {
   const [letterSrc, setLetterSrc] = useState(null);
 
+  const styleDef = getPaperStyleById(theme);
+  const isBurnt = theme === 'burnt' || (styleDef && styleDef.isBurnt);
+  const defaultInk = styleDef?.preview?.textColor || ((theme === 'parchment' || isBurnt) ? '#2a1a0f' : '#2d2a26');
+
   useEffect(() => {
     if (!text && !title) return;
 
@@ -18,9 +22,6 @@ const LetterPage = ({ text, title, userName, signature, index, isLastPage, theme
 
     const drawTextAndFinish = () => {
       // Usar color personalizado si se definió, o la tinta por defecto según el papel
-      const styleDef = getPaperStyleById(theme);
-      const isBurnt = theme === 'burnt' || (styleDef && styleDef.isBurnt);
-      const defaultInk = styleDef?.preview?.textColor || ((theme === 'parchment' || isBurnt) ? '#2a1a0f' : '#2d2a26');
       const baseColor = textColor || defaultInk;
       
       const align = textAlign || 'left';

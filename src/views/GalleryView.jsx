@@ -31,6 +31,22 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode]);
 
+  // Limpieza total y pausa al desmontar la vista de galería (evita audio fantasma al ir a Juegos o Cartas)
+  useEffect(() => {
+    return () => {
+      if (customAudioRef.current) {
+        try { customAudioRef.current.pause(); } catch (e) {}
+      }
+      if (window.__loveCustomAudio) {
+        try { window.__loveCustomAudio.pause(); } catch (e) {}
+        window.__loveCustomAudio = null;
+      }
+      if (window.spotifyController) {
+        try { window.spotifyController.pause(); } catch (e) {}
+      }
+    };
+  }, []);
+
   // Fetch real user data and images from Firestore
   useEffect(() => {
     // QA/desarrollo: ?stress=10000 genera N fotos sintéticas para validar la escala
@@ -300,6 +316,7 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
       } else if (customAudioRef.current.src !== currentTrack.url) {
         customAudioRef.current.src = currentTrack.url;
       }
+      window.__loveCustomAudio = customAudioRef.current;
 
       const onPlay = () => setIsAudioPlaying(true);
       const onPause = () => setIsAudioPlaying(false);
@@ -340,12 +357,20 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
 
       return () => {
         if (customAudioRef.current) {
+          try { customAudioRef.current.pause(); } catch (e) {}
           customAudioRef.current.removeEventListener('play', onPlay);
           customAudioRef.current.removeEventListener('pause', onPause);
           customAudioRef.current.removeEventListener('ended', handleEnded);
           customAudioRef.current.removeEventListener('timeupdate', onTimeUpdate);
           customAudioRef.current.removeEventListener('loadedmetadata', onLoadedMeta);
           customAudioRef.current.removeEventListener('durationchange', onLoadedMeta);
+        }
+        if (window.__loveCustomAudio) {
+          try { window.__loveCustomAudio.pause(); } catch (e) {}
+          window.__loveCustomAudio = null;
+        }
+        if (window.spotifyController) {
+          try { window.spotifyController.pause(); } catch (e) {}
         }
       };
     }
@@ -470,12 +495,18 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
 
       {/* Reproductor de Audio Flotante (Burbuja Compacta a la Derecha al Medio) */}
       {(userData?.customAudios?.length > 0 || userData?.customAudioUrl) && (
-        <div className={`fixed right-4 sm:right-6 top-1/2 -translate-y-1/2 z-[100] transition-all duration-700 ${(musicActive || userData?.musicAutoplay === false) ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-75 pointer-events-none'}`}>
+        <div className="fixed right-4 sm:right-6 top-1/2 -translate-y-1/2 z-[100] transition-all duration-700 opacity-100 scale-100 pointer-events-auto">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               setMusicActive(true);
+              const currentTrack = playlist[currentAudioIndex];
+              if (!customAudioRef.current && currentTrack?.url && !currentTrack.isSpotify && !currentTrack.url.includes('spotify')) {
+                customAudioRef.current = new Audio(currentTrack.url);
+                customAudioRef.current.crossOrigin = 'anonymous';
+                window.__loveCustomAudio = customAudioRef.current;
+              }
               if (customAudioRef.current) {
                 if (customAudioRef.current.paused) {
                   customAudioRef.current.play().then(() => setIsAudioPlaying(true)).catch(console.warn);

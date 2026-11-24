@@ -148,6 +148,16 @@ function App() {
 
   // Wrapper para cambiar la vista, persistir en sesión y añadir historial
   const handleSetView = (newView) => {
+    // Si salimos de la galería (ej: ir a juegos, cartas, configuración), detener de inmediato la música
+    if (newView !== 'gallery') {
+      if (window.__loveCustomAudio) {
+        try { window.__loveCustomAudio.pause(); } catch (e) {}
+        window.__loveCustomAudio = null;
+      }
+      if (window.spotifyController) {
+        try { window.spotifyController.pause(); } catch (e) {}
+      }
+    }
     setView(newView);
     try {
       sessionStorage.setItem('love_active_view', newView);

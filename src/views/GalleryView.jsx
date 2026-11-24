@@ -19,6 +19,8 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
   const [isWarping, setIsWarping] = useState(false);
   const [musicActive, setMusicActive] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
   const [clickCount, setClickCount] = useState(0);
   const [isExpired, setIsExpired] = useState(false);
 
@@ -292,7 +294,9 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
       }
 
       if (!customAudioRef.current) {
-        customAudioRef.current = new Audio(currentTrack.url);
+        customAudioRef.current = new Audio();
+        customAudioRef.current.crossOrigin = 'anonymous';
+        customAudioRef.current.src = currentTrack.url;
       } else if (customAudioRef.current.src !== currentTrack.url) {
         customAudioRef.current.src = currentTrack.url;
       }
@@ -302,10 +306,31 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
       const handleEnded = () => {
         setCurrentAudioIndex(prev => (prev + 1) % playlist.length);
       };
+      const onTimeUpdate = () => {
+        if (customAudioRef.current) {
+          setAudioCurrentTime(customAudioRef.current.currentTime || 0);
+          if (customAudioRef.current.duration && !isNaN(customAudioRef.current.duration)) {
+            setAudioDuration(customAudioRef.current.duration);
+          }
+        }
+      };
+      const onLoadedMeta = () => {
+        if (customAudioRef.current?.duration && !isNaN(customAudioRef.current.duration)) {
+          setAudioDuration(customAudioRef.current.duration);
+        }
+      };
 
       customAudioRef.current.addEventListener('play', onPlay);
       customAudioRef.current.addEventListener('pause', onPause);
       customAudioRef.current.addEventListener('ended', handleEnded);
+      customAudioRef.current.addEventListener('timeupdate', onTimeUpdate);
+      customAudioRef.current.addEventListener('loadedmetadata', onLoadedMeta);
+      customAudioRef.current.addEventListener('durationchange', onLoadedMeta);
+
+      if (customAudioRef.current.duration && !isNaN(customAudioRef.current.duration)) {
+        setAudioDuration(customAudioRef.current.duration);
+      }
+      setAudioCurrentTime(customAudioRef.current.currentTime || 0);
 
       if (musicActive) {
         customAudioRef.current.play()
@@ -318,6 +343,9 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
           customAudioRef.current.removeEventListener('play', onPlay);
           customAudioRef.current.removeEventListener('pause', onPause);
           customAudioRef.current.removeEventListener('ended', handleEnded);
+          customAudioRef.current.removeEventListener('timeupdate', onTimeUpdate);
+          customAudioRef.current.removeEventListener('loadedmetadata', onLoadedMeta);
+          customAudioRef.current.removeEventListener('durationchange', onLoadedMeta);
         }
       };
     }
@@ -440,9 +468,9 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
         <div id="spotify-global-iframe"></div>
       </div>
 
-      {/* Reproductor de Audio Flotante (Burbuja Compacta) */}
+      {/* Reproductor de Audio Flotante (Burbuja Compacta a la Derecha al Medio) */}
       {(userData?.customAudios?.length > 0 || userData?.customAudioUrl) && (
-        <div className={`fixed bottom-4 left-4 z-[100] transition-all duration-700 ${(musicActive || userData?.musicAutoplay === false) ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-75 pointer-events-none'}`}>
+        <div className={`fixed right-4 sm:right-6 top-1/2 -translate-y-1/2 z-[100] transition-all duration-700 ${(musicActive || userData?.musicAutoplay === false) ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-75 pointer-events-none'}`}>
           <button
             type="button"
             onClick={(e) => {
@@ -463,14 +491,14 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
               }
             }}
             title={isAudioPlaying ? `Pausar: ${userData?.customAudios?.[currentAudioIndex]?.name || 'Música'}` : `Reproducir: ${userData?.customAudios?.[currentAudioIndex]?.name || 'Música'}`}
-            className={`group relative w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md cursor-pointer border ${isAudioPlaying
-              ? 'bg-gradient-to-tr from-purple-700/80 via-pink-600/80 to-rose-500/80 border-pink-400/60 shadow-[0_0_20px_rgba(236,72,153,0.5)] hover:scale-105'
-              : 'bg-black/60 border-purple-500/30 text-white/50 hover:text-white hover:border-pink-500/50 hover:bg-black/80'
+            className={`group relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md cursor-pointer border ${isAudioPlaying
+              ? 'bg-gradient-to-tr from-purple-700/85 via-pink-600/85 to-rose-500/85 border-pink-400/60 shadow-[0_0_25px_rgba(236,72,153,0.6)] hover:scale-110'
+              : 'bg-black/75 border-purple-500/40 text-white/60 hover:text-white hover:border-pink-500/60 hover:bg-black/90 shadow-[0_0_15px_rgba(0,0,0,0.5)] hover:scale-105'
               }`}
           >
             {/* Anillo de pulso sutil cuando está reproduciendo */}
             {isAudioPlaying && (
-              <span className="absolute inset-0 rounded-full border border-pink-400/40 animate-ping pointer-events-none" style={{ animationDuration: '2.5s' }}></span>
+              <span className="absolute inset-0 rounded-full border border-pink-400/50 animate-ping pointer-events-none" style={{ animationDuration: '2.5s' }}></span>
             )}
 
             {/* Icono de Nota Musical / Pausa */}
@@ -493,8 +521,11 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
               </svg>
             )}
 
-            {/* Tooltip flotante sutil a la derecha al hacer hover */}
-            <span className="absolute left-full ml-3 px-2.5 py-1 rounded-lg bg-black/80 border border-white/10 text-white text-[11px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg">
+            {/* Tooltip flotante hacia la izquierda (porque el botón está en el lateral derecho) */}
+            <span className="absolute right-full mr-3 px-3 py-1.5 rounded-xl bg-black/90 border border-white/15 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-2xl backdrop-blur-md">
+              <span className="text-pink-300 font-bold block text-[10px] uppercase tracking-wider">
+                {isAudioPlaying ? 'Sonando' : 'Reproducir'}
+              </span>
               {userData?.customAudios?.[currentAudioIndex]?.name || 'Música de Fondo'}
             </span>
           </button>
@@ -653,6 +684,8 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
               isAudioPlaying={isAudioPlaying}
               setIsAudioPlaying={setIsAudioPlaying}
               customAudioRef={customAudioRef}
+              audioCurrentTime={audioCurrentTime}
+              audioDuration={audioDuration}
               musicActive={musicActive}
               setMusicActive={setMusicActive}
             />

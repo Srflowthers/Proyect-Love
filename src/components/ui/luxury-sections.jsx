@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { CONFIG } from '../../config/configuracion';
 import LetterPage from './LetterPage';
 
-// Contorno de alturas de onda (inspirado exactamente en la referencia visual de audio)
+// Contorno de alturas de onda (inspirado y calcado con precisión de la referencia visual de audio)
 const WAVEFORM_BARS = [
-  12, 14, 16, 20, 28, 48, 64, 52, 34, 22, 28, 42, 60, 50, 36, 24, 
-  32, 54, 76, 62, 40, 26, 32, 52, 78, 100, 86, 60, 38, 24, 30, 48, 
-  70, 84, 62, 42, 28, 34, 50, 44, 30, 22, 30, 52, 66, 50, 32, 18
+  5, 6, 7, 9, 12, 18, 32, 54, 64, 48, 16, 22, 
+  38, 58, 74, 66, 44, 22, 28, 38, 48, 42, 18, 24, 
+  40, 66, 80, 72, 46, 20, 28, 38, 54, 76, 92, 100, 
+  92, 78, 56, 34, 20, 28, 42, 64, 56, 38, 22, 28, 
+  44, 72, 88, 74, 48, 24, 30, 38, 48, 66, 58, 42, 
+  26, 18, 12, 8, 5
 ];
 
 const formatTime = (secs) => {
@@ -24,6 +27,8 @@ export default function LuxurySections({
   isAudioPlaying = false,
   setIsAudioPlaying,
   customAudioRef,
+  audioCurrentTime = 0,
+  audioDuration = 0,
   musicActive = false,
   setMusicActive
 }) {
@@ -32,8 +37,9 @@ export default function LuxurySections({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
+  const [realWaveformData, setRealWaveformData] = useState(null);
 
-  // Escuchar tiempo y duración del elemento de audio nativo
+  // Escuchar tiempo y duración del elemento de audio nativo (respaldo local)
   useEffect(() => {
     const audio = customAudioRef?.current;
     if (!audio) return;
@@ -100,6 +106,78 @@ export default function LuxurySections({
   const currentTrack = activePlaylist[currentAudioIndex] || activePlaylist[0];
   const currentTrackName = currentTrack?.name || 'Nuestra Canción Especial';
 
+  // EXTRACCIÓN Y DECODIFICACIÓN REAL DE LA ONDA SONORA DEL ARCHIVO DE AUDIO
+  useEffect(() => {
+    if (!currentTrack?.url || currentTrack.isSpotify || (currentTrack.url && currentTrack.url.includes('spotify'))) {
+      setRealWaveformData(null);
+      return;
+    }
+
+    let isMounted = true;
+
+    const extractRealWaveform = async () => {
+      try {
+        const res = await fetch(currentTrack.url);
+        if (!res.ok) throw new Error('Fetch audio error');
+        const buffer = await res.arrayBuffer();
+
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) throw new Error('No AudioContext');
+        const ctx = new AudioCtx();
+        const audioBuffer = await ctx.decodeAudioData(buffer);
+        const rawData = audioBuffer.getChannelData(0);
+
+        const NUM_BARS = 65;
+        const blockSize = Math.floor(rawData.length / NUM_BARS);
+        const peaks = [];
+
+        for (let i = 0; i < NUM_BARS; i++) {
+          const start = i * blockSize;
+          let sum = 0;
+          const step = Math.max(1, Math.floor(blockSize / 25));
+          let count = 0;
+          for (let j = 0; j < blockSize; j += step) {
+            sum += Math.abs(rawData[start + j] || 0);
+            count++;
+          }
+          peaks.push(count > 0 ? (sum / count) : 0);
+        }
+
+        const max = Math.max(...peaks, 0.0001);
+        const normalized = peaks.map(p => Math.max(5, Math.min(100, Math.round((p / max) * 98))));
+
+        if (isMounted) {
+          setRealWaveformData(normalized);
+        }
+        ctx.close().catch(() => {});
+      } catch (e) {
+        // Fallback acústico armónico basado en la referencia exacta de la onda sonora
+        const seed = (currentTrack.name || currentTrack.url || 'music')
+          .split('')
+          .reduce((acc, char, idx) => acc + char.charCodeAt(0) * (idx + 1), 0);
+        
+        const fallback = WAVEFORM_BARS.map((baseH, idx) => {
+          const variation = (Math.sin(idx * 0.7 + seed) * 0.12) + 1; // leve variación orgánica acústica (+-12%)
+          return Math.max(5, Math.min(100, Math.round(baseH * variation)));
+        });
+        if (isMounted) {
+          setRealWaveformData(fallback);
+        }
+      }
+    };
+
+    extractRealWaveform();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentTrack?.url, currentTrack?.name]);
+
+  const displayBars = realWaveformData || WAVEFORM_BARS;
+  const effectiveCurrentTime = audioCurrentTime || currentTime;
+  const effectiveDuration = audioDuration || duration;
+  const progress = effectiveDuration > 0 ? (effectiveCurrentTime / effectiveDuration) : 0;
+
   // Toggle Play / Pausa
   const handleTogglePlay = () => {
     if (setMusicActive) setMusicActive(true);
@@ -123,8 +201,8 @@ export default function LuxurySections({
     if (customAudioRef?.current) {
       const audio = customAudioRef.current;
       if (setMusicActive) setMusicActive(true);
-      if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
-        audio.currentTime = percentage * audio.duration;
+      if (effectiveDuration > 0) {
+        audio.currentTime = percentage * effectiveDuration;
         setCurrentTime(audio.currentTime);
         if (audio.paused) {
           audio.play().then(() => setIsAudioPlaying?.(true)).catch(console.warn);
@@ -146,8 +224,6 @@ export default function LuxurySections({
       setCurrentAudioIndex(prev => (prev + 1) % activePlaylist.length);
     }
   };
-
-  const progress = duration > 0 ? (currentTime / duration) : 0;
 
   // Extraer las páginas base recibidas
   const rawPages = userData?.letterPages && userData.letterPages.length > 0 && userData.letterPages[0] !== ""
@@ -267,30 +343,30 @@ export default function LuxurySections({
               <div className="bg-black/40 border border-white/5 rounded-2xl p-4 sm:p-5 mb-5 relative z-10 backdrop-blur-md">
                 <div
                   onClick={handleWaveformClick}
-                  className="w-full h-16 sm:h-20 flex items-center justify-between cursor-pointer group/wave select-none"
+                  className="w-full h-16 sm:h-20 flex items-center justify-between cursor-pointer group/wave select-none px-1"
                   title="Haz clic para adelantar o retroceder la canción"
                 >
-                  {WAVEFORM_BARS.map((baseH, idx) => {
-                    const barProgress = idx / WAVEFORM_BARS.length;
+                  {displayBars.map((baseH, idx) => {
+                    const barProgress = idx / displayBars.length;
                     const isPlayed = progress >= barProgress;
-                    const animDelay = `${(idx % 12) * 0.08}s`;
+                    const animDelay = `${(idx % 16) * 0.07}s`;
 
                     return (
                       <div
                         key={idx}
-                        className="flex-1 flex items-center justify-center h-full px-[1px] sm:px-[1.5px]"
+                        className="flex-1 flex items-center justify-center h-full min-w-0 py-1"
                       >
                         <span
-                          className={`w-full rounded-full transition-all duration-150 ${
+                          className={`w-full max-w-[2.5px] sm:max-w-[3.5px] rounded-full transition-all duration-150 ${
                             isPlayed
-                              ? 'bg-gradient-to-t from-blue-500 via-indigo-400 to-pink-400 shadow-[0_0_8px_rgba(99,102,241,0.5)]'
-                              : 'bg-white/20 group-hover/wave:bg-white/30'
+                              ? 'bg-gradient-to-t from-pink-500 via-purple-400 to-indigo-300 shadow-[0_0_8px_rgba(236,72,153,0.6)]'
+                              : 'bg-[#7393fc]/35 group-hover/wave:bg-[#7393fc]/55'
                           } ${isAudioPlaying ? 'animate-soundwave' : ''}`}
                           style={{
-                            height: `${baseH}%`,
-                            minHeight: '6px',
+                            height: `${Math.max(5, baseH)}%`,
+                            minHeight: '4px',
                             animationDelay: animDelay,
-                            animationDuration: '1.1s',
+                            animationDuration: '1.2s',
                             animationIterationCount: 'infinite',
                             animationTimingFunction: 'ease-in-out'
                           }}
@@ -301,10 +377,15 @@ export default function LuxurySections({
                 </div>
 
                 {/* Tiempos de reproducción (Actual / Total) */}
-                <div className="flex justify-between items-center text-xs font-mono mt-2 px-1 text-gray-400">
-                  <span className="text-pink-300 font-semibold">{formatTime(currentTime)}</span>
-                  <span className="text-gray-500">
-                    {duration > 0 ? formatTime(duration) : '--:--'}
+                <div className="flex justify-between items-center text-xs font-mono mt-3 px-1 text-gray-400">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse" />
+                    <span className="text-pink-300 font-semibold tracking-wider">
+                      {formatTime(effectiveCurrentTime)}
+                    </span>
+                  </div>
+                  <span className="text-purple-300/70 font-medium tracking-wider">
+                    {effectiveDuration > 0 ? formatTime(effectiveDuration) : '--:--'}
                   </span>
                 </div>
               </div>

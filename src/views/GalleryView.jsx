@@ -350,6 +350,9 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
 
   const triggerEpicTransition = () => {
     setIsWarping(true);
+    if (userData?.musicAutoplay !== false) {
+      setMusicActive(true);
+    }
     setTimeout(() => {
       const isTest = window.location.hash.replace('#', '') === '3dtest';
       changeView(isTest ? '3dtest' : '3d');
@@ -439,11 +442,12 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
 
       {/* Reproductor de Audio Flotante (Burbuja Compacta) */}
       {(userData?.customAudios?.length > 0 || userData?.customAudioUrl) && (
-        <div className={`fixed bottom-4 left-4 z-[100] transition-all duration-700 ${musicActive ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'}`}>
+        <div className={`fixed bottom-4 left-4 z-[100] transition-all duration-700 ${(musicActive || userData?.musicAutoplay === false) ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-75 pointer-events-none'}`}>
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
+              setMusicActive(true);
               if (customAudioRef.current) {
                 if (customAudioRef.current.paused) {
                   customAudioRef.current.play().then(() => setIsAudioPlaying(true)).catch(console.warn);
@@ -541,8 +545,11 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
             <div
               className={`w-full h-full relative group transition-transform duration-100 ${clickCount > 0 ? 'scale-[0.98]' : 'scale-100'} active:scale-[0.95]`}
               onClick={() => {
+                const shouldAutoplay = userData?.musicAutoplay !== false;
                 if (clickCount === 0) {
-                  setMusicActive(true);
+                  if (shouldAutoplay) {
+                    setMusicActive(true);
+                  }
                   setClickCount(1);
                 } else if (clickCount === 1) {
                   setClickCount(2);

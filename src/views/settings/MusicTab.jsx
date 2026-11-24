@@ -50,6 +50,64 @@ export default function MusicTab({
       </div>
 
       <form onSubmit={(e) => e.preventDefault()} className="space-y-8">
+
+        {/* Opción de Reproducción Automática (Autoplay al entrar al Universo) */}
+        <div className="bg-[#111] border border-gray-800 hover:border-gray-700/80 rounded-2xl p-5 sm:p-6 transition-all shadow-md">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start sm:items-center gap-3.5">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border transition-all ${
+                formData.musicAutoplay !== false 
+                  ? 'bg-green-950/60 border-green-500/40 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.2)]' 
+                  : 'bg-gray-900 border-gray-800 text-gray-500'
+              }`}>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  {formData.musicAutoplay !== false ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                  )}
+                </svg>
+              </div>
+              <div>
+                <span className="text-sm font-bold text-gray-200 block">
+                  Reproducción Automática al Entrar al Universo
+                </span>
+                <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
+                  {formData.musicAutoplay !== false 
+                    ? 'Activado: La música empezará a sonar automáticamente al ingresar e interactuar con tu Universo.' 
+                    : 'Desactivado: Tu Universo se abrirá en silencio. Podrás iniciar la música manualmente cuando desees desde el botón flotante.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Switch Toggle */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={formData.musicAutoplay !== false}
+              onClick={() => {
+                if (isExpired) {
+                  if (onExpiredAction) onExpiredAction('cambiar configuración de música');
+                  return;
+                }
+                const nextVal = formData.musicAutoplay === false;
+                setFormData(prev => ({
+                  ...prev,
+                  musicAutoplay: nextVal
+                }));
+              }}
+              className={`w-12 h-6 rounded-full transition-colors duration-200 relative p-0.5 cursor-pointer shrink-0 self-end sm:self-center ${
+                formData.musicAutoplay !== false ? 'bg-green-500' : 'bg-gray-800'
+              }`}
+            >
+              <div
+                className={`bg-white w-5 h-5 rounded-full shadow-md transform transition-transform duration-200 ${
+                  formData.musicAutoplay !== false ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
         
         {/* Caja 1: Subir MP3 */}
         <div className="bg-[#111] border border-gray-800 rounded-2xl p-6">

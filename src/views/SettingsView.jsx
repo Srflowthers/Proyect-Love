@@ -40,6 +40,7 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
     universeParticleSpeed: 1,
     customAudioUrl: '',
     customAudios: [],
+    musicAutoplay: true,
     arcadeName: ''
   });
 
@@ -344,6 +345,7 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
           universeVariant: data.universeVariant || 'tunnel',
           customAudioUrl: data.customAudioUrl || '',
           customAudios: data.customAudios || (data.customAudioUrl ? [{ url: data.customAudioUrl, name: 'Canción Principal' }] : []),
+          musicAutoplay: data.musicAutoplay !== undefined ? data.musicAutoplay : true,
           arcadeName: data.arcadeName || ''
         });
         
@@ -397,6 +399,7 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
             universeVariant: data.universeVariant || 'tunnel',
             customAudioUrl: data.customAudioUrl || '',
             customAudios: data.customAudios || (data.customAudioUrl ? [{ url: data.customAudioUrl, name: 'Canción Principal' }] : []),
+            musicAutoplay: data.musicAutoplay !== undefined ? data.musicAutoplay : true,
             arcadeName: data.arcadeName || ''
           });
 
@@ -505,7 +508,8 @@ const SettingsView = ({ user, onSaveComplete, initialTab = 'profile', globalUser
           universeParticleSize: formData.universeParticleSize,
           universeParticleSpeed: formData.universeParticleSpeed,
           customAudioUrl: formData.customAudioUrl,
-          customAudios: formData.customAudios
+          customAudios: formData.customAudios,
+          musicAutoplay: formData.musicAutoplay !== undefined ? formData.musicAutoplay : true
         })
       });
       if (!res.ok) throw new Error("Fallo al actualizar");

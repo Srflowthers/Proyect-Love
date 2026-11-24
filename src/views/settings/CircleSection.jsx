@@ -29,7 +29,7 @@ export default function CircleSection({ currentUser, globalUserData, setGlobalUs
       case 'hijo':
         return {
           view: true,
-          upload: true, // Recomendado: puede subir fotos/videos en alta calidad sin perder calidad de WhatsApp
+          upload: true, // Recomendado: puede subir fotos/videos en alta calidad original sin compresión
           delete: false, // Recomendado: desmarcado para proteger recuerdos y evitar borrados accidentales
           download: false,
           viewLetters: false,
@@ -647,7 +647,7 @@ export default function CircleSection({ currentUser, globalUserData, setGlobalUs
                     }}
                     className="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white text-xs focus:border-purple-500 outline-none transition-colors"
                   >
-                    <option value="hijo">Hijo / Hija (Recomendado: subir sin WhatsApp y sin borrar)</option>
+                    <option value="hijo">Hijo / Hija</option>
                     <option value="familiar">Familiar (Hermano, Mamá, etc.)</option>
                     <option value="amigo">Amigo / Amiga</option>
                     <option value="otro">Otro Ser Querido</option>
@@ -709,7 +709,7 @@ export default function CircleSection({ currentUser, globalUserData, setGlobalUs
                       </div>
                       <p className="text-[11px] text-gray-400">
                         {permissions.upload
-                          ? 'Sube fotos y videos en calidad original (sin la compresión de WhatsApp).'
+                          ? 'Sube fotos y videos en calidad original y máxima resolución.'
                           : 'No puede subir contenido a la galería.'}
                       </p>
                     </div>
@@ -961,7 +961,7 @@ export default function CircleSection({ currentUser, globalUserData, setGlobalUs
               <label className="flex items-center justify-between p-3 rounded-xl bg-gray-950 border border-gray-800 hover:border-gray-700 transition-colors cursor-pointer">
                 <div className="pr-3">
                   <span className="font-semibold text-white block">Subir fotos y videos (calidad original)</span>
-                  <span className="text-[11px] text-gray-400">Aporta contenido sin la pérdida de calidad de WhatsApp</span>
+                  <span className="text-[11px] text-gray-400">Aporta contenido en calidad original y máxima resolución</span>
                 </div>
                 <input
                   type="checkbox"

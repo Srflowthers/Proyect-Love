@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diseñador de Fondos del Universo & Partículas 3D · Plantilla para Claude</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
+    body { font-family: 'Inter', sans-serif; background-color: #05030f; color: #f8fafc; overflow-x: hidden; }
+    code, pre { font-family: 'JetBrains Mono', monospace; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #070414; }
+    ::-webkit-scrollbar-thumb { background: #2a1f4d; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3f2d73; }
+  </style>
+</head>
+<body class="min-h-screen p-4 sm:p-8">
+
+  <div class="max-w-7xl mx-auto space-y-8">
+
+    <!-- HEADER -->
+    <header class="bg-slate-900/90 border border-purple-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 backdrop-blur-md">
+      <div>
+        <div class="flex items-center gap-3">
+          <span class="text-3xl animate-pulse">🌌</span>
+          <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-2">
+            Universo 3D & Partículas · <span class="bg-gradient-to-r from-pink-500 via-purple-400 to-cyan-400 bg-clip-text text-transparent">Plantilla para Claude</span>
+          </h1>
+        </div>
+        <p class="text-sm text-slate-400 mt-2 max-w-2xl">
+          Estudio visual interactivo con motor de partículas en vivo para diseñar y generar nuevos 
+          <strong>Colores de Fondo (Base)</strong> y <strong>Paletas de Partículas 3D</strong> para <em>Proyect-Love</em>.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3 flex-wrap">
+        <button 
+          onclick="copyClaudePrompt()" 
+          class="px-5 py-3 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-purple-600/30 transition-all flex items-center gap-2 hover:scale-105 active:scale-95"
+        >
+          <i class="fa-solid fa-robot"></i>
+          <span>Copiar Prompt para Claude</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- INSTRUCCIONES Y PROMPT PARA CLAUDE (PLEGABLE) -->
+    <section class="bg-slate-900/80 border border-purple-500/30 rounded-3xl p-6 shadow-xl space-y-4">
+      <div class="flex items-center justify-between cursor-pointer" onclick="togglePromptGuide()">
+        <h2 class="text-lg font-bold text-purple-300 flex items-center gap-2.5">
+          <i class="fa-solid fa-scroll text-pink-400"></i>
+          <span>Instrucciones & Prompt Oficial para Claude</span>
+        </h2>
+        <span id="promptToggleIcon" class="text-slate-400 text-sm font-semibold flex items-center gap-1">
+          <span>Ver Prompt</span> <i class="fa-solid fa-chevron-down"></i>
+        </span>
+      </div>
+
+      <div id="promptGuideContent" class="hidden space-y-4 pt-3 border-t border-slate-800 text-xs text-slate-300 leading-relaxed">
+        <p>
+          Copia y pega este prompt directamente en <strong>Claude</strong> para que te genere 10, 20 o 30 nuevos fondos base del universo y combinaciones de partículas en formato JSON compatible:
+        </p>
+
+        <pre class="bg-slate-950 p-4 rounded-2xl border border-slate-800 overflow-x-auto text-[11px] text-pink-200 select-all leading-relaxed" id="promptText">Actúa como diseñador visual y especialista en shaders/Three.js de temática espacial y romántica. Necesito que generes nuevos "Colores de Fondo (Base)" y "Paletas de Partículas 3D" para el universo de la aplicación "Proyect-Love".
+
+CONTEXTO ACTUAL DEL SISTEMA:
+1. Fondos Base Existentes en 'ProfileTab.jsx' / 'GalleryView.jsx':
+   - "Nebulosa Rosa" (purple): from-purple-950 via-pink-900 to-black (Aura: rgba(131,24,67,0.15))
+   - "Océano Cósmico" (blue): from-blue-950 via-cyan-900 to-black (Aura: rgba(6,182,212,0.15))
+   - "Pasión Carmesí" (red): from-red-950 via-rose-900 to-black (Aura: rgba(239,68,68,0.12))
+   - "Polvo de Oro" (gold): from-yellow-950 via-amber-900 to-black (Aura: rgba(245,158,11,0.12))
+   - "Vacío Elegante" (black): from-gray-900 via-[#111] to-black (Aura: rgba(156,163,175,0.1))
+
+2. Paletas de Partículas 3D Existentes en 'glitter-warp.jsx':
+   - Champagne: ["#fff6e5", "#f1d9a7", "#ffffff"]
+   - Perla:     ["#ffffff", "#dfe9ff", "#f3dfff"]
+   - Cósmico:   ["#ffffff", "#9ec5ff", "#d6a8ff", "#ffd1a6", "#8ff0ff"]
+   - Nebulosa:  ["#ff7ad9", "#7a5cff", "#4de3ff", "#ffffff"]
+   - Ámbar:     ["#fff2d6", "#ffc46b", "#ff8a4c", "#ffffff"]
+   - Esmeralda: ["#d9ffe8", "#5cffb0", "#2fd4ff", "#ffffff"]
+
+FORMATO DE SALIDA REQUERIDO (JSON):
+Genera un objeto con dos arreglos: "universeBackgrounds" y "particlePalettes":
+{
+  "universeBackgrounds": [
+    {
+      "id": "emerald_deep",
+      "name": "Esmeralda Estelar",
+      "tailwindClasses": "bg-gradient-to-br from-emerald-950 via-teal-900 to-black",
+      "gradientCss": "linear-gradient(135deg, #022c22 0%, #134e4a 50%, #000000 100%)",
+      "activeBorder": "border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]",
+      "auraColor": "rgba(16,185,129,0.15)",
+      "description": "Destellos de nebulosa verde esmeralda y misterio estelar"
+    }
+  ],
+  "particlePalettes": [
+    {
+      "name": "Aurora Boreal",
+      "colors": ["#00ffcc", "#3b82f6", "#a855f7", "#ffffff"],
+      "recommendedBackground": "emerald_deep"
+    }
+  ]
+}
+
+REGLAS DE COLOR:
+- Todos los fondos deben conservar su base oscura espacial (el gradiente termina en 'to-black' o tonos ultranegros) para que las partículas brillen con nitidez.
+- Las paletas de partículas deben incluir de 3 a 5 colores brillantes y al menos un blanco puro (#ffffff) o brillo intenso para acentos de destello.
+Genera [CANTIDAD] nuevos fondos de universo y [CANTIDAD] paletas de partículas complementarias.</pre>
+
+        <div class="flex justify-end">
+          <button onclick="copyPromptText()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold flex items-center gap-1.5 transition-all">
+            <i class="fa-solid fa-copy"></i> Copiar Texto del Prompt
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- GRID PRINCIPAL: SIMULADOR 3D EN VIVO & CONTROLES -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+      <!-- COLUMNA IZQUIERDA: CONTROLES DEL UNIVERSO Y PARTÍCULAS -->
+      <div class="lg:col-span-5 space-y-6">
+
+        <!-- 1. SELECCIÓN DE FONDOS BASE -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h2 class="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-palette text-pink-400"></i> Color del Fondo (Base)
+            </h2>
+            <span class="text-[10px] bg-purple-950 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-full font-bold" id="bgCountBadge">
+              5 Oficiales
+            </span>
+          </div>
+
+          <!-- Cuadrícula de tarjetas de fondos idéntica a ProfileTab.jsx -->
+          <div id="bgOptionsGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <!-- Se llena dinámicamente con JS -->
+          </div>
+
+          <!-- Diseñador de Nuevo Fondo Base -->
+          <div class="mt-4 pt-4 border-t border-slate-800/80 space-y-3">
+            <span class="text-xs font-bold text-purple-300 block">
+              + Crear / Editar Fondo Personalizado:
+            </span>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-1">Nombre</label>
+                <input type="text" id="customBgName" value="Crepúsculo Amatista" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white outline-none focus:border-purple-500">
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-1">ID (slug)</label>
+                <input type="text" id="customBgId" value="amatista" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-slate-300 font-mono outline-none focus:border-purple-500">
+              </div>
+            </div>
+
+            <!-- Gradiente: Colores Inicio, Medio y Fin -->
+            <div class="grid grid-cols-3 gap-2">
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-1">Color Inicio</label>
+                <input type="color" id="bgColFrom" value="#2e1065" onchange="updateCustomGradient()" class="w-full h-8 rounded-lg bg-transparent cursor-pointer border border-slate-700">
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-1">Color Medio</label>
+                <input type="color" id="bgColVia" value="#581c87" onchange="updateCustomGradient()" class="w-full h-8 rounded-lg bg-transparent cursor-pointer border border-slate-700">
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-1">Color Fin</label>
+                <input type="color" id="bgColTo" value="#000000" onchange="updateCustomGradient()" class="w-full h-8 rounded-lg bg-transparent cursor-pointer border border-slate-700">
+              </div>
+            </div>
+
+            <button onclick="addCustomBackground()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-purple-200 text-xs font-bold rounded-xl border border-purple-500/30 transition-all flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-plus"></i> Guardar Fondo en Biblioteca
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. SELECCIÓN DE PALETAS DE PARTÍCULAS (PALETTES) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h2 class="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> 1. Paleta de Colores de Partículas
+            </h2>
+            <span class="text-[10px] bg-amber-950 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold" id="paletteCountBadge">
+              6 Oficiales
+            </span>
+          </div>
+
+          <!-- Pestañas de paletas (Champagne, Perla, Cósmico, Nebulosa, Ámbar, Esmeralda...) -->
+          <div id="palettePillsContainer" class="flex flex-wrap gap-2">
+            <!-- Dinámico -->
+          </div>
+
+          <!-- Muestra de Colores de la Paleta Activa -->
+          <div class="p-3 bg-slate-950 rounded-2xl border border-slate-800 flex items-center justify-between">
+            <span class="text-xs text-slate-400">Colores activos:</span>
+            <div id="activePaletteSwatches" class="flex items-center gap-1.5">
+              <!-- Círculos de color -->
+            </div>
+          </div>
+
+          <!-- Diseñador de Nueva Paleta de Partículas -->
+          <div class="mt-4 pt-4 border-t border-slate-800/80 space-y-3">
+            <span class="text-xs font-bold text-amber-300 block">
+              + Crear Nueva Paleta de Partículas:
+            </span>
+            <div class="text-xs">
+              <label class="block text-[10px] text-slate-400 mb-1">Nombre de la Paleta</label>
+              <input type="text" id="customPalName" value="Zafiro Místico" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white outline-none focus:border-amber-500">
+            </div>
+
+            <div class="grid grid-cols-4 gap-2">
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-1">Color 1</label>
+                <input type="color" id="palCol1" value="#38bdf8" class="w-full h-8 rounded-lg bg-transparent cursor-pointer border border-slate-700">
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-1">Color 2</label>
+                <input type="color" id="palCol2" value="#818cf8" class="w-full h-8 rounded-lg bg-transparent cursor-pointer border border-slate-700">
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-1">Color 3</label>
+                <input type="color" id="palCol3" value="#c084fc" class="w-full h-8 rounded-lg bg-transparent cursor-pointer border border-slate-700">
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-1">Color 4 (Brillo)</label>
+                <input type="color" id="palCol4" value="#ffffff" class="w-full h-8 rounded-lg bg-transparent cursor-pointer border border-slate-700">
+              </div>
+            </div>
+
+            <button onclick="addCustomPalette()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-amber-200 text-xs font-bold rounded-xl border border-amber-500/30 transition-all flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-plus"></i> Guardar Paleta de Partículas
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. ESTILO DE MOVIMIENTO (VARIANTS) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+          <h2 class="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-3">
+            <i class="fa-solid fa-compass text-cyan-400"></i> 2. Estilo de Movimiento de Partículas
+          </h2>
+          
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <button onclick="setMovementVariant('tunnel')" id="btnVar_tunnel" class="var-btn p-2 rounded-xl border border-purple-500 bg-purple-500/20 text-purple-200 font-bold">Túnel</button>
+            <button onclick="setMovementVariant('vortex')" id="btnVar_vortex" class="var-btn p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 font-semibold hover:border-slate-700">Vórtice</button>
+            <button onclick="setMovementVariant('hyperspace')" id="btnVar_hyperspace" class="var-btn p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 font-semibold hover:border-slate-700">Hiperespacio</button>
+            <button onclick="setMovementVariant('polvo')" id="btnVar_polvo" class="var-btn p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 font-semibold hover:border-slate-700">Polvo Dorado</button>
+            <button onclick="setMovementVariant('silk')" id="btnVar_silk" class="var-btn p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 font-semibold hover:border-slate-700">Seda</button>
+            <button onclick="setMovementVariant('constelacion')" id="btnVar_constelacion" class="var-btn p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 font-semibold hover:border-slate-700">Constelación</button>
+            <button onclick="setMovementVariant('luciernagas')" id="btnVar_luciernagas" class="var-btn p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 font-semibold hover:border-slate-700">Luciérnagas</button>
+            <button onclick="setMovementVariant('halo')" id="btnVar_halo" class="var-btn p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 font-semibold hover:border-slate-700">Halo</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- COLUMNA DERECHA: SIMULADOR EN VIVO (CANVAS GLITTER-WARP 3D) -->
+      <div class="lg:col-span-7 space-y-6">
+        
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative flex flex-col items-center">
+          
+          <div class="w-full flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+            <div>
+              <h2 class="text-base font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-satellite-dish text-pink-400"></i>
+                <span>Simulador del Universo 3D en Tiempo Real</span>
+              </h2>
+              <p class="text-xs text-slate-400">Fondo Base + Partículas activas a 60 FPS</p>
+            </div>
+
+            <div class="flex items-center gap-2 text-xs">
+              <span id="activeUniverseLabel" class="font-bold text-pink-300">Nebulosa Rosa</span>
+              <span class="text-slate-600">•</span>
+              <span id="activePaletteLabel" class="font-bold text-cyan-300">Cósmico</span>
+            </div>
+          </div>
+
+          <!-- CONTENEDOR DEL UNIVERSO EN VIVO -->
+          <div 
+            id="universeViewport" 
+            class="w-full h-[520px] rounded-2xl relative overflow-hidden shadow-2xl border border-purple-500/20 flex flex-col justify-between p-6 transition-colors duration-500"
+            style="background: linear-gradient(135deg, #2e1065 0%, #831843 50%, #000000 100%);"
+          >
+            <!-- Canvas de Partículas GlitterWarp -->
+            <canvas id="universeCanvas" class="absolute inset-0 w-full h-full pointer-events-none block"></canvas>
+
+            <!-- Aura ambiental superpuesta -->
+            <div id="universeAura" class="absolute inset-0 pointer-events-none transition-colors duration-500" style="background: radial-gradient(circle at center, rgba(131,24,67,0.2) 0%, transparent 70%);"></div>
+
+            <!-- Interfaz simulada del Universo de la pareja -->
+            <div class="relative z-10 flex items-center justify-between">
+              <div class="flex items-center gap-2 bg-slate-950/70 border border-white/10 px-3 py-1.5 rounded-full backdrop-blur-md">
+                <span class="w-2.5 h-2.5 rounded-full bg-pink-500 animate-ping"></span>
+                <span class="text-xs font-bold text-pink-200">Universo Activo</span>
+              </div>
+
+              <div class="text-right">
+                <span class="text-xs font-bold text-white block drop-shadow-md">Nuestra Historia</span>
+                <span class="text-[10px] text-slate-400">365 días juntos ❤️</span>
+              </div>
+            </div>
+
+            <!-- Tarjeta central de muestra (Galería / Foto) -->
+            <div class="relative z-10 max-w-sm mx-auto bg-slate-950/60 border border-white/15 rounded-2xl p-4 backdrop-blur-lg shadow-2xl text-center space-y-2">
+              <span class="text-xs font-bold text-purple-300 uppercase tracking-widest block">Simulación de Galería</span>
+              <p class="text-xs text-slate-200">
+                Así se complementan el color de fondo base y las partículas 3D en la pantalla principal.
+              </p>
+            </div>
+
+            <!-- Pie de viewport con controles rápidos de animación -->
+            <div class="relative z-10 flex items-center justify-between text-xs text-slate-400 bg-slate-950/80 px-4 py-2 rounded-xl backdrop-blur-md border border-white/10">
+              <div class="flex items-center gap-2">
+                <span>Velocidad:</span>
+                <input type="range" id="speedSlider" min="0.2" max="2.5" step="0.1" value="1" oninput="setSpeedMult(this.value)" class="w-20 accent-pink-500">
+              </div>
+              <div class="flex items-center gap-2">
+                <span>Cantidad:</span>
+                <input type="range" id="countSlider" min="100" max="600" step="50" value="300" oninput="setParticleCount(this.value)" class="w-20 accent-cyan-500">
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- SECCIÓN INFERIOR: IMPORTADOR / EXPORTADOR MASIVO PARA CLAUDE -->
+    <section class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div>
+          <h2 class="text-xl font-black text-white flex items-center gap-2.5">
+            <i class="fa-solid fa-code-merge text-purple-400"></i>
+            <span>Importador & Exportador de Diseños de Claude</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">
+            Pega el JSON generado por Claude para cargarlo instantáneamente al simulador y exportarlo a los archivos del proyecto.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <button 
+            onclick="importClaudeJson()" 
+            class="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-all shadow-md flex items-center gap-1.5"
+          >
+            <i class="fa-solid fa-bolt"></i> Cargar JSON de Claude
+          </button>
+          <button 
+            onclick="copyProfileTabSnippet()" 
+            class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-pink-300 hover:text-white font-bold text-xs transition-all border border-pink-500/30 flex items-center gap-1.5"
+          >
+            <i class="fa-solid fa-copy"></i> Copiar Código para ProfileTab.jsx
+          </button>
+          <button 
+            onclick="copyPalettesSnippet()" 
+            class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-white font-bold text-xs transition-all border border-cyan-500/30 flex items-center gap-1.5"
+          >
+            <i class="fa-solid fa-copy"></i> Copiar Código para glitter-warp.jsx
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-xs font-bold text-slate-400 mb-2">
+            Pega aquí el JSON que te entregue Claude:
+          </label>
+          <textarea 
+            id="claudeJsonInput" 
+            rows="10" 
+            placeholder='{
+  "universeBackgrounds": [
+    {
+      "id": "emerald_deep",
+      "name": "Esmeralda Galáctica",
+      "tailwindClasses": "bg-gradient-to-br from-emerald-950 via-teal-900 to-black",
+      "gradientCss": "linear-gradient(135deg, #022c22 0%, #134e4a 50%, #000000 100%)",
+      "activeBorder": "border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]",
+      "auraColor": "rgba(16,185,129,0.15)"
+    }
+  ],
+  "particlePalettes": [
+    {
+      "name": "Aurora Boreal",
+      "colors": ["#00ffcc", "#3b82f6", "#a855f7", "#ffffff"]
+    }
+  ]
+}'
+            class="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-xs font-mono text-purple-200 outline-none focus:border-purple-500"
+          ></textarea>
+        </div>
+
+        <div class="space-y-3">
+          <span class="text-xs font-bold text-slate-300 block">
+            Código Listo para Integrar al Proyecto:
+          </span>
+          <pre id="outputCodeSnippet" class="bg-slate-950 border border-slate-800 rounded-2xl p-4 text-[11px] text-slate-300 h-56 overflow-y-auto leading-relaxed">// Aquí aparecerá el código formateado para copiar directamente a ProfileTab.jsx o glitter-warp.jsx</pre>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- SCRIPT DEL MOTOR DE SIMULACIÓN Y LÓGICA -->
+  <script>
+    // FONDOS BASE OFICIALES DEL PROYECTO
+    const DEFAULT_BACKGROUNDS = [
+      {
+        id: 'purple',
+        name: 'Nebulosa Rosa',
+        tailwindClasses: 'bg-gradient-to-br from-purple-950 via-pink-900 to-black',
+        gradientCss: 'linear-gradient(135deg, #2e1065 0%, #831843 50%, #000000 100%)',
+        activeBorder: 'border-pink-500 shadow-[0_0_15px_rgba(236,72,153,0.3)]',
+        auraColor: 'rgba(131,24,67,0.2)'
+      },
+      {
+        id: 'blue',
+        name: 'Océano Cósmico',
+        tailwindClasses: 'bg-gradient-to-br from-blue-950 via-cyan-900 to-black',
+        gradientCss: 'linear-gradient(135deg, #172554 0%, #164e63 50%, #000000 100%)',
+        activeBorder: 'border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.3)]',
+        auraColor: 'rgba(6,182,212,0.2)'
+      },
+      {
+        id: 'red',
+        name: 'Pasión Carmesí',
+        tailwindClasses: 'bg-gradient-to-br from-red-950 via-rose-900 to-black',
+        gradientCss: 'linear-gradient(135deg, #450a0a 0%, #881337 50%, #000000 100%)',
+        activeBorder: 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]',
+        auraColor: 'rgba(239,68,68,0.18)'
+      },
+      {
+        id: 'gold',
+        name: 'Polvo de Oro',
+        tailwindClasses: 'bg-gradient-to-br from-yellow-950 via-amber-900 to-black',
+        gradientCss: 'linear-gradient(135deg, #422006 0%, #78350f 50%, #000000 100%)',
+        activeBorder: 'border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]',
+        auraColor: 'rgba(245,158,11,0.18)'
+      },
+      {
+        id: 'black',
+        name: 'Vacío Elegante',
+        tailwindClasses: 'bg-gradient-to-br from-gray-900 via-[#111] to-black',
+        gradientCss: 'linear-gradient(135deg, #111827 0%, #111111 50%, #000000 100%)',
+        activeBorder: 'border-gray-400 shadow-[0_0_15px_rgba(156,163,175,0.3)]',
+        auraColor: 'rgba(156,163,175,0.15)'
+      }
+    ];
+
+    // PALETAS OFICIALES DE PARTÍCULAS
+    const DEFAULT_PALETTES = {
+      Champagne: ["#fff6e5", "#f1d9a7", "#ffffff"],
+      Perla:     ["#ffffff", "#dfe9ff", "#f3dfff"],
+      Cósmico:   ["#ffffff", "#9ec5ff", "#d6a8ff", "#ffd1a6", "#8ff0ff"],
+      Nebulosa:  ["#ff7ad9", "#7a5cff", "#4de3ff", "#ffffff"],
+      Ámbar:     ["#fff2d6", "#ffc46b", "#ff8a4c", "#ffffff"],
+      Esmeralda: ["#d9ffe8", "#5cffb0", "#2fd4ff", "#ffffff"],
+    };
+
+    // Estado activo
+    let backgroundsList = [...DEFAULT_BACKGROUNDS];
+    let palettesMap = { ...DEFAULT_PALETTES };
+    let currentBg = backgroundsList[0];
+    let currentPaletteName = 'Cósmico';
+    let currentMovement = 'tunnel';
+    let speedMult = 1;
+    let particleCount = 300;
+
+    // MOTOR DE PARTÍCULAS CANVAS (GLITTER-WARP NATIVO EN JS)
+    let animationFrameId = null;
+    let stars = [];
+    const DEPTH = 1000;
+
+    function initParticles() {
+      stars = [];
+      const colors = palettesMap[currentPaletteName] || DEFAULT_PALETTES.Cósmico;
+      for (let i = 0; i < particleCount; i++) {
+        stars.push({
+          x: (Math.random() - 0.5) * 2000,
+          y: (Math.random() - 0.5) * 2000,
+          z: Math.random() * DEPTH,
+          sz: 0.6 + Math.random() * 1.2,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          tw: Math.random() * 6.28
+        });
+      }
+    }
+
+    function renderParticlesLoop() {
+      const canvas = document.getElementById('universeCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      const cx = w / 2;
+      const cy = h / 2;
+      const speed = 2.5 * speedMult;
+
+      for (let i = 0; i < stars.length; i++) {
+        const s = stars[i];
+
+        if (currentMovement === 'vortex') {
+          const angle = 0.005 * speedMult;
+          const cos = Math.cos(angle);
+          const sin = Math.sin(angle);
+          const nx = s.x * cos - s.y * sin;
+          const ny = s.x * sin + s.y * cos;
+          s.x = nx;
+          s.y = ny;
+        }
+
+        s.z -= speed;
+        if (s.z <= 10) {
+          s.z = DEPTH;
+          s.x = (Math.random() - 0.5) * 2000;
+          s.y = (Math.random() - 0.5) * 2000;
+        }
+
+        const k = 250 / s.z;
+        const px = s.x * k + cx;
+        const py = s.y * k + cy;
+
+        if (px >= 0 && px <= w && py >= 0 && py <= h) {
+          const size = Math.max(0.8, (1 - s.z / DEPTH) * s.sz * 2.5);
+          const alpha = Math.min(1, Math.max(0.1, (1 - s.z / DEPTH) * 1.2));
+
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = s.color;
+
+          // Glow suave
+          if (s.z < 400) {
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = s.color;
+          }
+
+          ctx.beginPath();
+          ctx.arc(px, py, size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      animationFrameId = requestAnimationFrame(renderParticlesLoop);
+    }
+
+    function setSpeedMult(val) {
+      speedMult = parseFloat(val);
+    }
+
+    function setParticleCount(val) {
+      particleCount = parseInt(val);
+      initParticles();
+    }
+
+    function setMovementVariant(v) {
+      currentMovement = v;
+      document.querySelectorAll('.var-btn').forEach(b => {
+        b.className = 'var-btn p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 font-semibold hover:border-slate-700';
+      });
+      const activeBtn = document.getElementById(`btnVar_${v}`);
+      if (activeBtn) {
+        activeBtn.className = 'var-btn p-2 rounded-xl border border-purple-500 bg-purple-500/20 text-purple-200 font-bold';
+      }
+    }
+
+    function selectBackground(id) {
+      const bg = backgroundsList.find(b => b.id === id);
+      if (!bg) return;
+      currentBg = bg;
+
+      const vp = document.getElementById('universeViewport');
+      const aura = document.getElementById('universeAura');
+      vp.style.background = bg.gradientCss;
+      aura.style.background = `radial-gradient(circle at center, ${bg.auraColor} 0%, transparent 70%)`;
+
+      document.getElementById('activeUniverseLabel').innerText = bg.name;
+      renderBackgroundCards();
+    }
+
+    function selectPalette(name) {
+      currentPaletteName = name;
+      document.getElementById('activePaletteLabel').innerText = name;
+      initParticles();
+      renderPalettePills();
+    }
+
+    function renderBackgroundCards() {
+      const grid = document.getElementById('bgOptionsGrid');
+      document.getElementById('bgCountBadge').innerText = `${backgroundsList.length} Disponibles`;
+
+      grid.innerHTML = backgroundsList.map(bg => {
+        const isSelected = currentBg.id === bg.id;
+        return `
+          <div 
+            onclick="selectBackground('${bg.id}')"
+            class="cursor-pointer rounded-xl border-2 p-1.5 transition-all text-center ${
+              isSelected 
+                ? `${bg.activeBorder} scale-105 z-10 bg-slate-900` 
+                : 'border-transparent hover:border-slate-700 bg-slate-950/60'
+            }"
+          >
+            <div class="w-full h-14 rounded-lg shadow-inner" style="background: ${bg.gradientCss};"></div>
+            <p class="text-[10px] mt-1.5 font-bold ${isSelected ? 'text-pink-300' : 'text-slate-400'} truncate">${bg.name}</p>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderPalettePills() {
+      const container = document.getElementById('palettePillsContainer');
+      const swatches = document.getElementById('activePaletteSwatches');
+      document.getElementById('paletteCountBadge').innerText = `${Object.keys(palettesMap).length} Disponibles`;
+
+      container.innerHTML = Object.keys(palettesMap).map(p => {
+        const isSelected = currentPaletteName === p;
+        return `
+          <button
+            type="button"
+            onclick="selectPalette('${p}')"
+            class="px-3.5 py-1.5 rounded-full border text-xs font-semibold transition-all ${
+              isSelected
+                ? 'border-pink-500 bg-pink-500/20 text-pink-300 shadow-[0_0_12px_rgba(236,72,153,0.3)] font-bold'
+                : 'border-slate-800 bg-slate-950/80 text-slate-400 hover:border-slate-600 hover:text-slate-200'
+            }"
+          >
+            ${p}
+          </button>
+        `;
+      }).join('');
+
+      const colors = palettesMap[currentPaletteName] || [];
+      swatches.innerHTML = colors.map(c => `
+        <span class="w-4 h-4 rounded-full border border-white/20 shadow-sm" style="background: ${c};" title="${c}"></span>
+      `).join('');
+    }
+
+    function addCustomBackground() {
+      const name = document.getElementById('customBgName').value.trim();
+      const id = document.getElementById('customBgId').value.trim();
+      const colFrom = document.getElementById('bgColFrom').value;
+      const colVia = document.getElementById('bgColVia').value;
+      const colTo = document.getElementById('bgColTo').value;
+
+      if (!name || !id) {
+        alert("Ingresa un nombre y un ID para el fondo.");
+        return;
+      }
+
+      const newBg = {
+        id,
+        name,
+        tailwindClasses: `bg-gradient-to-br from-[${colFrom}] via-[${colVia}] to-[${colTo}]`,
+        gradientCss: `linear-gradient(135deg, ${colFrom} 0%, ${colVia} 50%, ${colTo} 100%)`,
+        activeBorder: `border-purple-500 shadow-[0_0_15px_${colVia}88]`,
+        auraColor: `${colVia}33`
+      };
+
+      const existingIdx = backgroundsList.findIndex(b => b.id === id);
+      if (existingIdx >= 0) {
+        backgroundsList[existingIdx] = newBg;
+      } else {
+        backgroundsList.push(newBg);
+      }
+
+      selectBackground(id);
+    }
+
+    function addCustomPalette() {
+      const name = document.getElementById('customPalName').value.trim();
+      const col1 = document.getElementById('palCol1').value;
+      const col2 = document.getElementById('palCol2').value;
+      const col3 = document.getElementById('palCol3').value;
+      const col4 = document.getElementById('palCol4').value;
+
+      if (!name) {
+        alert("Ingresa un nombre para la paleta de partículas.");
+        return;
+      }
+
+      palettesMap[name] = [col1, col2, col3, col4];
+      selectPalette(name);
+    }
+
+    function importClaudeJson() {
+      const raw = document.getElementById('claudeJsonInput').value.trim();
+      if (!raw) {
+        alert("Pega un JSON válido en el área de texto.");
+        return;
+      }
+
+      try {
+        const data = JSON.parse(raw);
+        let countBg = 0;
+        let countPal = 0;
+
+        if (Array.isArray(data.universeBackgrounds)) {
+          data.universeBackgrounds.forEach(bg => {
+            if (bg.id && bg.name && bg.gradientCss) {
+              const idx = backgroundsList.findIndex(b => b.id === bg.id);
+              if (idx >= 0) backgroundsList[idx] = bg;
+              else backgroundsList.push(bg);
+              countBg++;
+            }
+          });
+        }
+
+        if (Array.isArray(data.particlePalettes)) {
+          data.particlePalettes.forEach(pal => {
+            if (pal.name && Array.isArray(pal.colors)) {
+              palettesMap[pal.name] = pal.colors;
+              countPal++;
+            }
+          });
+        }
+
+        renderBackgroundCards();
+        renderPalettePills();
+        alert(`✅ ¡Importación completada! Se agregaron ${countBg} fondos y ${countPal} paletas de partículas.`);
+      } catch (err) {
+        alert("❌ Error al procesar el JSON: " + err.message);
+      }
+    }
+
+    function copyProfileTabSnippet() {
+      const snippet = `// Código para ProfileTab.jsx (Color del Fondo Base)
+<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+${backgroundsList.map(bg => `  <label className={\`cursor-pointer rounded-xl border-2 p-1 transition-all \${formData.universeColor === '${bg.id}' ? '${bg.activeBorder} scale-105' : 'border-transparent hover:border-gray-600'}\`}>
+    <input type="radio" name="universeColor" value="${bg.id}" checked={formData.universeColor === '${bg.id}'} onChange={handleChange} className="hidden" />
+    <div className="w-full h-16 rounded-lg ${bg.tailwindClasses}"></div>
+    <p className="text-[10px] text-center mt-2 font-bold text-gray-300">${bg.name}</p>
+  </label>`).join('\n')}
+</div>`;
+
+      document.getElementById('outputCodeSnippet').innerText = snippet;
+      navigator.clipboard.writeText(snippet).then(() => {
+        alert("✅ Código para ProfileTab.jsx copiado al portapapeles.");
+      });
+    }
+
+    function copyPalettesSnippet() {
+      const snippet = `// Código para glitter-warp.jsx (PALETTES)
+export const PALETTES = ${JSON.stringify(palettesMap, null, 2)};`;
+
+      document.getElementById('outputCodeSnippet').innerText = snippet;
+      navigator.clipboard.writeText(snippet).then(() => {
+        alert("✅ Código para glitter-warp.jsx copiado al portapapeles.");
+      });
+    }
+
+    function togglePromptGuide() {
+      const c = document.getElementById('promptGuideContent');
+      const icon = document.getElementById('promptToggleIcon');
+      if (c.classList.contains('hidden')) {
+        c.classList.remove('hidden');
+        icon.innerHTML = 'Ocultar <i class="fa-solid fa-chevron-up"></i>';
+      } else {
+        c.classList.add('hidden');
+        icon.innerHTML = 'Ver Prompt <i class="fa-solid fa-chevron-down"></i>';
+      }
+    }
+
+    function copyClaudePrompt() {
+      const text = document.getElementById('promptText').innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        alert("✅ ¡Prompt para Claude copiado! Pégalo en tu conversación con Claude para generar más fondos y paletas.");
+      });
+    }
+
+    function copyPromptText() {
+      copyClaudePrompt();
+    }
+
+    // Inicializar canvas y eventos de ventana
+    window.addEventListener('resize', () => {
+      const canvas = document.getElementById('universeCanvas');
+      if (canvas && canvas.parentElement) {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+      }
+    });
+
+    window.onload = () => {
+      const canvas = document.getElementById('universeCanvas');
+      if (canvas && canvas.parentElement) {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+      }
+      renderBackgroundCards();
+      renderPalettePills();
+      initParticles();
+      renderParticlesLoop();
+    };
+  </script>
+</body>
+</html>

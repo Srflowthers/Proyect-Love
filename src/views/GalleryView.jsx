@@ -645,7 +645,17 @@ const GalleryView = ({ user, onOpenSettings, onOpenAdmin, onDockVisibilityChange
           </div>
 
           <div className="relative z-10 bg-black">
-            <LuxurySections userData={userData} />
+            <LuxurySections
+              userData={userData}
+              playlist={playlist}
+              currentAudioIndex={currentAudioIndex}
+              setCurrentAudioIndex={setCurrentAudioIndex}
+              isAudioPlaying={isAudioPlaying}
+              setIsAudioPlaying={setIsAudioPlaying}
+              customAudioRef={customAudioRef}
+              musicActive={musicActive}
+              setMusicActive={setMusicActive}
+            />
           </div>
         </div>
       )}

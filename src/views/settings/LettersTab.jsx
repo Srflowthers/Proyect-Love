@@ -353,14 +353,14 @@ export default function LettersTab({ formData, setFormData, user, setGlobalUserD
 
       <form onSubmit={(e) => e.preventDefault()}>
         {/* Barra de Navegación Limpia y Elegante: Anterior / Contador / Siguiente */}
-        <div className="bg-gray-950/80 border border-purple-500/25 rounded-2xl p-3 sm:p-4 mb-6 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="bg-gray-950/85 border border-purple-500/30 backdrop-blur-md rounded-2xl p-3 sm:px-5 sm:py-3.5 mb-6 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3">
           {/* Controles de Navegación de Hoja */}
-          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-start">
+          <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
             <button
               type="button"
               onClick={() => setActivePageIndex(p => Math.max(0, p - 1))}
               disabled={safePageIndex === 0}
-              className="px-4 py-2 rounded-xl bg-gray-900 border border-gray-700 hover:border-purple-500 text-gray-200 hover:text-white hover:bg-gray-850 disabled:opacity-30 disabled:border-gray-800 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 text-xs font-bold shadow-sm"
+              className="px-4 py-2 rounded-xl bg-gray-900/90 border border-gray-700/80 hover:border-purple-400 text-gray-200 hover:text-white hover:bg-purple-950/40 disabled:opacity-25 disabled:border-gray-800 disabled:pointer-events-none transition-all flex items-center gap-2 text-xs font-bold shadow-sm active:scale-95"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
@@ -369,14 +369,14 @@ export default function LettersTab({ formData, setFormData, user, setGlobalUserD
             </button>
 
             {/* Contador Central: Hoja X de Y */}
-            <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gray-900/90 border border-purple-500/30 rounded-xl text-xs font-bold shadow-inner">
+            <div className="flex items-center gap-1.5 px-4 py-2 bg-black/60 border border-purple-500/30 rounded-xl text-xs font-bold shadow-inner">
               <span className="text-gray-400">Hoja</span>
-              <span className="text-purple-400 font-mono text-sm">{safePageIndex + 1}</span>
+              <span className="text-purple-300 font-mono text-sm">{safePageIndex + 1}</span>
               <span className="text-gray-500">de</span>
               <span className="text-gray-300 font-mono text-sm">{localPages.length}</span>
               {isPageIndexModified(safePageIndex) && (
                 <span 
-                  className="w-2 h-2 rounded-full bg-pink-400 animate-pulse ml-1 shadow-[0_0_6px_rgba(244,114,182,0.8)]"
+                  className="w-2 h-2 rounded-full bg-pink-400 animate-pulse ml-1 shadow-[0_0_8px_rgba(244,114,182,0.9)]"
                   title="Esta hoja tiene modificaciones sin guardar"
                 />
               )}
@@ -386,7 +386,7 @@ export default function LettersTab({ formData, setFormData, user, setGlobalUserD
               type="button"
               onClick={() => setActivePageIndex(p => Math.min(localPages.length - 1, p + 1))}
               disabled={safePageIndex === localPages.length - 1}
-              className="px-4 py-2 rounded-xl bg-gray-900 border border-gray-700 hover:border-purple-500 text-gray-200 hover:text-white hover:bg-gray-850 disabled:opacity-30 disabled:border-gray-800 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 text-xs font-bold shadow-sm"
+              className="px-4 py-2 rounded-xl bg-gray-900/90 border border-gray-700/80 hover:border-purple-400 text-gray-200 hover:text-white hover:bg-purple-950/40 disabled:opacity-25 disabled:border-gray-800 disabled:pointer-events-none transition-all flex items-center gap-2 text-xs font-bold shadow-sm active:scale-95"
             >
               <span>Siguiente</span>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -399,9 +399,9 @@ export default function LettersTab({ formData, setFormData, user, setGlobalUserD
           <button 
             type="button" 
             onClick={handleAddPage} 
-            className="w-full sm:w-auto px-4 py-2 border border-dashed border-purple-500/40 hover:border-purple-400 bg-purple-950/20 hover:bg-purple-900/40 text-purple-300 hover:text-white rounded-xl transition-all font-semibold text-xs flex items-center justify-center gap-2 shadow-sm"
+            className="w-full sm:w-auto px-4 py-2 border border-dashed border-purple-500/50 hover:border-purple-400 bg-purple-950/30 hover:bg-purple-900/50 text-purple-200 hover:text-white rounded-xl transition-all font-semibold text-xs flex items-center justify-center gap-2 shadow-sm active:scale-95"
           >
-            <span className="text-sm font-bold">+</span> Agregar Nueva Hoja
+            <span className="text-sm font-bold text-pink-400">+</span> Agregar Hoja
           </button>
         </div>
 

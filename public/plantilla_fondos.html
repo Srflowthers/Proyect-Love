@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diseñador & Generador de Fondos de Carta · Plantilla para Claude</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Fuentes Románticas -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Great+Vibes&family=Playfair+Display:ital,wght@0,600;1,400&family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #090d16; color: #f1f5f9; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0b0f19; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+  </style>
+</head>
+<body class="min-h-screen p-4 sm:p-8">
+
+  <div class="max-w-7xl mx-auto space-y-8">
+    
+    <!-- HEADER -->
+    <header class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div>
+        <div class="flex items-center gap-3">
+          <span class="text-3xl">📜</span>
+          <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-3">
+            Estudios de Papel · <span class="bg-gradient-to-r from-pink-500 via-purple-400 to-amber-300 bg-clip-text text-transparent">Plantilla para Claude</span>
+          </h1>
+        </div>
+        <p class="text-sm text-slate-400 mt-2 max-w-2xl">
+          Herramienta visual para diseñar, simular en Canvas y generar en lote estilos de papel de carta organizados por niveles de rareza para <strong>Proyect-Love</strong>.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button 
+          onclick="copyClaudePrompt()" 
+          class="px-5 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-purple-600/30 transition-all flex items-center gap-2 hover:scale-105 active:scale-95"
+        >
+          <i class="fa-solid fa-copy"></i>
+          <span>Copiar Prompt para Claude</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- GUÍA DEL PROMPT PARA CLAUDE (PLEGABLE) -->
+    <section class="bg-slate-900/80 border border-purple-500/30 rounded-3xl p-6 shadow-xl space-y-4">
+      <div class="flex items-center justify-between cursor-pointer" onclick="togglePromptGuide()">
+        <h2 class="text-lg font-bold text-purple-300 flex items-center gap-2.5">
+          <i class="fa-solid fa-robot text-pink-400"></i>
+          <span>Instrucciones & Prompt Oficial para Claude</span>
+        </h2>
+        <span id="promptToggleIcon" class="text-slate-400 text-sm font-semibold flex items-center gap-1">
+          <span>Ver Prompt</span> <i class="fa-solid fa-chevron-down"></i>
+        </span>
+      </div>
+
+      <div id="promptGuideContent" class="hidden space-y-4 pt-3 border-t border-slate-800 text-xs text-slate-300 leading-relaxed">
+        <p>
+          Copia y pega este prompt directamente en <strong>Claude</strong> para pedirle que invente 10, 20 o 50 estilos de papel con el formato exacto que espera <strong>Proyect-Love</strong>:
+        </p>
+
+        <pre class="bg-slate-950 p-4 rounded-2xl border border-slate-800 overflow-x-auto text-[11px] text-pink-200 select-all font-mono leading-relaxed" id="promptText">Actúa como un diseñador de interfaces y artista visual romántico. Necesito que generes estilos de papel para cartas de amor en formato JSON para el proyecto "Proyect-Love".
+
+Cada estilo debe seguir estrictamente este esquema:
+{
+  "id": "slug_unico_en_minusculas",
+  "name": "Nombre Poético y Evocador",
+  "rarity": "comun" | "rara" | "epica" | "legendaria" | "mitica",
+  "description": "Breve frase descriptiva de 1 línea de la atmósfera",
+  "isBurnt": false, // true SOLO si es un pergamino milenario carbonizado con bordes quemados
+  "preview": {
+    "bg": "Color del Fondo (Base): puede ser un hex #RRGGBB o un radial-gradient(...) o linear-gradient(...)",
+    "border": "#HexColorParaBorde",
+    "textColor": "#HexColorParaTintaDeTextoRecomendada"
+  }
+}
+
+REGLAS DE DISEÑO:
+1. "Color del Fondo (Base)" ('preview.bg'):
+   - Para estilos 'comun': tonos crema suaves, linos, marfil (#f4f0e8, #faf9f6, #fffaf0, #e8dcbf).
+   - Para estilos 'rara': gradientes sutiles pastel (cielo crepuscular, sakura rosa, menta suave, lavanda).
+   - Para estilos 'epica': gradientes más intensos y dramáticos (noche estelar azul profundo, papiro egipcio, terciopelo carmesí, o isBurnt: true).
+   - Para estilos 'legendaria': dorados áureos (oro 24k), plata celestial, amatistas místicas y gemas.
+   - Para estilos 'mitica': fondos cósmicos profundos (#000000 con centros púrpuras, carmesí o auroras con brillos).
+
+2. "textColor": Debe tener ALTO CONTRASTE con el fondo.
+   - Si el fondo es claro: usa tinta oscura (#2a1a0f, #2d2a26, #3e2723, #111111).
+   - Si el fondo es oscuro: usa tinta clara o dorada (#ffffff, #fef08a, #e0e7ff, #fbcfe8).
+
+3. "border": Color de ribete que combine con la armonía del papel.
+
+Genera una lista JSON con [CANTIDAD] nuevos estilos únicos sin repetir IDs.</pre>
+
+        <div class="flex justify-end">
+          <button onclick="copyPromptText()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold flex items-center gap-1.5 transition-all">
+            <i class="fa-solid fa-copy"></i> Copiar Texto del Prompt
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- GRID PRINCIPAL: EDITOR EN VIVO & PREVISUALIZADOR CANVAS -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      
+      <!-- COLUMNA IZQUIERDA: FORMULARIO DE DISEÑO -->
+      <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-5">
+        <div class="border-b border-slate-800 pb-3 flex items-center justify-between">
+          <h2 class="text-base font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-sliders text-purple-400"></i>
+            <span>Diseñador en Tiempo Real</span>
+          </h2>
+          <span class="text-[10px] bg-slate-800 text-slate-400 px-2.5 py-0.5 rounded-full font-mono">Modo Interactivo</span>
+        </div>
+
+        <!-- Presets Rápidos -->
+        <div>
+          <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+            Paletas Rápidas de Inspiración:
+          </label>
+          <div class="flex flex-wrap gap-1.5 text-xs">
+            <button onclick="applyPreset('crema')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200">Crema Común</button>
+            <button onclick="applyPreset('sakura')" class="px-2.5 py-1 rounded-lg bg-pink-950/70 border border-pink-500/30 text-pink-300">Sakura Rara</button>
+            <button onclick="applyPreset('pergamino')" class="px-2.5 py-1 rounded-lg bg-amber-950/70 border border-amber-500/30 text-amber-300">Pergamino</button>
+            <button onclick="applyPreset('quemado')" class="px-2.5 py-1 rounded-lg bg-red-950/70 border border-red-500/30 text-red-300">Quemado Épico</button>
+            <button onclick="applyPreset('aureo')" class="px-2.5 py-1 rounded-lg bg-yellow-950/70 border border-yellow-500/30 text-yellow-300">Oro Legendario</button>
+            <button onclick="applyPreset('cosmico')" class="px-2.5 py-1 rounded-lg bg-purple-950/70 border border-purple-500/30 text-purple-300">Mítica Cósmica</button>
+          </div>
+        </div>
+
+        <!-- Datos Generales -->
+        <div class="space-y-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+              Nombre del Papel
+            </label>
+            <input 
+              type="text" 
+              id="inputName" 
+              value="Rosa Crepuscular" 
+              oninput="updateLivePreview()" 
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                ID Único (slug)
+              </label>
+              <input 
+                type="text" 
+                id="inputId" 
+                value="rara_rosa_crepuscular" 
+                oninput="updateLivePreview()" 
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono outline-none focus:border-purple-500"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Nivel de Rareza
+              </label>
+              <select 
+                id="inputRarity" 
+                onchange="updateLivePreview()" 
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500"
+              >
+                <option value="comun">⚪ Común (55)</option>
+                <option value="rara" selected>🔵 Rara (101)</option>
+                <option value="epica">🟣 Épica (160)</option>
+                <option value="legendaria">🟡 Legendaria (8)</option>
+                <option value="mitica">🔴 Mítica (4)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+              Descripción Evocadora
+            </label>
+            <input 
+              type="text" 
+              id="inputDesc" 
+              value="Gradiente suave inspirado en el cielo al atardecer" 
+              oninput="updateLivePreview()" 
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500"
+            />
+          </div>
+        </div>
+
+        <!-- Color del Fondo (Base) -->
+        <div class="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-pink-300 uppercase tracking-wider">
+              <i class="fa-solid fa-fill-drip mr-1.5"></i> Color del Fondo (Base)
+            </span>
+            <div class="flex items-center gap-1 text-[11px]">
+              <label class="flex items-center gap-1 cursor-pointer">
+                <input type="radio" name="bgType" value="solid" onchange="toggleBgType()" class="text-purple-600"> Sólido
+              </label>
+              <label class="flex items-center gap-1 cursor-pointer ml-2">
+                <input type="radio" name="bgType" value="linear" checked onchange="toggleBgType()" class="text-purple-600"> Lineal
+              </label>
+              <label class="flex items-center gap-1 cursor-pointer ml-2">
+                <input type="radio" name="bgType" value="radial" onchange="toggleBgType()" class="text-purple-600"> Radial
+              </label>
+            </div>
+          </div>
+
+          <!-- Selectores de color -->
+          <div id="gradientControls" class="grid grid-cols-3 gap-2">
+            <div>
+              <span class="text-[10px] text-slate-400 block mb-1">Color 1 (Inicio)</span>
+              <div class="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-lg border border-slate-700">
+                <input type="color" id="bgCol1" value="#fff1f2" onchange="updateLivePreview()" class="w-6 h-6 rounded bg-transparent cursor-pointer border-0">
+                <input type="text" id="bgHex1" value="#fff1f2" oninput="syncHex('1')" class="w-full bg-transparent text-[11px] text-white font-mono outline-none">
+              </div>
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 block mb-1">Color 2 (Medio)</span>
+              <div class="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-lg border border-slate-700">
+                <input type="color" id="bgCol2" value="#fbcfe8" onchange="updateLivePreview()" class="w-6 h-6 rounded bg-transparent cursor-pointer border-0">
+                <input type="text" id="bgHex2" value="#fbcfe8" oninput="syncHex('2')" class="w-full bg-transparent text-[11px] text-white font-mono outline-none">
+              </div>
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 block mb-1">Color 3 (Final)</span>
+              <div class="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-lg border border-slate-700">
+                <input type="color" id="bgCol3" value="#f472b6" onchange="updateLivePreview()" class="w-6 h-6 rounded bg-transparent cursor-pointer border-0">
+                <input type="text" id="bgHex3" value="#f472b6" oninput="syncHex('3')" class="w-full bg-transparent text-[11px] text-white font-mono outline-none">
+              </div>
+            </div>
+          </div>
+
+          <!-- String resultante CSS -->
+          <div>
+            <label class="block text-[10px] text-slate-500 font-mono mb-1">preview.bg (Código CSS):</label>
+            <input 
+              type="text" 
+              id="rawBgString" 
+              value="linear-gradient(135deg, #fff1f2 0%, #fbcfe8 60%, #f472b6 100%)" 
+              oninput="manualBgInput()" 
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-[11px] text-purple-300 font-mono outline-none"
+            />
+          </div>
+        </div>
+
+        <!-- Bordes y Tinta -->
+        <div class="grid grid-cols-2 gap-3 p-4 bg-slate-950 rounded-2xl border border-slate-800">
+          <div>
+            <span class="text-xs font-bold text-slate-300 block mb-1.5">Color del Borde:</span>
+            <div class="flex items-center gap-2 bg-slate-900 p-2 rounded-xl border border-slate-700">
+              <input type="color" id="borderColor" value="#db2777" onchange="updateLivePreview()" class="w-6 h-6 rounded bg-transparent cursor-pointer border-0">
+              <input type="text" id="borderHex" value="#db2777" oninput="syncBorderHex()" class="w-full bg-transparent text-xs text-white font-mono outline-none">
+            </div>
+          </div>
+
+          <div>
+            <span class="text-xs font-bold text-slate-300 block mb-1.5">Tinta Recomendada:</span>
+            <div class="flex items-center gap-2 bg-slate-900 p-2 rounded-xl border border-slate-700">
+              <input type="color" id="textColor" value="#701a75" onchange="updateLivePreview()" class="w-6 h-6 rounded bg-transparent cursor-pointer border-0">
+              <input type="text" id="textHex" value="#701a75" oninput="syncTextHex()" class="w-full bg-transparent text-xs text-white font-mono outline-none">
+            </div>
+          </div>
+
+          <div class="col-span-2 pt-1 flex items-center justify-between">
+            <label class="flex items-center gap-2 text-xs text-amber-300 font-semibold cursor-pointer select-none">
+              <input type="checkbox" id="isBurntCheck" onchange="updateLivePreview()" class="rounded text-amber-500 bg-slate-800 focus:ring-0">
+              <span>🔥 Borde Quemado Procedimental (isBurnt: true)</span>
+            </label>
+            <button onclick="autoAdjustTextColor()" class="text-[11px] text-purple-400 hover:text-purple-300 underline">
+              Auto-contraste Tinta
+            </button>
+          </div>
+        </div>
+
+        <button 
+          onclick="addCurrentStyleToCatalog()" 
+          class="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-2xl shadow-lg shadow-purple-600/30 transition-all text-xs sm:text-sm flex items-center justify-center gap-2"
+        >
+          <i class="fa-solid fa-plus"></i>
+          <span>Agregar este diseño a la Colección</span>
+        </button>
+      </div>
+
+      <!-- COLUMNA DERECHA: PREVISUALIZADOR EN VIVO (CANVAS & MINIATURA) -->
+      <div class="lg:col-span-7 space-y-6">
+        
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col items-center">
+          <div class="w-full flex items-center justify-between border-b border-slate-800 pb-3 mb-6">
+            <div>
+              <h2 class="text-base font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-eye text-pink-400"></i>
+                <span>Vista Previa del Lienzo (Canvas 400x550)</span>
+              </h2>
+              <p class="text-xs text-slate-400">Exactamente como se dibuja en la app con <code>drawPaperBackground()</code></p>
+            </div>
+            
+            <span id="badgeRarity" class="text-xs font-bold px-3 py-1 rounded-full border">
+              🔵 Rara
+            </span>
+          </div>
+
+          <!-- CONTENEDOR CANVAS EXACTO (400x550) -->
+          <div class="relative rounded-2xl overflow-hidden shadow-2xl p-2 bg-slate-950/60 border border-slate-800">
+            <canvas id="liveCanvas" width="400" height="550" class="rounded-xl block"></canvas>
+          </div>
+
+          <!-- MINIATURA DE CATÁLOGO (CÓMO SE VE EN EL MODAL) -->
+          <div class="w-full mt-6 pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="text-xs text-slate-400 text-center sm:text-left">
+              <strong>Aspecto en el selector modal:</strong>
+              <div class="text-[11px] text-slate-500">Miniatura que verá el usuario en la cuadrícula de 300+ papeles</div>
+            </div>
+
+            <!-- Card de muestra -->
+            <div id="sampleMiniCard" class="w-48 p-3 rounded-2xl border border-slate-700 bg-slate-900/90 flex flex-col items-center shadow-lg">
+              <div id="sampleSwatch" class="w-full h-20 rounded-xl relative overflow-hidden flex flex-col justify-between p-2 shadow-inner">
+                <div class="space-y-1 opacity-30">
+                  <div class="h-1 rounded w-3/4 bg-current"></div>
+                  <div class="h-1 rounded w-full bg-current"></div>
+                  <div class="h-1 rounded w-1/2 bg-current"></div>
+                </div>
+                <span class="text-[8px] font-bold uppercase opacity-40 self-end">Love Letter</span>
+              </div>
+              <div class="w-full mt-2 flex items-center justify-between text-xs">
+                <span id="sampleMiniName" class="font-bold text-white truncate text-[11px]">Rosa Crepuscular</span>
+                <span id="sampleMiniBadge" class="text-[9px] px-1.5 py-0.2 rounded border">Rara</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- SECCIÓN INFERIOR: IMPORTAR / EXPORTAR EN LOTE DESDE CLAUDE -->
+    <section class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div>
+          <h2 class="text-xl font-black text-white flex items-center gap-2.5">
+            <i class="fa-solid fa-code text-purple-400"></i>
+            <span>Importador & Exportador Masivo (JSON para <code class="text-pink-400 font-mono">paperStylesCatalog.js</code>)</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">
+            Pega aquí el bloque JSON generado por Claude para agregarlo instantáneamente y probarlo en vivo.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+          <button 
+            onclick="importJsonFromTextarea()" 
+            class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-all shadow-md flex items-center gap-1.5"
+          >
+            <i class="fa-solid fa-bolt"></i> Cargar y Previsualizar JSON
+          </button>
+          <button 
+            onclick="copyAllCatalogJson()" 
+            class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs transition-all border border-slate-700 flex items-center gap-1.5"
+          >
+            <i class="fa-solid fa-file-export"></i> Copiar Código para Proyecto
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-xs font-bold text-slate-400 mb-2">
+            Pega aquí el JSON de Claude:
+          </label>
+          <textarea 
+            id="batchJsonInput" 
+            rows="10" 
+            placeholder='[
+  {
+    "id": "epica_noche_aurora",
+    "name": "Noche de Aurora Boreal",
+    "rarity": "epica",
+    "description": "Cielo ártico iluminado por cortinas de luz esmeralda",
+    "preview": {
+      "bg": "radial-gradient(circle at 50% 20%, #064e3b 0%, #022c22 45%, #020617 100%)",
+      "border": "#34d399",
+      "textColor": "#ecfdf5"
+    }
+  }
+]'
+            class="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-xs font-mono text-purple-200 outline-none focus:border-purple-500"
+          ></textarea>
+        </div>
+
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-300">
+              Colección Actual en Memoria (<span id="collectionCount">0</span> estilos):
+            </span>
+            <button onclick="clearCustomCollection()" class="text-[11px] text-red-400 hover:underline">
+              Limpiar Colección
+            </button>
+          </div>
+
+          <!-- Cuadrícula de estilos agregados -->
+          <div id="catalogGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-56 overflow-y-auto p-2 bg-slate-950 rounded-2xl border border-slate-800">
+            <!-- Renderizado dinámico -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- SCRIPT LÓGICO DEL ESTUDIO -->
+  <script>
+    let customCatalog = [];
+
+    const RARITY_MAP = {
+      comun: { label: 'Común', border: 'border-slate-600', text: 'text-slate-300', bg: 'bg-slate-800' },
+      rara: { label: 'Rara', border: 'border-cyan-500/50', text: 'text-cyan-300', bg: 'bg-cyan-950' },
+      epica: { label: 'Épica', border: 'border-purple-500/60', text: 'text-purple-300', bg: 'bg-purple-950' },
+      legendaria: { label: 'Legendaria', border: 'border-amber-400/80', text: 'text-amber-300', bg: 'bg-amber-950' },
+      mitica: { label: 'Mítica', border: 'border-rose-500', text: 'text-rose-300', bg: 'bg-rose-950' }
+    };
+
+    function togglePromptGuide() {
+      const content = document.getElementById('promptGuideContent');
+      const icon = document.getElementById('promptToggleIcon');
+      if (content.classList.contains('hidden')) {
+        content.classList.remove('hidden');
+        icon.innerHTML = 'Ocultar <i class="fa-solid fa-chevron-up"></i>';
+      } else {
+        content.classList.add('hidden');
+        icon.innerHTML = 'Ver Prompt <i class="fa-solid fa-chevron-down"></i>';
+      }
+    }
+
+    function copyClaudePrompt() {
+      const text = document.getElementById('promptText').innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        alert("✅ ¡Prompt para Claude copiado al portapapeles! Pégalo en tu conversación con Claude para generar más fondos.");
+      });
+    }
+
+    function copyPromptText() {
+      copyClaudePrompt();
+    }
+
+    function syncHex(num) {
+      const val = document.getElementById(`bgHex${num}`).value;
+      if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+        document.getElementById(`bgCol${num}`).value = val;
+        updateLivePreview();
+      }
+    }
+
+    function syncBorderHex() {
+      const val = document.getElementById('borderHex').value;
+      if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+        document.getElementById('borderColor').value = val;
+        updateLivePreview();
+      }
+    }
+
+    function syncTextHex() {
+      const val = document.getElementById('textHex').value;
+      if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+        document.getElementById('textColor').value = val;
+        updateLivePreview();
+      }
+    }
+
+    function toggleBgType() {
+      const type = document.querySelector('input[name="bgType"]:checked').value;
+      const col1 = document.getElementById('bgCol1').value;
+      const col2 = document.getElementById('bgCol2').value;
+      const col3 = document.getElementById('bgCol3').value;
+
+      let str = '';
+      if (type === 'solid') {
+        str = col1;
+      } else if (type === 'linear') {
+        str = `linear-gradient(135deg, ${col1} 0%, ${col2} 60%, ${col3} 100%)`;
+      } else if (type === 'radial') {
+        str = `radial-gradient(circle at center, ${col1} 0%, ${col2} 65%, ${col3} 100%)`;
+      }
+      document.getElementById('rawBgString').value = str;
+      updateLivePreview();
+    }
+
+    function manualBgInput() {
+      updateLivePreview();
+    }
+
+    function applyPreset(name) {
+      if (name === 'crema') {
+        document.getElementById('inputName').value = 'Moderna (Papel Crema)';
+        document.getElementById('inputId').value = 'modern';
+        document.getElementById('inputRarity').value = 'comun';
+        document.getElementById('inputDesc').value = 'Papel liso y limpio tono marfil suave';
+        document.getElementById('rawBgString').value = '#f4f0e8';
+        document.getElementById('borderColor').value = '#e6dfd1';
+        document.getElementById('borderHex').value = '#e6dfd1';
+        document.getElementById('textColor').value = '#2d2a26';
+        document.getElementById('textHex').value = '#2d2a26';
+        document.getElementById('isBurntCheck').checked = false;
+      } else if (name === 'sakura') {
+        document.getElementById('inputName').value = 'Flor de Cerezo Rosa';
+        document.getElementById('inputId').value = 'rara_sakura';
+        document.getElementById('inputRarity').value = 'rara';
+        document.getElementById('inputDesc').value = 'Pétalos de sakura al viento de primavera';
+        document.getElementById('rawBgString').value = 'linear-gradient(135deg, #fdf2f8 0%, #fbcfe8 60%, #f472b6 100%)';
+        document.getElementById('borderColor').value = '#db2777';
+        document.getElementById('borderHex').value = '#db2777';
+        document.getElementById('textColor').value = '#701a75';
+        document.getElementById('textHex').value = '#701a75';
+        document.getElementById('isBurntCheck').checked = false;
+      } else if (name === 'pergamino') {
+        document.getElementById('inputName').value = 'Antigua (Pergamino)';
+        document.getElementById('inputId').value = 'parchment';
+        document.getElementById('inputRarity').value = 'rara';
+        document.getElementById('inputDesc').value = 'Pergamino histórico con matices ambarinos';
+        document.getElementById('rawBgString').value = 'radial-gradient(circle at center, #f1dcb8 0%, #e4c494 70%, #c79c65 100%)';
+        document.getElementById('borderColor').value = '#b88c52';
+        document.getElementById('borderHex').value = '#b88c52';
+        document.getElementById('textColor').value = '#2a1a0f';
+        document.getElementById('textHex').value = '#2a1a0f';
+        document.getElementById('isBurntCheck').checked = false;
+      } else if (name === 'quemado') {
+        document.getElementById('inputName').value = 'Antigua (Bordes Quemados)';
+        document.getElementById('inputId').value = 'burnt';
+        document.getElementById('inputRarity').value = 'epica';
+        document.getElementById('inputDesc').value = 'Pergamino milenario con bordes carbonizados al fuego';
+        document.getElementById('rawBgString').value = 'radial-gradient(circle at center, #f1dcb8 0%, #e4c494 70%, #c79c65 100%)';
+        document.getElementById('borderColor').value = '#1a0a00';
+        document.getElementById('borderHex').value = '#1a0a00';
+        document.getElementById('textColor').value = '#2a1a0f';
+        document.getElementById('textHex').value = '#2a1a0f';
+        document.getElementById('isBurntCheck').checked = true;
+      } else if (name === 'aureo') {
+        document.getElementById('inputName').value = 'Pérgamo Real Aureo';
+        document.getElementById('inputId').value = 'legendaria_pergamo_aureo';
+        document.getElementById('inputRarity').value = 'legendaria';
+        document.getElementById('inputDesc').value = 'Bañado en pan de oro de 24 kilates para votos eternos';
+        document.getElementById('rawBgString').value = 'radial-gradient(circle at center, #fef08a 0%, #eab308 50%, #854d0e 100%)';
+        document.getElementById('borderColor').value = '#fde047';
+        document.getElementById('borderHex').value = '#fde047';
+        document.getElementById('textColor').value = '#422006';
+        document.getElementById('textHex').value = '#422006';
+        document.getElementById('isBurntCheck').checked = false;
+      } else if (name === 'cosmico') {
+        document.getElementById('inputName').value = 'Pacto de Almas Gemelas';
+        document.getElementById('inputId').value = 'mitica_pacto_almas';
+        document.getElementById('inputRarity').value = 'mitica';
+        document.getElementById('inputDesc').value = 'El juramento más sagrado que trasciende las dimensiones';
+        document.getElementById('rawBgString').value = 'radial-gradient(circle at 50% 50%, #be123c 0%, #881337 40%, #4c0519 80%, #000000 100%)';
+        document.getElementById('borderColor').value = '#fb7185';
+        document.getElementById('borderHex').value = '#fb7185';
+        document.getElementById('textColor').value = '#fff1f2';
+        document.getElementById('textHex').value = '#fff1f2';
+        document.getElementById('isBurntCheck').checked = false;
+      }
+      updateLivePreview();
+    }
+
+    function autoAdjustTextColor() {
+      const bgStr = document.getElementById('rawBgString').value.toLowerCase();
+      const isDark = bgStr.includes('#000') || bgStr.includes('#0f') || bgStr.includes('#1') || bgStr.includes('#2') || bgStr.includes('black');
+      if (isDark) {
+        document.getElementById('textColor').value = '#fef08a';
+        document.getElementById('textHex').value = '#fef08a';
+      } else {
+        document.getElementById('textColor').value = '#2a1a0f';
+        document.getElementById('textHex').value = '#2a1a0f';
+      }
+      updateLivePreview();
+    }
+
+    function updateLivePreview() {
+      const name = document.getElementById('inputName').value;
+      const rarity = document.getElementById('inputRarity').value;
+      const bgStr = document.getElementById('rawBgString').value;
+      const borderCol = document.getElementById('borderColor').value;
+      const textCol = document.getElementById('textColor').value;
+      const isBurnt = document.getElementById('isBurntCheck').checked;
+
+      document.getElementById('borderHex').value = borderCol;
+      document.getElementById('textHex').value = textCol;
+
+      // Actualizar badges
+      const rInfo = RARITY_MAP[rarity] || RARITY_MAP.comun;
+      const badgeEl = document.getElementById('badgeRarity');
+      badgeEl.className = `text-xs font-bold px-3 py-1 rounded-full border ${rInfo.bg} ${rInfo.text} ${rInfo.border}`;
+      badgeEl.innerText = `${rInfo.label}`;
+
+      // Actualizar tarjeta de miniatura
+      const sampleCard = document.getElementById('sampleMiniCard');
+      const sampleSwatch = document.getElementById('sampleSwatch');
+      const sampleMiniName = document.getElementById('sampleMiniName');
+      const sampleMiniBadge = document.getElementById('sampleMiniBadge');
+
+      sampleMiniName.innerText = name;
+      sampleMiniBadge.className = `text-[9px] px-1.5 py-0.2 rounded border ${rInfo.bg} ${rInfo.text} ${rInfo.border}`;
+      sampleMiniBadge.innerText = rInfo.label;
+
+      sampleSwatch.style.background = bgStr;
+      sampleSwatch.style.borderColor = borderCol;
+      sampleSwatch.style.borderWidth = '2px';
+      sampleSwatch.style.borderStyle = 'solid';
+      sampleSwatch.style.color = textCol;
+
+      // Dibujar en el Canvas 400x550 idéntico al motor del proyecto
+      drawCanvasPreview(bgStr, borderCol, textCol, isBurnt, name, rarity);
+    }
+
+    function drawCanvasPreview(bg, border, textCol, isBurnt, name, rarity) {
+      const canvas = document.getElementById('liveCanvas');
+      const ctx = canvas.getContext('2d');
+      const w = 400;
+      const h = 550;
+
+      ctx.clearRect(0, 0, w, h);
+
+      if (isBurnt) {
+        // Fondo negro circundante
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, w, h);
+
+        let seed = 42;
+        const pseudoRandom = () => {
+          seed = (seed * 9301 + 49297) % 233280;
+          return seed / 233280;
+        };
+
+        ctx.beginPath();
+        ctx.moveTo(10, 10);
+        for (let x = 10; x <= w - 10; x += 2) ctx.lineTo(x, pseudoRandom() * 8 + 10);
+        for (let y = 10; y <= h - 10; y += 2) ctx.lineTo(w - (pseudoRandom() * 8 + 10), y);
+        for (let x = w - 10; x >= 10; x -= 2) ctx.lineTo(x, h - (pseudoRandom() * 8 + 10));
+        for (let y = h - 10; y >= 10; y -= 2) ctx.lineTo(pseudoRandom() * 8 + 10, y);
+        ctx.closePath();
+
+        ctx.save();
+        ctx.clip();
+
+        // Rellenar fondo
+        fillBackground(ctx, w, h, bg);
+
+        ctx.strokeStyle = 'rgba(80, 30, 5, 0.45)';
+        ctx.lineWidth = 15;
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(40, 15, 0, 0.85)';
+        ctx.lineWidth = 6;
+        ctx.stroke();
+
+        ctx.strokeStyle = '#1a0a00';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.restore();
+      } else {
+        fillBackground(ctx, w, h, bg);
+
+        // Borde elegante
+        ctx.strokeStyle = border || '#e6dfd1';
+        ctx.lineWidth = (rarity === 'legendaria' || rarity === 'mitica') ? 3.5 : 2;
+        ctx.strokeRect(8, 8, w - 16, h - 16);
+
+        if (rarity === 'legendaria' || rarity === 'mitica') {
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(13, 13, w - 26, h - 26);
+        }
+      }
+
+      // Dibujar texto de muestra
+      ctx.textAlign = 'left';
+      ctx.fillStyle = textCol;
+      ctx.font = 'bold 24px "Playfair Display", Georgia, serif';
+      ctx.fillText(name || 'Para mi amor...', 40, 65);
+
+      ctx.font = '20px "Caveat", cursive, Georgia, serif';
+      const lines = [
+        "Desde el primer instante en que nuestras miradas",
+        "se cruzaron, comprendí que cada latido de mi",
+        "corazón tenía un único destino: encontrarte.",
+        "",
+        "Gracias por ser mi refugio, mi sueño cumplido",
+        "y la historia más bonita que jamás escribiré..."
+      ];
+      let y = 115;
+      lines.forEach(l => {
+        ctx.fillText(l, 40, y);
+        y += 26;
+      });
+
+      ctx.font = 'italic bold 20px "Great Vibes", cursive, Georgia, serif';
+      ctx.textAlign = 'right';
+      ctx.fillText("Por siempre tuyo/a ❤️", 360, 480);
+    }
+
+    function fillBackground(ctx, w, h, bg) {
+      if (bg.startsWith('#') || bg.startsWith('rgb')) {
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, w, h);
+      } else if (bg.includes('radial-gradient')) {
+        const colors = bg.match(/(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))/g);
+        if (colors && colors.length >= 2) {
+          const radGrad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.max(w, h) * 0.75);
+          colors.forEach((c, i) => radGrad.addColorStop(i / (colors.length - 1), c));
+          ctx.fillStyle = radGrad;
+          ctx.fillRect(0, 0, w, h);
+        } else {
+          ctx.fillStyle = '#f4f0e8';
+          ctx.fillRect(0, 0, w, h);
+        }
+      } else if (bg.includes('linear-gradient')) {
+        const colors = bg.match(/(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))/g);
+        if (colors && colors.length >= 2) {
+          const linGrad = ctx.createLinearGradient(0, 0, w, h);
+          colors.forEach((c, i) => linGrad.addColorStop(i / (colors.length - 1), c));
+          ctx.fillStyle = linGrad;
+          ctx.fillRect(0, 0, w, h);
+        } else {
+          ctx.fillStyle = '#f4f0e8';
+          ctx.fillRect(0, 0, w, h);
+        }
+      } else {
+        ctx.fillStyle = '#f4f0e8';
+        ctx.fillRect(0, 0, w, h);
+      }
+    }
+
+    function addCurrentStyleToCatalog() {
+      const id = document.getElementById('inputId').value.trim();
+      const name = document.getElementById('inputName').value.trim();
+      const rarity = document.getElementById('inputRarity').value;
+      const desc = document.getElementById('inputDesc').value.trim();
+      const bg = document.getElementById('rawBgString').value.trim();
+      const border = document.getElementById('borderColor').value;
+      const textColor = document.getElementById('textColor').value;
+      const isBurnt = document.getElementById('isBurntCheck').checked;
+
+      if (!id || !name) {
+        alert("Por favor ingresa un ID y un Nombre para el estilo.");
+        return;
+      }
+
+      const newStyle = {
+        id,
+        name,
+        rarity,
+        description: desc,
+        preview: { bg, border, textColor }
+      };
+      if (isBurnt) newStyle.isBurnt = true;
+
+      // Si ya existe, reemplazarlo; si no, agregar
+      const idx = customCatalog.findIndex(s => s.id === id);
+      if (idx >= 0) {
+        customCatalog[idx] = newStyle;
+      } else {
+        customCatalog.push(newStyle);
+      }
+
+      renderCatalogGrid();
+    }
+
+    function importJsonFromTextarea() {
+      const raw = document.getElementById('batchJsonInput').value.trim();
+      if (!raw) {
+        alert("Pega un JSON válido en el área de texto.");
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(raw);
+        const list = Array.isArray(parsed) ? parsed : [parsed];
+        
+        let added = 0;
+        list.forEach(item => {
+          if (item.id && item.name && item.preview) {
+            const idx = customCatalog.findIndex(s => s.id === item.id);
+            if (idx >= 0) {
+              customCatalog[idx] = item;
+            } else {
+              customCatalog.push(item);
+            }
+            added++;
+          }
+        });
+
+        renderCatalogGrid();
+        alert(`✅ ¡Se importaron exitosamente ${added} estilos al catálogo!`);
+      } catch (err) {
+        alert("❌ Error al procesar el JSON: Asegúrate de que tenga sintaxis válida. " + err.message);
+      }
+    }
+
+    function renderCatalogGrid() {
+      const container = document.getElementById('catalogGrid');
+      document.getElementById('collectionCount').innerText = customCatalog.length;
+
+      if (customCatalog.length === 0) {
+        container.innerHTML = '<div class="col-span-full py-6 text-center text-slate-500 text-xs">No hay estilos agregados aún. Usa el diseñador o pega el JSON de Claude.</div>';
+        return;
+      }
+
+      container.innerHTML = customCatalog.map(style => {
+        const rInfo = RARITY_MAP[style.rarity] || RARITY_MAP.comun;
+        return `
+          <div 
+            onclick="loadStyleIntoDesigner('${style.id}')" 
+            class="p-2.5 rounded-xl border ${rInfo.border} bg-slate-900/80 hover:scale-105 transition-all cursor-pointer text-left shadow-sm flex flex-col justify-between"
+          >
+            <div 
+              class="w-full h-12 rounded-lg mb-2 shadow-inner"
+              style="background: ${style.preview?.bg || '#f4f0e8'}; border: 1.5px solid ${style.preview?.border || '#ccc'};"
+            ></div>
+            <span class="text-xs font-bold text-white truncate block">${style.name}</span>
+            <div class="flex items-center justify-between mt-1 text-[9px]">
+              <span class="px-1.5 py-0.2 rounded border ${rInfo.bg} ${rInfo.text} ${rInfo.border}">${rInfo.label}</span>
+              <span class="text-slate-500 font-mono">${style.id}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function loadStyleIntoDesigner(id) {
+      const style = customCatalog.find(s => s.id === id);
+      if (!style) return;
+
+      document.getElementById('inputName').value = style.name;
+      document.getElementById('inputId').value = style.id;
+      document.getElementById('inputRarity').value = style.rarity || 'comun';
+      document.getElementById('inputDesc').value = style.description || '';
+      document.getElementById('rawBgString').value = style.preview?.bg || '#f4f0e8';
+      document.getElementById('borderColor').value = style.preview?.border || '#e6dfd1';
+      document.getElementById('borderHex').value = style.preview?.border || '#e6dfd1';
+      document.getElementById('textColor').value = style.preview?.textColor || '#2d2a26';
+      document.getElementById('textHex').value = style.preview?.textColor || '#2d2a26';
+      document.getElementById('isBurntCheck').checked = !!style.isBurnt;
+
+      updateLivePreview();
+    }
+
+    function clearCustomCollection() {
+      if (confirm("¿Seguro que deseas limpiar la colección en memoria?")) {
+        customCatalog = [];
+        renderCatalogGrid();
+      }
+    }
+
+    function copyAllCatalogJson() {
+      if (customCatalog.length === 0) {
+        alert("No hay estilos en la colección para exportar.");
+        return;
+      }
+      const formatted = JSON.stringify(customCatalog, null, 2);
+      navigator.clipboard.writeText(formatted).then(() => {
+        alert(`✅ ¡Copiados ${customCatalog.length} estilos en formato JSON! Listo para pegar en paperStylesCatalog.js`);
+      });
+    }
+
+    // Inicialización automática
+    window.onload = () => {
+      applyPreset('sakura');
+      renderCatalogGrid();
+    };
+  </script>
+</body>
+</html>

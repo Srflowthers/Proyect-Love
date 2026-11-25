@@ -272,9 +272,6 @@ export default function LuxurySections({
       {(hasCustomAudio || embedUrl) && (
         <section className="w-full max-w-4xl px-4 flex flex-col items-center">
           <div className="flex flex-col items-center mb-8 text-center">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-pink-400 bg-pink-950/60 border border-pink-500/30 px-3.5 py-1 rounded-full mb-3 shadow-[0_0_15px_rgba(236,72,153,0.2)]">
-              Banda Sonora de Nuestro Universo
-            </span>
             <h3 className="text-3xl md:text-5xl font-serif italic text-transparent bg-clip-text bg-gradient-to-r from-pink-200 via-purple-200 to-indigo-300 drop-shadow-md">
               Nuestra Canción
             </h3>
